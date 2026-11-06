@@ -1,5 +1,3 @@
-# ![Unicopia](https://github-production-user-asset-6210df.s3.amazonaws.com/6429283/244022981-71021d60-e698-4ca0-88ae-bfa71be39cc6.png)
-
 ## Unicopia Modern
 
 This repository is an experimental modern port of [Sollace's Unicopia](https://github.com/Sollace/Unicopia) to
@@ -14,6 +12,9 @@ This is an unofficial development port and can be incomplete or unstable in some
 documentation, and official releases, visit the [original Unicopia repository](https://github.com/Sollace/Unicopia).
 
 [![Build Status](https://github.com/jazzyband/unicopia-modern/actions/workflows/gradle-build.yml/badge.svg)](https://github.com/jazzyband/unicopia-modern/actions/workflows/gradle-build.yml)
+
+# ![Unicopia](https://github-production-user-asset-6210df.s3.amazonaws.com/6429283/244022981-71021d60-e698-4ca0-88ae-bfa71be39cc6.png)
+
 [![Downloads](https://img.shields.io/github/downloads/Sollace/Unicopia/total.svg?color=yellowgreen)](https://github.com/Sollace/Unicopia/releases/latest)
 [![Crowdin](https://badges.crowdin.net/unicopia/localized.svg)](https://crowdin.com/project/unicopia)
 ![](https://img.shields.io/badge/api-fabric-orange.svg)
