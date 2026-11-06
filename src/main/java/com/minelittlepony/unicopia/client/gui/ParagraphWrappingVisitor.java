@@ -3,36 +3,41 @@ package com.minelittlepony.unicopia.client.gui;
 import java.util.*;
 import java.util.function.BiConsumer;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextHandler;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.text.*;
-import net.minecraft.text.StringVisitable.StyledVisitor;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.StringSplitter;
+import net.minecraft.client.gui.Font;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText.StyledContentConsumer;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSink;
+import net.minecraft.util.StringDecomposer;
+import net.minecraft.network.chat.FormattedText;
 
-public class ParagraphWrappingVisitor implements StyledVisitor<Object> {
+public class ParagraphWrappingVisitor implements StyledContentConsumer<Object> {
     private int line = 0;
     private int pageWidth;
 
-    private final TextRenderer font = MinecraftClient.getInstance().textRenderer;
-    private final TextHandler handler = font.getTextHandler();
+    private final Font font = Minecraft.getInstance().font;
+    private final StringSplitter handler = font.getSplitter();
 
     private float currentLineCollectedLength = 0;
-    private MutableText currentLine = Text.empty();
+    private MutableComponent currentLine = Component.empty();
     private boolean progressedNonEmpty;
 
     private final Int2IntFunction widthSupplier;
-    private final BiConsumer<Text, Integer> lineConsumer;
+    private final BiConsumer<Component, Integer> lineConsumer;
 
-    public ParagraphWrappingVisitor(Int2IntFunction widthSupplier, BiConsumer<Text, Integer> lineConsumer) {
+    public ParagraphWrappingVisitor(Int2IntFunction widthSupplier, BiConsumer<Component, Integer> lineConsumer) {
         this.widthSupplier = widthSupplier;
         this.lineConsumer = lineConsumer;
-        pageWidth = widthSupplier.applyAsInt((line) * font.fontHeight);
+        pageWidth = widthSupplier.applyAsInt((line) * font.lineHeight);
     }
 
     @Override
     public Optional<Object> accept(Style initialStyle, String s) {
         StyleBreakingVisitor visitor = new StyleBreakingVisitor(initialStyle, this::acceptFragment);
-        TextVisitFactory.visitFormatted(s, 0, initialStyle, initialStyle, visitor);
+        StringDecomposer.iterateFormatted(s, 0, initialStyle, initialStyle, visitor);
         visitor.flush();
         return Optional.empty();
     }
@@ -41,7 +46,7 @@ public class ParagraphWrappingVisitor implements StyledVisitor<Object> {
         int remainingLength = (int)(pageWidth - currentLineCollectedLength);
 
         while (!s.isEmpty()) {
-            int trimmedLength = handler.getTrimmedLength(s, remainingLength, inlineStyle);
+            int trimmedLength = handler.plainIndexAtWidth(s, remainingLength, inlineStyle);
             int newline = s.indexOf('\n');
 
             if (newline >= 0 && newline < trimmedLength) {
@@ -62,8 +67,8 @@ public class ParagraphWrappingVisitor implements StyledVisitor<Object> {
                 trimmedLength = lastSpace > 0 ? Math.min(lastSpace, trimmedLength) : trimmedLength;
             }
 
-            Text fragment = Text.literal(s.substring(0, trimmedLength).trim()).setStyle(inlineStyle);
-            float grabbedWidth = handler.getWidth(fragment);
+            Component fragment = Component.literal(s.substring(0, trimmedLength).trim()).setStyle(inlineStyle);
+            float grabbedWidth = handler.stringWidth(fragment);
 
             // advance if appending the next segment would cause an overflow
             if (currentLineCollectedLength + grabbedWidth > pageWidth) {
@@ -73,7 +78,7 @@ public class ParagraphWrappingVisitor implements StyledVisitor<Object> {
             // append the segment to the line that's being built
             if (currentLineCollectedLength > 0 && s.startsWith(" ")) {
                 currentLine.append(" ");
-                currentLineCollectedLength += handler.getWidth(" ");
+                currentLineCollectedLength += handler.stringWidth(" ");
             }
             currentLine.append(fragment);
             currentLineCollectedLength += grabbedWidth;
@@ -81,7 +86,7 @@ public class ParagraphWrappingVisitor implements StyledVisitor<Object> {
             // append the segment to the line that's being built
             if (currentLineCollectedLength > 0 && s.endsWith(" ")) {
                 currentLine.append(" ");
-                currentLineCollectedLength += handler.getWidth(" ");
+                currentLineCollectedLength += handler.stringWidth(" ");
             }
 
             if (newline >= 0) {
@@ -109,20 +114,20 @@ public class ParagraphWrappingVisitor implements StyledVisitor<Object> {
         line++;
         if (progressedNonEmpty || currentLineCollectedLength > 0) {
             progressedNonEmpty = true;
-            lineConsumer.accept(currentLine, line * font.fontHeight);
+            lineConsumer.accept(currentLine, line * font.lineHeight);
         }
-        pageWidth = widthSupplier.applyAsInt(line * font.fontHeight);
-        currentLine = Text.empty();
+        pageWidth = widthSupplier.applyAsInt(line * font.lineHeight);
+        currentLine = Component.empty();
         currentLineCollectedLength = 0;
     }
 
-    static final class StyleBreakingVisitor implements CharacterVisitor {
-        private final StyledVisitor<?> fragmentVisitor;
+    static final class StyleBreakingVisitor implements FormattedCharSink {
+        private final StyledContentConsumer<?> fragmentVisitor;
         private final StringBuilder collectedText = new StringBuilder();
 
         private Style currentStyle;
 
-        public StyleBreakingVisitor(Style initialStyle, StyledVisitor<?> fragmentVisitor) {
+        public StyleBreakingVisitor(Style initialStyle, StyledContentConsumer<?> fragmentVisitor) {
             this.currentStyle = initialStyle;
             this.fragmentVisitor = fragmentVisitor;
         }

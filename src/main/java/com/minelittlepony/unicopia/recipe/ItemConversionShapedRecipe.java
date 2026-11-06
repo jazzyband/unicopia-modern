@@ -4,62 +4,66 @@ import com.minelittlepony.unicopia.util.serialization.PacketCodecUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.RawShapedRecipe;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapedRecipePattern;
 
 public class ItemConversionShapedRecipe extends ShapedRecipe {
     public static final MapCodec<ItemConversionShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.STRING.optionalFieldOf("group", "").forGetter(ItemConversionShapedRecipe::getGroup),
-            CraftingRecipeCategory.CODEC.fieldOf("category").orElse(CraftingRecipeCategory.MISC).forGetter(ItemConversionShapedRecipe::getCategory),
-            RawShapedRecipe.CODEC.forGetter(recipe -> recipe.raw),
-            ItemStack.VALIDATED_CODEC.fieldOf("base").forGetter(recipe -> recipe.base),
-            ItemStack.VALIDATED_CODEC.fieldOf("result").forGetter(recipe -> recipe.result),
+            Codec.STRING.optionalFieldOf("group", "").forGetter(ItemConversionShapedRecipe::group),
+            CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(ItemConversionShapedRecipe::category),
+            ShapedRecipePattern.MAP_CODEC.forGetter(recipe -> recipe.raw),
+            ItemStackTemplate.CODEC.fieldOf("base").forGetter(recipe -> recipe.base),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(recipe -> recipe.result),
             Codec.BOOL.optionalFieldOf("show_notification", true).forGetter(ItemConversionShapedRecipe::showNotification)
     ).apply(i, ItemConversionShapedRecipe::new));
-    public static final PacketCodec<RegistryByteBuf, ItemConversionShapedRecipe> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.STRING, ItemConversionShapedRecipe::getGroup,
-            PacketCodecUtils.ofEnum(CraftingRecipeCategory.class), ItemConversionShapedRecipe::getCategory,
-            RawShapedRecipe.PACKET_CODEC, recipe -> recipe.raw,
-            ItemStack.PACKET_CODEC, recipe -> recipe.base,
-            ItemStack.PACKET_CODEC, recipe -> recipe.result,
-            PacketCodecs.BOOLEAN, ItemConversionShapedRecipe::showNotification,
+    public static final StreamCodec<RegistryFriendlyByteBuf, ItemConversionShapedRecipe> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8, ItemConversionShapedRecipe::group,
+            PacketCodecUtils.ofEnum(CraftingBookCategory.class), ItemConversionShapedRecipe::category,
+            ShapedRecipePattern.STREAM_CODEC, recipe -> recipe.raw,
+            ItemStackTemplate.STREAM_CODEC, recipe -> recipe.base,
+            ItemStackTemplate.STREAM_CODEC, recipe -> recipe.result,
+            ByteBufCodecs.BOOL, ItemConversionShapedRecipe::showNotification,
             ItemConversionShapedRecipe::new
     );
 
-    final RawShapedRecipe raw;
-    final ItemStack base;
-    final ItemStack result;
+    final ShapedRecipePattern raw;
+    final ItemStackTemplate base;
+    final ItemStackTemplate result;
 
-    public ItemConversionShapedRecipe(String group, CraftingRecipeCategory category, RawShapedRecipe raw, ItemStack base, ItemStack result, boolean showNotification) {
-        super(group, category, raw, result, showNotification);
+    public ItemConversionShapedRecipe(String group, CraftingBookCategory category, ShapedRecipePattern raw, ItemStackTemplate base, ItemStackTemplate result, boolean showNotification) {
+        super(new net.minecraft.world.item.crafting.Recipe.CommonInfo(showNotification), new net.minecraft.world.item.crafting.CraftingRecipe.CraftingBookInfo(category, group), raw, result);
         this.raw = raw;
         this.base = base;
         this.result = result;
     }
 
-    @Override
-    public RecipeSerializer<ItemConversionShapedRecipe> getSerializer() {
-        return URecipes.CONVERSION_SERIALIZER;
+    public ItemConversionShapedRecipe(String group, CraftingBookCategory category, ShapedRecipePattern raw, ItemStack base, ItemStack result, boolean showNotification) {
+        this(group, category, raw, ItemStackTemplate.fromNonEmptyStack(base), ItemStackTemplate.fromNonEmptyStack(result), showNotification);
     }
 
     @Override
-    public ItemStack craft(CraftingRecipeInput input, RegistryWrapper.WrapperLookup lookup) {
-        return input.getStacks().stream()
+    public RecipeSerializer<ShapedRecipe> getSerializer() {
+        return com.minelittlepony.unicopia.util.Untyped.cast(URecipes.CONVERSION_SERIALIZER);
+    }
+
+    @Override
+    public ItemStack assemble(CraftingInput input) {
+        return input.items().stream()
                 .filter(i -> {
 
-                    return i.isOf(base.getItem());
+                    return i.is(base.item());
                 })
                 .findFirst()
-                .map(base -> base.withItem(result.getItem()))
-                .orElseGet(() -> super.craft(input, lookup));
+                .map(base -> base.transmuteCopy(result.item().value()))
+                .orElseGet(() -> super.assemble(input));
     }
 }

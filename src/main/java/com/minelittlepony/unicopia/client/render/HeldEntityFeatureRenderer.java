@@ -1,6 +1,5 @@
 package com.minelittlepony.unicopia.client.render;
 
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import com.minelittlepony.unicopia.client.FirstPersonRendererOverrides.ArmRenderer;
@@ -8,66 +7,70 @@ import com.minelittlepony.unicopia.client.minelittlepony.MineLPDelegate;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.state.BipedEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.*;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.levelgen.feature.Feature;
 
-public class HeldEntityFeatureRenderer<S extends BipedEntityRenderState, E extends LivingEntity> implements AccessoryFeatureRenderer.Feature<S> {
-    public HeldEntityFeatureRenderer(FeatureRendererContext<S, ? extends BipedEntityModel<S>> context) {
+public class HeldEntityFeatureRenderer<S extends HumanoidRenderState, E extends LivingEntity> implements AccessoryFeatureRenderer.Feature<S> {
+    public HeldEntityFeatureRenderer(RenderLayerParent<S, ? extends HumanoidModel<S>> context) {
     }
 
     @Override
-    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, S entity, float limbAngle, float limbDistance) {
+    public void render(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, S entity, float limbAngle, float limbDistance) {
         CasterState state = CasterState.of(entity);
         CasterState.PassengerState<?, ?> carriedEntity = state.carriedEntity;
         if (carriedEntity.state != null) {
-            matrices.push();
-            matrices.multiply(RotationAxis.POSITIVE_X.rotation(MathHelper.PI - state.leanAmount * MathHelper.HALF_PI));
+            matrices.pushPose();
+            matrices.rotate(Axis.XP.rotationDegrees(180 - state.leanAmount * 90));
 
             matrices.translate(carriedEntity.carryPosition.x, carriedEntity.carryPosition.y, carriedEntity.carryPosition.z);
             if (carriedEntity.isPony) {
-                matrices.multiply(RotationAxis.POSITIVE_Y.rotation(MathHelper.HALF_PI));
+                matrices.rotate(Axis.YP.rotationDegrees(90));
             }
 
             carriedEntity.render(matrices, vertexConsumers, light);
-            matrices.pop();
+            matrices.popPose();
         }
     }
 
     @Override
-    public void renderArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, S entity, ModelPart arm, Arm side) {
+    public void renderArm(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, S entity, ModelPart arm, HumanoidArm side) {
 
     }
 
     @Override
-    public boolean beforeRenderArms(ArmRenderer sender, MatrixStack matrices, VertexConsumerProvider vertexConsumers, S entity, int light) {
+    public boolean beforeRenderArms(ArmRenderer sender, PoseStack matrices, SubmitNodeCollector vertexConsumers, S entity, int light) {
         CasterState state = CasterState.of(entity);
         CasterState.PassengerState<?, ?> carriedEntity = state.carriedEntity;
         if (carriedEntity.state != null) {
-            matrices.push();
+            matrices.pushPose();
             matrices.translate(carriedEntity.viewportPosition.x(), carriedEntity.viewportPosition.y(), carriedEntity.viewportPosition.z());
             matrices.translate(0, -1.3F, carriedEntity.isPony ? -1.9F : -1.3F);
-            matrices.multiply(new Quaternionf().rotationXYZ((carriedEntity.isPony ? 33 : 13) * MathHelper.RADIANS_PER_DEGREE, (carriedEntity.isPony ? MathHelper.PI : MathHelper.HALF_PI), 0));
+            matrices.rotate(Axis.XP.rotationDegrees(carriedEntity.isPony ? 33 : 13));
+            matrices.rotate(Axis.YP.rotationDegrees(carriedEntity.isPony ? 180 : 90));
 
             carriedEntity.render(matrices, vertexConsumers, light);
-            matrices.pop();
+            matrices.popPose();
 
-            float equipProgress = 1 - sender.getEquipProgress(Hand.MAIN_HAND, MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false));
+            float equipProgress = 1 - sender.getEquipProgress(InteractionHand.MAIN_HAND, Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
 
-            matrices.push();
-            sender.invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, entity.handSwingProgress, Arm.LEFT);
-            matrices.pop();
-            matrices.push();
-            sender.invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, entity.handSwingProgress, Arm.RIGHT);
-            matrices.pop();
+            matrices.pushPose();
+            sender.invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, net.minecraft.client.Minecraft.getInstance().player == null ? 0 : net.minecraft.client.Minecraft.getInstance().player.getSwingAnimation(0), HumanoidArm.LEFT);
+            matrices.popPose();
+            matrices.pushPose();
+            sender.invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, net.minecraft.client.Minecraft.getInstance().player == null ? 0 : net.minecraft.client.Minecraft.getInstance().player.getSwingAnimation(0), HumanoidArm.RIGHT);
+            matrices.popPose();
             return true;
         }
 
@@ -75,29 +78,29 @@ public class HeldEntityFeatureRenderer<S extends BipedEntityRenderState, E exten
     }
 
     public static Vector3f getViewportPosition(Living<?> entity, Living<?> passenger, float tickDelta) {
-        float handSwingProgress = entity.asEntity().getHandSwingProgress(tickDelta);
-        float f = -0.4f * MathHelper.sin(MathHelper.sqrt(handSwingProgress) * (float)Math.PI);
-        float g = 0.2f * MathHelper.sin(MathHelper.sqrt(handSwingProgress) * ((float)Math.PI * 2));
-        float h = -0.2f * MathHelper.sin(handSwingProgress * (float)Math.PI);
+        float handSwingProgress = entity.asEntity().getSwingAnimation(tickDelta);
+        float f = -0.4f * Mth.sin(Mth.sqrt(handSwingProgress) * (float)Math.PI);
+        float g = 0.2f * Mth.sin(Mth.sqrt(handSwingProgress) * ((float)Math.PI * 2));
+        float h = -0.2f * Mth.sin(handSwingProgress * (float)Math.PI);
         return new Vector3f(f, g, h);
     }
 
-    public static Vec3d getCarryPosition(Living<?> entity, Living<?> passenger) {
+    public static Vec3 getCarryPosition(Living<?> entity, Living<?> passenger) {
         float passengerHeight = MineLPDelegate.getInstance().getPonyHeight(passenger.asEntity()) / 2F;
         float carrierHeight = MineLPDelegate.getInstance().getPonyHeight(entity.asEntity()) / 5F;
 
         if (entity instanceof Pony pony
                 && MineLPDelegate.getInstance().getPlayerPonyRace(pony.asEntity()).isEquine()
                 && pony.getPhysics().isFlying()) {
-            return new Vec3d(0,
+            return new Vec3(0,
                     -carrierHeight * 10 - passengerHeight * 2,
                     0
             );
         }
 
-        return new Vec3d(0,
+        return new Vec3(0,
                 -passengerHeight - carrierHeight,
-                entity.asEntity().getWidth()
+                entity.asEntity().getBbWidth()
         );
     }
 }

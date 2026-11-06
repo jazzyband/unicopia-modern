@@ -2,13 +2,11 @@ package com.minelittlepony.unicopia;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.entity.EntityReference;
 import com.minelittlepony.unicopia.entity.EntityReference.EntityValues;
-
-import net.minecraft.entity.Entity;
 
 /**
  * Interface for things that can be weakly owned (by an entity).

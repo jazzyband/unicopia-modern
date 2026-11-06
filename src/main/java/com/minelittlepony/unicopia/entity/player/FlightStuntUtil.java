@@ -2,8 +2,7 @@ package com.minelittlepony.unicopia.entity.player;
 
 import com.minelittlepony.unicopia.util.MutableVector;
 import com.minelittlepony.unicopia.util.PosHelper;
-
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 public class FlightStuntUtil {
     public static boolean isPerformingDive(Pony pony, MutableVector velocity) {
@@ -13,7 +12,7 @@ public class FlightStuntUtil {
     }
 
     public static boolean isFlyingLow(Pony pony, MutableVector velocity) {
-        BlockPos pos = pony.asEntity().getBlockPos();
+        BlockPos pos = pony.asEntity().blockPosition();
         return velocity.horizontalLengthSquared() > 0.005F && (pos.getY() - PosHelper.findNearestSurface(pony.asWorld(), pos).getY()) < 6;
     }
 }

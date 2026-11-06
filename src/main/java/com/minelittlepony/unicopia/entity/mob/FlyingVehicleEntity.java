@@ -1,43 +1,41 @@
 package com.minelittlepony.unicopia.entity.mob;
 
-import java.util.Optional;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquineContext;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.entity.MagicImmune;
 import com.minelittlepony.unicopia.entity.collision.MultiBoundingBoxEntity;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 
-public abstract class FlyingVehicleEntity extends MobEntity implements MultiBoundingBoxEntity, MagicImmune, EquineContext {
+public abstract class FlyingVehicleEntity extends Mob implements MultiBoundingBoxEntity, MagicImmune, EquineContext {
 
     private final UUID[] seats = new UUID[getSeatCount()];
 
-    protected FlyingVehicleEntity(EntityType<? extends MobEntity> entityType, World world) {
+    protected FlyingVehicleEntity(EntityType<? extends Mob> entityType, Level world) {
         super(entityType, world);
     }
 
     protected abstract int getSeatCount();
 
-    protected abstract Vec3d getSeatPosition(int seatIndex);
-
-    public abstract Optional<BlockState> getSteppingState(Box entityBox);
+    protected abstract Vec3 getSeatPosition(int seatIndex);
 
     protected int getSeatFor(Entity passenger) {
         double closestDistance = Double.MAX_VALUE;
@@ -45,11 +43,11 @@ public abstract class FlyingVehicleEntity extends MobEntity implements MultiBoun
 
         for (int i = 0; i < seats.length; i++) {
             if (seats[i] != null) {
-                if (seats[i].equals(passenger.getUuid())) {
+                if (seats[i].equals(passenger.getUUID())) {
                     return i;
                 }
             } else {
-                double distance = passenger.squaredDistanceTo(getSeatPosition(i).add(getPos()));
+                double distance = passenger.distanceToSqr(getSeatPosition(i).add(position()));
                 if (distance < closestDistance) {
                     closestDistance = distance;
                     closestSeat = i;
@@ -62,8 +60,8 @@ public abstract class FlyingVehicleEntity extends MobEntity implements MultiBoun
     }
 
     @Override
-    protected final Entity.MoveEffect getMoveEffect() {
-        return Entity.MoveEffect.EVENTS;
+    protected final Entity.MovementEmission getMovementEmission() {
+        return Entity.MovementEmission.EVENTS;
     }
 
     @Override
@@ -72,12 +70,12 @@ public abstract class FlyingVehicleEntity extends MobEntity implements MultiBoun
     }
 
     @Override
-    public boolean isClimbing() {
+    public boolean onClimbable() {
         return false;
     }
 
     @Override
-    public final boolean isCollidable() {
+    public final boolean canBeCollidedWith(Entity other) {
         return true;
     }
 
@@ -88,66 +86,66 @@ public abstract class FlyingVehicleEntity extends MobEntity implements MultiBoun
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float amount) {
-        if (source.getAttacker() instanceof PlayerEntity player && player.getAbilities().creativeMode) {
-            dropInventory(world);
+    public boolean hurtServer(ServerLevel world, DamageSource source, float amount) {
+        if (source.getEntity() instanceof Player player && player.getAbilities().instabuild) {
+            dropEquipment(world);
             remove(RemovalReason.KILLED);
             return true;
         }
-        if (super.damage(world, source, amount)) {
+        if (super.hurtServer(world, source, amount)) {
             hurtTime = 0;
-            maxHurtTime = 0;
+            hurtDuration = 0;
             return true;
         }
         return false;
     }
 
     @Override
-    protected void updatePostDeath() {
-        if (!getWorld().isClient() && !isRemoved()) {
+    protected void tickDeath() {
+        if (!level().isClientSide() && !isRemoved()) {
             remove(Entity.RemovalReason.KILLED);
         }
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
+    protected void checkFallDamage(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
     }
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
-        return getPassengerList().size() < seats.length && getSeatFor(passenger) != -1;
+        return this.getPassengers().size() < seats.length && getSeatFor(passenger) != -1;
     }
 
     @Override
-    protected Vec3d getPassengerAttachmentPos(Entity passenger, EntityDimensions dimensions, float scaleFactor) {
+    protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scaleFactor) {
         int seat = getSeatFor(passenger);
         if (seat == -1) {
-            return Vec3d.ZERO;
+            return Vec3.ZERO;
         }
-        return getSeatPosition(seat).multiply(scaleFactor);
+        return getSeatPosition(seat).scale(scaleFactor);
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound compound) {
-        super.readCustomDataFromNbt(compound);
-        NbtList seats = compound.getListOrEmpty("seats");
+    public void readAdditionalSaveData(ValueInput compound) {
+        super.readAdditionalSaveData(compound);
+        java.util.List<CompoundTag> seats = compound.read("seats", CompoundTag.CODEC.listOf()).orElseGet(java.util.List::of);
         for (int i = 0; i < this.seats.length; i++) {
-            this.seats[i] = i < seats.size() ? seats.getCompound(i).flatMap(c -> c.get("id", Uuids.CODEC)).orElse(null) : null;
+            this.seats[i] = i < seats.size() ? seats.get(i).read("id", UUIDUtil.AUTHLIB_CODEC).orElse(null) : null;
         }
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound compound) {
-        super.writeCustomDataToNbt(compound);
-        NbtList seats = new NbtList();
+    public void addAdditionalSaveData(ValueOutput compound) {
+        super.addAdditionalSaveData(compound);
+        java.util.List<CompoundTag> seats = new java.util.ArrayList<>();
         for (int i = 0; i < this.seats.length; i++) {
-            NbtCompound seat = new NbtCompound();
+            CompoundTag seat = new CompoundTag();
             if (this.seats[i] != null) {
-                seat.put("id", Uuids.CODEC, this.seats[i]);
+                seat.store("id", UUIDUtil.AUTHLIB_CODEC, this.seats[i]);
             }
             seats.add(seat);
         }
-        compound.put("seats", seats);
+        compound.store("seats", CompoundTag.CODEC.listOf(), seats);
     }
 
 }

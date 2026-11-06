@@ -1,0 +1,16 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:empty"
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 6,
+      "saturation": 10.799999
+    }
+  },
+  "tags": [
+    "c:foods/fruit"
+  ]
+}

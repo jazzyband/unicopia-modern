@@ -1,21 +1,21 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.util.ActionResult;
+import net.minecraft.world.InteractionResult;
 
-public record TypedActionResult<T> (ActionResult result, T value) {
+public record TypedActionResult<T> (InteractionResult result, T value) {
     public static <T> TypedActionResult<T> success(T value) {
-        return new TypedActionResult<>(ActionResult.SUCCESS, value);
+        return new TypedActionResult<>(InteractionResult.SUCCESS, value);
     }
 
     public static <T> TypedActionResult<T> pass(T value) {
-        return new TypedActionResult<>(ActionResult.PASS, value);
+        return new TypedActionResult<>(InteractionResult.PASS, value);
     }
 
     public static <T> TypedActionResult<T> fail(T value) {
-        return new TypedActionResult<>(ActionResult.FAIL, value);
+        return new TypedActionResult<>(InteractionResult.FAIL, value);
     }
 
     public static <T> TypedActionResult<T> consume(T value) {
-        return new TypedActionResult<>(ActionResult.CONSUME, value);
+        return new TypedActionResult<>(InteractionResult.CONSUME, value);
     }
 }

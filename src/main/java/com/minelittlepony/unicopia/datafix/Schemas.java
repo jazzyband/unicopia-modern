@@ -2,8 +2,7 @@ package com.minelittlepony.unicopia.datafix;
 
 import com.mojang.datafixers.DataFixerBuilder;
 import com.mojang.serialization.Dynamic;
-
-import net.minecraft.datafixer.fix.ItemStackComponentizationFix;
+import net.minecraft.util.datafix.fixes.ItemStackComponentizationFix;
 
 public interface Schemas {
     static void build(DataFixerBuilder builder) {
@@ -30,7 +29,7 @@ public interface Schemas {
             .register();
     }
 
-    static void fixComponents(ItemStackComponentizationFix.StackData data, Dynamic<?> dynamic) {
+    static void fixComponents(ItemStackComponentizationFix.ItemStackData data, Dynamic<?> dynamic) {
         UnicopiaItemStackComponentizations.run(data, dynamic);
     }
 }

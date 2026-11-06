@@ -1,59 +1,57 @@
 package com.minelittlepony.unicopia.entity.effect;
 
 import java.util.List;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.UTags;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.mob.GuardianEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.structure.StructureStart;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.gen.structure.StructureKeys;
-
 public class SeaponyGraceStatusEffect {
 
     public static void update(LivingEntity entity) {
-        if (entity.getWorld().isClient) {
+        if (entity.level().isClientSide()) {
             return;
         }
         if (EquinePredicates.PLAYER_SEAPONY.test(entity)) {
-            if (!entity.hasStatusEffect(UEffects.SEAPONYS_GRACE) && !entity.hasStatusEffect(UEffects.SEAPONYS_IRE)) {
-                entity.addStatusEffect(new StatusEffectInstance(UEffects.SEAPONYS_GRACE, StatusEffectInstance.INFINITE, 0, false, true));
+            if (!entity.hasEffect(UEffects.SEAPONYS_GRACE) && !entity.hasEffect(UEffects.SEAPONYS_IRE)) {
+                entity.addEffect(new MobEffectInstance(UEffects.SEAPONYS_GRACE, MobEffectInstance.INFINITE_DURATION, 0, false, true));
             }
-        } else if (entity.hasStatusEffect(UEffects.SEAPONYS_GRACE)) {
-            entity.removeStatusEffect(UEffects.SEAPONYS_GRACE);
+        } else if (entity.hasEffect(UEffects.SEAPONYS_GRACE)) {
+            entity.removeEffect(UEffects.SEAPONYS_GRACE);
         }
     }
 
-    public static boolean hasIre(LivingEntity entity, MobEntity enemy) {
-        return enemy.getAttacker() == entity || hasIre(entity);
+    public static boolean hasIre(LivingEntity entity, Mob enemy) {
+        return enemy.getLastHurtByMob() == entity || hasIre(entity);
     }
 
     public static boolean hasGrace(LivingEntity entity) {
         boolean isSeapony = EquinePredicates.PLAYER_SEAPONY.test(entity);
-        return isSeapony && entity.hasStatusEffect(UEffects.SEAPONYS_GRACE) && !entity.hasStatusEffect(UEffects.SEAPONYS_IRE);
+        return isSeapony && entity.hasEffect(UEffects.SEAPONYS_GRACE) && !entity.hasEffect(UEffects.SEAPONYS_IRE);
     }
 
     public static boolean hasIre(LivingEntity entity) {
-        return !EquinePredicates.PLAYER_SEAPONY.test(entity) || entity.hasStatusEffect(UEffects.SEAPONYS_IRE);
+        return !EquinePredicates.PLAYER_SEAPONY.test(entity) || entity.hasEffect(UEffects.SEAPONYS_IRE);
     }
 
-    public static void processBlockChange(World world, PlayerEntity player, BlockPos pos, BlockState stateBroken, @Nullable BlockEntity blockEntity) {
+    public static void processBlockChange(Level world, Player player, BlockPos pos, BlockState stateBroken, @Nullable BlockEntity blockEntity) {
 
-        if (!(world instanceof ServerWorld sw)) {
+        if (!(world instanceof ServerLevel sw)) {
             return;
         }
 
@@ -61,15 +59,15 @@ public class SeaponyGraceStatusEffect {
             return;
         }
 
-        if (!stateBroken.isIn(UTags.Blocks.ANGERS_GUARDIANS)) {
+        if (!stateBroken.is(UTags.Blocks.ANGERS_GUARDIANS)) {
             return;
         }
-        StructureStart start = sw.getStructureAccessor().getStructureContaining(pos, key -> key == StructureKeys.MONUMENT);
+        StructureStart start = sw.structureManager().getStructureWithPieceAt(pos, key -> key.is(BuiltinStructures.OCEAN_MONUMENT));
         if (start.getStructure() == null) {
             return;
         }
 
-        List<GuardianEntity> guardians = sw.getEntitiesByClass(GuardianEntity.class, player.getBoundingBox().expand(10), EntityPredicates.VALID_LIVING_ENTITY);
+        List<Guardian> guardians = sw.getEntitiesOfClass(Guardian.class, player.getBoundingBox().inflate(10), EntitySelector.LIVING_ENTITY_STILL_ALIVE);
 
         if (guardians.size() > 0) {
             guardians.forEach(guardian -> {
@@ -77,9 +75,9 @@ public class SeaponyGraceStatusEffect {
                 guardian.playAmbientSound();
             });
 
-            player.removeStatusEffect(UEffects.SEAPONYS_GRACE);
-            player.addStatusEffect(new StatusEffectInstance(UEffects.SEAPONYS_IRE, 90000, 0, false, true));
-            world.playSound(null, pos, USounds.Vanilla.ENTITY_ELDER_GUARDIAN_CURSE, SoundCategory.PLAYERS, 1, 1);
+            player.removeEffect(UEffects.SEAPONYS_GRACE);
+            player.addEffect(new MobEffectInstance(UEffects.SEAPONYS_IRE, 90000, 0, false, true));
+            world.playSound(null, pos, USounds.Vanilla.ELDER_GUARDIAN_CURSE, SoundSource.PLAYERS, 1, 1);
         }
     }
 }

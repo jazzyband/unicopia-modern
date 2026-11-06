@@ -7,38 +7,38 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.util.RandomSource;
 
 public record MagicParticleEffect (
         boolean tinted,
         Vector3f color
-    ) implements ParticleEffect {
+    ) implements ParticleOptions {
     public static final MagicParticleEffect UNICORN = new MagicParticleEffect(false, new Vector3f());
     public static final MapCodec<MagicParticleEffect> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.BOOL.fieldOf("tinted").forGetter(MagicParticleEffect::tinted),
-            Codecs.VECTOR_3F.fieldOf("color").forGetter(MagicParticleEffect::color)
-    ).apply(instance, MagicParticleEffect::new));
-    public static final PacketCodec<ByteBuf, MagicParticleEffect> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.BOOLEAN, MagicParticleEffect::tinted,
-            PacketCodecs.VECTOR_3F, MagicParticleEffect::color,
-            MagicParticleEffect::new
+            ExtraCodecs.VECTOR3F.fieldOf("color").forGetter(MagicParticleEffect::color)
+    ).apply(instance, (tinted, color) -> new MagicParticleEffect(tinted, new Vector3f(color))));
+    public static final StreamCodec<ByteBuf, MagicParticleEffect> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.BOOL, MagicParticleEffect::tinted,
+            ByteBufCodecs.VECTOR3F, MagicParticleEffect::color,
+            (tinted, color) -> new MagicParticleEffect(tinted, new Vector3f(color))
     );
 
     public MagicParticleEffect(int tint) {
-        this(true, new Vector3f(ColorHelper.getRedFloat(tint), ColorHelper.getGreenFloat(tint), ColorHelper.getBlueFloat(tint)));
+        this(true, new Vector3f(ARGB.redFloat(tint), ARGB.greenFloat(tint), ARGB.blueFloat(tint)));
     }
 
     public MagicParticleEffect(Vector3f color) {
         this(true, color);
     }
 
-    public Vector3f getColor(Random random) {
+    public Vector3f getColor(RandomSource random) {
         if (tinted()) {
             return color;
         }

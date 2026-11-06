@@ -1,7 +1,13 @@
 package com.minelittlepony.unicopia.client.render.spell;
 
 import java.util.UUID;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemDisplayContext;
 import org.joml.Quaternionf;
 
 import com.minelittlepony.unicopia.EquinePredicates;
@@ -11,16 +17,8 @@ import com.minelittlepony.unicopia.ability.magic.spell.TimedSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
 import com.minelittlepony.unicopia.client.gui.DrawableUtil;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexConsumerProvider.Immediate;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.util.Colors;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 
 public abstract class SpellRenderer<T extends Spell, S extends SpellRenderer.SpellRenderState> {
     public static final SpellRenderer<?, ?> DEFAULT = new SpellRenderer<>() {
@@ -30,19 +28,19 @@ public abstract class SpellRenderer<T extends Spell, S extends SpellRenderer.Spe
         }
     };
 
-    protected final MinecraftClient client = MinecraftClient.getInstance();
+    protected final Minecraft client = Minecraft.getInstance();
 
     private final S state = createRenderState();
 
-    public final S getAndUpdateRenderState(T spell, CasterState casterState, Caster<?> caster, float tickDelta) {
-        updateRenderState(spell, state, casterState, caster, tickDelta);
+    public final S getAndUpdateRenderState(T spell, Caster<?> caster, float tickDelta) {
+        updateRenderState(spell, state, caster, tickDelta);
         return state;
     }
 
-    public void updateRenderState(T spell, S state, CasterState casterState, Caster<?> caster, float tickDelta) {
-        state.casterState = casterState;
+    public void updateRenderState(T spell, S state, Caster<?> caster, float tickDelta) {
         state.uuid = spell.getUuid();
         state.type = spell.getTypeAndTraits();
+        client.getItemModelResolver().updateForNonLiving(state.gemstone, state.type.getDefaultStack(), ItemDisplayContext.FIXED, caster.asEntity());
     }
 
     public abstract S createRenderState();
@@ -51,63 +49,65 @@ public abstract class SpellRenderer<T extends Spell, S extends SpellRenderer.Spe
         return true;
     }
 
-    public void render(MatrixStack matrices, VertexConsumerProvider vertices, S spell, int light) {
-        if (spell.casterState.isCamera || spell.casterState.isProjectile) {
+    public void render(PoseStack matrices, SubmitNodeCollector vertices, S spell, CasterState caster, int light) {
+        if (caster.isCamera || caster.isProjectile) {
             return;
         }
 
         if (EquinePredicates.IS_CASTER.test(client.player)) {
-            renderGemstone(matrices, vertices, spell, light);
+            renderGemstone(matrices, vertices, spell, caster, light);
         }
     }
 
-    private void renderGemstone(MatrixStack matrices, VertexConsumerProvider vertices, S spell, int light) {
-
-        matrices.push();
+    private void renderGemstone(PoseStack matrices, SubmitNodeCollector vertices, S spell, CasterState caster, int light) {
+        matrices.pushPose();
         float scale = 1/8F;
         matrices.scale(scale, scale, scale);
 
-        transformGemstone(matrices, vertices, spell);
-        matrices.push();
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(spell.casterState.entityState.age));
+        transformGemstone(matrices, vertices, spell, caster);
+        matrices.pushPose();
+        matrices.rotate(Axis.YP.rotationDegrees(caster.entityState.ageInTicks));
 
-        client.getItemRenderer().renderItem(spell.type.getDefaultStack(), ItemDisplayContext.FIXED, light, 0, matrices, vertices, null, 0);
-        matrices.pop();
+        spell.gemstone.submit(matrices, vertices, light, 0, CommonColors.WHITE);
+        matrices.popPose();
 
         if (spell instanceof TimedSpell timed) {
-            if (spell.casterState.gemYaw != 0) {
-                matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(spell.casterState.gemYaw));
+            if (caster.gemYaw != 0) {
+                matrices.rotate(Axis.YP.rotationDegrees(caster.gemYaw));
             }
-            renderCountdown(matrices, vertices, timed, spell.casterState.entityState.age);
+            renderCountdown(matrices, vertices, timed, caster.entityState.ageInTicks);
         }
 
-        matrices.pop();
+        matrices.popPose();
     }
 
-    protected void renderCountdown(MatrixStack matrices, VertexConsumerProvider vertices, TimedSpell spell, float tickDelta) {
+    protected void renderCountdown(PoseStack matrices, SubmitNodeCollector vertices, TimedSpell spell, float tickDelta) {
+        matrices.rotate(client.gameRenderer.mainCamera().rotation().invert(new Quaternionf()));
         float radius = 0.6F;
         float timeRemaining = spell.getTimer().getPercentTimeRemaining(tickDelta);
 
-        DrawContext context = new DrawContext(MinecraftClient.getInstance(),
-                vertices instanceof Immediate m ? m : MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers()
-        );
-        context.getMatrices().peek().getPositionMatrix().set(matrices.peek().getPositionMatrix());
-        context.getMatrices().peek().getNormalMatrix().set(matrices.peek().getNormalMatrix());
-        context.getMatrices().multiply(client.getEntityRenderDispatcher().getRotation().invert(new Quaternionf()));
-
-        DrawableUtil.drawArc(context, radius, radius + 0.3F, 0, DrawableUtil.TAU * timeRemaining,
-                ColorHelper.lerp(MathHelper.clamp(timeRemaining * 4, 0, 1), Colors.BLUE, Colors.WHITE)
-        );
+        SpellGeometry.render(matrices, vertices, net.minecraft.client.renderer.rendertype.RenderTypes.lines(), (stack, buffer) -> {
+            int segments = Math.max(3, (int)(timeRemaining * 64));
+            int color = ARGB.srgbLerp(Mth.clamp(timeRemaining * 4, 0, 1), CommonColors.BLUE, CommonColors.WHITE);
+            for (int i = 0; i < segments; i++) {
+                float a = (float)(DrawableUtil.TAU * timeRemaining * i / segments);
+                float b = (float)(DrawableUtil.TAU * timeRemaining * (i + 1) / segments);
+                float x1 = Mth.cos(a) * radius, y1 = Mth.sin(a) * radius;
+                float x2 = Mth.cos(b) * radius, y2 = Mth.sin(b) * radius;
+                buffer.addVertex(stack.last().pose(), x1, y1, 0).setColor(color).setNormal(stack.last(), 0, 0, 1);
+                buffer.addVertex(stack.last().pose(), x2, y2, 0).setColor(color).setNormal(stack.last(), 0, 0, 1);
+            }
+        });
     }
 
-    protected void transformGemstone(MatrixStack matrices, VertexConsumerProvider vertices, S spell) {
-        float y = spell.casterState.isPlacement ? 1 : -spell.casterState.entityState.height;
-        matrices.translate(0, y * 8 + MathHelper.sin(spell.casterState.entityState.age / 3F) * 0.2F, 0);
+    protected void transformGemstone(PoseStack matrices, SubmitNodeCollector vertices, S spell, CasterState caster) {
+        float y = caster.isPlacement ? 1 : -caster.entityState.boundingBoxHeight;
+        matrices.translate(0, y * 8 + Mth.sin(caster.entityState.ageInTicks / 3F) * 0.2F, 0);
     }
 
     public static class SpellRenderState {
-        public CasterState casterState;
         public UUID uuid;
         public CustomisedSpellType<?> type;
+        public final ItemStackRenderState gemstone = new ItemStackRenderState();
     }
 }

@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "traits": "water:7",
+  "items": [
+    "#c:water_buckets"
+  ]
+}

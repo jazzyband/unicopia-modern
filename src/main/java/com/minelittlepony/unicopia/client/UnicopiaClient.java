@@ -1,8 +1,6 @@
 package com.minelittlepony.unicopia.client;
 
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
-
 import com.minelittlepony.common.client.gui.element.Button;
 import com.minelittlepony.common.event.ScreenInitCallback;
 import com.minelittlepony.common.event.ScreenInitCallback.ButtonList;
@@ -26,19 +24,19 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.OpenToLanScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.HandledScreens;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.gui.screens.Screen;
+
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 public class UnicopiaClient implements ClientModInitializer {
-    private static final Text PROGRAMMER_ART_NAME = Text.translatable("resourcepack.unicopia.programmer_art");
+    private static final Component PROGRAMMER_ART_NAME = Component.translatable("resourcepack.unicopia.programmer_art");
 
     private static UnicopiaClient instance;
 
@@ -48,7 +46,7 @@ public class UnicopiaClient implements ClientModInitializer {
 
     @Nullable
     public static Pony getClientPony() {
-        return Pony.of(MinecraftClient.getInstance().player);
+        return Pony.of(Minecraft.getInstance().player);
     }
 
     public final Lerp tangentalSkyAngle = new Lerp(0, true);
@@ -57,9 +55,9 @@ public class UnicopiaClient implements ClientModInitializer {
     private ZapAppleStageStore.Stage zapAppleStage = ZapAppleStageStore.Stage.HIBERNATING;
 
     public static PlayerCamera getCamera() {
-        PlayerEntity player = MinecraftClient.getInstance().player;
+        Player player = Minecraft.getInstance().player;
 
-        if (player != null && MinecraftClient.getInstance().cameraEntity == player) {
+        if (player != null && Minecraft.getInstance().getCameraEntity() == player) {
             return Pony.of(player).getCamera();
         }
 
@@ -67,26 +65,26 @@ public class UnicopiaClient implements ClientModInitializer {
     }
 
 
-    public static Vec3d getAdjustedSoundPosition(Vec3d pos, boolean isPositionRelative) {
+    public static Vec3 getAdjustedSoundPosition(Vec3 pos, boolean isPositionRelative) {
         PlayerCamera cam = getCamera();
         if (cam == PlayerCamera.DEFAULT) {
             return pos;
         }
-        var camera = MinecraftClient.getInstance().gameRenderer.getCamera();
-        boolean firstPerson = MinecraftClient.getInstance().options.getPerspective().isFirstPerson();
-        float fovEffectScale = MinecraftClient.getInstance().options.getFovEffectScale().getValue().floatValue();
+        var camera = Minecraft.getInstance().gameRenderer.mainCamera();
+        boolean firstPerson = Minecraft.getInstance().options.getCameraType().isFirstPerson();
+        float fovEffectScale = Minecraft.getInstance().options.fovEffectScale().get().floatValue();
 
-        float roll = MathHelper.wrapDegrees(cam.calculateRoll(firstPerson, fovEffectScale));
-        if (MathHelper.approximatelyEquals(Math.abs(roll), 0)) {
+        float roll = Mth.wrapDegrees(cam.calculateRoll(firstPerson, fovEffectScale));
+        if (Mth.equal(Math.abs(roll), 0)) {
             return pos;
         }
 
-        Vec3d cameraPos = camera.getPos();
-        Vec3d relativePos = isPositionRelative ? pos : pos.subtract(cameraPos);
-        if (MathHelper.approximatelyEquals(relativePos.length(), 0)) {
+        Vec3 cameraPos = camera.position();
+        Vec3 relativePos = isPositionRelative ? pos : pos.subtract(cameraPos);
+        if (Mth.equal(relativePos.length(), 0)) {
             return pos;
         }
-        Vec3d newPos = new Vec3d(relativePos.toVector3f().rotateAxis(roll * MathHelper.RADIANS_PER_DEGREE, 0, 1, 0));
+        Vec3 newPos = new Vec3(relativePos.toVector3f().rotateAxis(roll * Mth.DEG_TO_RAD, 0, 1, 0));
         if (!isPositionRelative) {
             newPos = newPos.add(cameraPos);
         }
@@ -96,7 +94,7 @@ public class UnicopiaClient implements ClientModInitializer {
 
     public static Race getPreferredRace() {
         if (!Unicopia.getConfig().ignoreMineLP.get()
-                && MinecraftClient.getInstance().player != null) {
+                && Minecraft.getInstance().player != null) {
             Race race = MineLPDelegate.getInstance().getPlayerPonyRace();
 
             if (race.isEquine()) {
@@ -119,17 +117,15 @@ public class UnicopiaClient implements ClientModInitializer {
         return zapAppleStage;
     }
 
-    private float getSkyAngleDelta(float tickDelta) {
-        if (MinecraftClient.getInstance().world == null) {
+    public float getSkyAngleDelta(float tickDelta) {
+        if (Minecraft.getInstance().level == null) {
             return 0;
         }
-        float skyAngle = MinecraftClient.getInstance().world.getSkyAngle(tickDelta);
+        float skyAngle = (Minecraft.getInstance().level.clockManager().getInstance(
+                Minecraft.getInstance().level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_CLOCK)
+                        .getOrThrow(net.minecraft.world.clock.WorldClocks.OVERWORLD)).totalTicks() + tickDelta) / 24000F;
         this.skyAngle.update(skyAngle, 200);
         return this.skyAngle.getValue() - skyAngle;
-    }
-
-    public Quaternionf getSkyRotation(float tickDelta) {
-        return new Quaternionf().rotationXYZ(getSkyAngleDelta(tickDelta), tangentalSkyAngle.getValue(), 0);
     }
 
     @Override
@@ -140,63 +136,34 @@ public class UnicopiaClient implements ClientModInitializer {
         KeyBindingsHandler.bootstrap();
         URenderers.bootstrap();
 
-        HandledScreens.register(UScreenHandlers.SPELL_BOOK, SpellbookScreen::new);
-        HandledScreens.register(UScreenHandlers.SHAPING_BENCH, ShapingBenchScreen::new);
+        MenuScreens.register(UScreenHandlers.SPELL_BOOK, SpellbookScreen::new);
+        MenuScreens.register(UScreenHandlers.SHAPING_BENCH, ShapingBenchScreen::new);
 
         Unicopia.getConfig().skinFeatures.onChanged(features -> {
-            Pony pony = Pony.of(MinecraftClient.getInstance().player);
+            Pony pony = Pony.of(Minecraft.getInstance().player);
             if (pony != null) {
                 pony.setSkinFeatures(features);
             }
         });
         Unicopia.getConfig().onChangedExternally(config -> {
-            Pony pony = Pony.of(MinecraftClient.getInstance().player);
+            Pony pony = Pony.of(Minecraft.getInstance().player);
             if (pony != null) {
                 pony.setSkinFeatures(Unicopia.getConfig().skinFeatures.get());
             }
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
-        ClientTickEvents.END_WORLD_TICK.register(this::onWorldTick);
-        ScreenInitCallback.EVENT.register(this::onScreenInit);
 
         FabricLoader.getInstance().getModContainer("unicopia").ifPresent(container -> {
             ResourceManagerHelper.registerBuiltinResourcePack(Unicopia.id("unicopia_programmer_art"), container, PROGRAMMER_ART_NAME, ResourcePackActivationType.NORMAL);
         });
 
-        ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(SpellEffectsRenderDispatcher.INSTANCE);
+        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(SpellEffectsRenderDispatcher.INSTANCE);
     }
 
-    private void onTick(MinecraftClient client) {
+    private void onTick(Minecraft client) {
         KeyBindingsHandler.INSTANCE.tick(client);
         UHud.INSTANCE.tick();
-    }
-
-    private void onWorldTick(ClientWorld world) {
-        /*BlockPos pos = MinecraftClient.getInstance().getCameraEntity().getBlockPos();
-        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickDelta(false);
-
-        Float targetRainGradient = ((WeatherAccess)world).isInRangeOfStorm(pos) ? (Float)1F : ((WeatherAccess)world).isBelowCloudLayer(pos) ? null : (Float)0F;
-        Float targetThunderGradient = ((WeatherAccess)world).isInRangeOfStorm(pos) ? (Float)1F : null;
-
-        ((WeatherAccess)world).setWeatherOverride(null, null);
-        rainGradient.update(targetRainGradient == null ? world.getRainGradient(tickDelta) : targetRainGradient, 2000);
-
-        ((WeatherAccess)world).setWeatherOverride(1F, null);
-        thunderGradient.update(targetThunderGradient == null ? world.getThunderGradient(tickDelta) : targetThunderGradient, 2000);
-
-        ((WeatherAccess)world).setWeatherOverride(
-                rainGradient.isFinished() ? targetRainGradient : (Float)rainGradient.getValue(),
-                thunderGradient.isFinished() ? targetThunderGradient : (Float)thunderGradient.getValue()
-        );*/
-    }
-
-    private void onScreenInit(Screen screen, ButtonList buttons) {
-        if (screen instanceof OpenToLanScreen) {
-            buttons.addButton(new Button(screen.width / 2 - 155, 130, 150, 20))
-                    .onClick(b -> MinecraftClient.getInstance().setScreen(new LanSettingsScreen(screen)))
-                    .getStyle().setText(Text.translatable("unicopia.options.title"));
-        }
     }
 
 }

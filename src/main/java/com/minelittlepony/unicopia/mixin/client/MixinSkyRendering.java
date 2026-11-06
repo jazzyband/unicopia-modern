@@ -7,19 +7,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import com.minelittlepony.unicopia.client.UnicopiaClient;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SkyRenderer;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.SkyRendering;
-import net.minecraft.client.util.math.MatrixStack;
-
-@Mixin(value = SkyRendering.class, priority = 1001)
+@Mixin(value = SkyRenderer.class, priority = 1001)
 abstract class MixinSkyRendering {
-    @Inject(method = "renderCelestialBodies", at = @At(
+    @Inject(method = "renderSunMoonAndStars", at = @At(
         value = "INVOKE",
-        target = "net/minecraft/client/util/math/MatrixStack.multiply(Lorg/joml/Quaternionfc;)V",
-        ordinal = 0
+        target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V",
+        ordinal = 0,
+        shift = At.Shift.AFTER
     ))
-    private void onRenderCelestialBodies(CallbackInfo info, @Local(argsOnly = true) MatrixStack matrices) {
-        matrices.multiply(UnicopiaClient.getInstance().getSkyRotation(MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false)));
+    private void onRenderCelestialBodies(CallbackInfo info, @Local(argsOnly = true) PoseStack matrices) {
+        matrices.rotate(Axis.XP.rotationDegrees(UnicopiaClient.getInstance().getSkyAngleDelta(Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false))));
+        matrices.rotate(Axis.YP.rotationDegrees(UnicopiaClient.getInstance().tangentalSkyAngle.getValue()));
     }
 }

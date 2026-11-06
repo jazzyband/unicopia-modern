@@ -4,34 +4,33 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import com.minelittlepony.unicopia.particle.OrientedBillboardParticleEffect;
-
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.*;
+import com.mojang.math.Axis;
+import net.minecraft.client.Camera;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 public abstract class OrientedBillboardParticle extends AbstractBillboardParticle {
 
     protected boolean fixed;
-    private Quaternionf rotation;
+    protected Quaternionf rotation = new Quaternionf(0, 0, 0, 1);
 
-    public OrientedBillboardParticle(OrientedBillboardParticleEffect effect, ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+    public OrientedBillboardParticle(OrientedBillboardParticleEffect effect, ClientLevel world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
         super(world, x, y, z, velocityX, velocityY, velocityZ);
 
         fixed = effect.fixed();
-        rotation = fixed ? new Quaternionf().rotationYXZ(
-                effect.pitch() * MathHelper.RADIANS_PER_DEGREE,
-                (180 - effect.yaw()) * MathHelper.RADIANS_PER_DEGREE,
-                0
-        ) : new Quaternionf();
+        if (fixed) {
+            rotation.mul(Axis.YP.rotationDegrees(effect.pitch()));
+            rotation.mul(Axis.XP.rotationDegrees(180 - effect.yaw()));
+        }
     }
 
     @Override
-    public void render(VertexConsumer drawer, Camera camera, float tickDelta) {
+    public void submitCustomGeometry(SubmitNodeCollector collector, Camera camera, float tickDelta) {
         if (!fixed) {
-            rotation = camera.getRotation();
+            rotation = camera.rotation();
         }
-        super.render(drawer, camera, tickDelta);
+        super.submitCustomGeometry(collector, camera, tickDelta);
     }
 
     @Override
@@ -51,7 +50,7 @@ public abstract class OrientedBillboardParticle extends AbstractBillboardParticl
            corner.add(x, y, z);
         }
 
-        float alpha = this.alpha * (1 - ((float)age / maxAge));
+        float alpha = this.alpha * (1 - ((float)age / lifetime));
 
         renderQuad(te, corners, alpha, tickDelta);
     }

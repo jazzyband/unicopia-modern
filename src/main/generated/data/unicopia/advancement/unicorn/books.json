@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:unicorn/unicorn_route",
+  "criteria": {
+    "has_spellbook": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:spellbook"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.books.description"
+    },
+    "icon": {
+      "id": "unicopia:spellbook"
+    },
+    "title": {
+      "translate": "advancements.unicopia.books.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_spellbook"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

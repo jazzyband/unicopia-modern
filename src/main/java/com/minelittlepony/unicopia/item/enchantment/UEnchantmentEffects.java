@@ -2,10 +2,9 @@ package com.minelittlepony.unicopia.item.enchantment;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.mojang.serialization.MapCodec;
-
-import net.minecraft.enchantment.effect.EnchantmentEntityEffect;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.enchantment.effects.EnchantmentEntityEffect;
 
 public interface UEnchantmentEffects {
     static void bootstrap() {
@@ -16,6 +15,6 @@ public interface UEnchantmentEffects {
     }
 
     private static void register(String name, MapCodec<? extends EnchantmentEntityEffect> codec) {
-        Registry.register(Registries.ENCHANTMENT_ENTITY_EFFECT_TYPE, Unicopia.id(name), codec);
+        Registry.register(BuiltInRegistries.ENCHANTMENT_ENTITY_EFFECT_TYPE, Unicopia.id(name), codec);
     }
 }

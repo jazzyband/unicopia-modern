@@ -9,15 +9,15 @@ import com.minelittlepony.unicopia.item.component.Issuer;
 import io.wispforest.accessories.api.attributes.AccessoryAttributeBuilder;
 import io.wispforest.accessories.api.core.Accessory;
 import io.wispforest.accessories.api.slot.SlotReference;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.EquippableComponent;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.world.event.GameEvent;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.equipment.Equippable;
+import net.minecraft.world.level.gameevent.GameEvent;
 
 public class UnicopiaTrinket implements Accessory {
 
@@ -34,10 +34,10 @@ public class UnicopiaTrinket implements Accessory {
         }
 
         if (!(stack.getItem() instanceof ItemTracker.Trackable)) {
-            EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
-            RegistryEntry<SoundEvent> soundEvent = equippable == null ? null : equippable.equipSound();
+            Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
+            Holder<SoundEvent> soundEvent = equippable == null ? null : equippable.equipSound();
             if (soundEvent != null) {
-                slot.entity().emitGameEvent(GameEvent.EQUIP);
+                slot.entity().gameEvent(GameEvent.EQUIP);
                 slot.entity().playSound(soundEvent.value(), 1, 1);
             }
         }
@@ -49,10 +49,10 @@ public class UnicopiaTrinket implements Accessory {
             Living<?> l = Living.living(slot.entity());
             t.onUnequipped(l, l.getArmour().forceRemove(t));
         }
-        EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
-        RegistryEntry<SoundEvent> soundEvent = equippable == null ? null : equippable.equipSound();
+        Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
+        Holder<SoundEvent> soundEvent = equippable == null ? null : equippable.equipSound();
         if (soundEvent != null) {
-            slot.entity().emitGameEvent(GameEvent.EQUIP);
+            slot.entity().gameEvent(GameEvent.EQUIP);
             slot.entity().playSound(soundEvent.value(), 1, 1);
         }
     }
@@ -73,7 +73,7 @@ public class UnicopiaTrinket implements Accessory {
 
     @Override
     public void tick(ItemStack stack, SlotReference slot) {
-        if (slot.entity().getWorld() instanceof ServerWorld sw) {
+        if (slot.entity().level() instanceof ServerLevel sw) {
             item.inventoryTick(stack, sw, slot.entity(), null);
         }
     }
@@ -84,8 +84,8 @@ public class UnicopiaTrinket implements Accessory {
 
         if (item instanceof WearableItem wearable) {
             EquipmentSlot es = wearable.getSlotType(stack);
-            stack.get(DataComponentTypes.ATTRIBUTE_MODIFIERS).modifiers().forEach(entry -> {
-                if (entry.slot().matches(es)) {
+            stack.get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().forEach(entry -> {
+                if (entry.slot().test(es)) {
                     builder.addStackable(entry.attribute(), entry.modifier());
                 }
             });

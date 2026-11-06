@@ -1,0 +1,6 @@
+{
+  "type": "unicopia:transform_crop",
+  "consume": "minecraft:raw_gold_block",
+  "output": "unicopia:gold_root",
+  "target": "minecraft:carrots"
+}

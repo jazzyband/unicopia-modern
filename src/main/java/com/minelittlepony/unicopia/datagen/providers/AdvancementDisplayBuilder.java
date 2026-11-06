@@ -2,28 +2,28 @@ package com.minelittlepony.unicopia.datagen.providers;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
+import net.minecraft.util.Util;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.AdvancementRequirements;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.AdvancementType;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.DisplayInfo;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Unicopia;
 
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementCriterion;
-import net.minecraft.advancement.AdvancementDisplay;
-import net.minecraft.advancement.AdvancementEntry;
-import net.minecraft.advancement.AdvancementFrame;
-import net.minecraft.advancement.AdvancementRequirements;
-import net.minecraft.advancement.AdvancementRewards;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-
 public class AdvancementDisplayBuilder {
-    private static final Identifier BACKGROUND = Identifier.ofVanilla("textures/gui/advancements/backgrounds/stone.png");
+    private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("textures/gui/advancements/backgrounds/stone.png");
 
-    public static AdvancementDisplayBuilder create(ItemConvertible icon) {
-        return new AdvancementDisplayBuilder(icon, Advancement.Builder.create(), false, false, false);
+    public static AdvancementDisplayBuilder create(ItemLike icon) {
+        AdvancementDisplayBuilder builder = new AdvancementDisplayBuilder(icon, Advancement.Builder.advancement(), false, false, false);
+        builder.root = true;
+        return builder;
     }
 
     @Nullable
@@ -32,14 +32,15 @@ public class AdvancementDisplayBuilder {
     private boolean toast;
     private boolean hidden;
     private boolean announce;
-    private final ItemConvertible icon;
-    private AdvancementFrame frame = AdvancementFrame.TASK;
+    private final ItemLike icon;
+    private boolean root;
+    private AdvancementType frame = AdvancementType.TASK;
     @Nullable
     private String group;
 
     private final Advancement.Builder advancementBuilder;
 
-    AdvancementDisplayBuilder(ItemConvertible icon, Advancement.Builder advancementBuilder, boolean toast, boolean announce, boolean hidden) {
+    AdvancementDisplayBuilder(ItemLike icon, Advancement.Builder advancementBuilder, boolean toast, boolean announce, boolean hidden) {
         this.icon = icon;
         this.advancementBuilder = advancementBuilder;
         this.toast = toast;
@@ -47,7 +48,7 @@ public class AdvancementDisplayBuilder {
         this.hidden = hidden;
     }
 
-    public AdvancementDisplayBuilder frame(AdvancementFrame frame) {
+    public AdvancementDisplayBuilder frame(AdvancementType frame) {
         this.frame = frame;
         return this;
     }
@@ -92,18 +93,19 @@ public class AdvancementDisplayBuilder {
         return this;
     }
 
-    public AdvancementDisplayBuilder criterion(String name, AdvancementCriterion<?> criterion) {
-        advancementBuilder.criterion(name, criterion);
+    public AdvancementDisplayBuilder criterion(String name, Criterion<?> criterion) {
+        advancementBuilder.addCriterion(name, criterion);
         return this;
     }
 
-    public AdvancementDisplayBuilder criteriaMerger(AdvancementRequirements.CriterionMerger merger) {
-        advancementBuilder.criteriaMerger(merger);
+    public AdvancementDisplayBuilder criteriaMerger(AdvancementRequirements.Strategy merger) {
+        advancementBuilder.requirements(merger);
         return this;
     }
 
     public AdvancementDisplayBuilder parent(Identifier parent) {
-        advancementBuilder.parent(Advancement.Builder.createUntelemetered().build(parent));
+        root = false;
+        advancementBuilder.parent(Advancement.Builder.recipeAdvancement().build(parent));
         return this;
     }
 
@@ -112,33 +114,36 @@ public class AdvancementDisplayBuilder {
         return this;
     }
 
-    public Parent build(Consumer<AdvancementEntry> exporter, String name) {
+    public Parent build(Consumer<AdvancementHolder> exporter, String name) {
         Identifier id = Unicopia.id(group == null ? name : group + "/" + name);
-        String key = Util.createTranslationKey("advancements", Unicopia.id(name));
-        AdvancementEntry advancement = advancementBuilder.display(
-                icon.asItem().getDefaultStack(),
-                Text.translatable(key + ".title"),
-                Text.translatable(key + ".description"), background, frame, toast, announce, hidden)
-                .build(id);
+        String key = Util.makeDescriptionId("advancements", Unicopia.id(name));
+        Component title = Component.translatable(key + ".title");
+        Component description = Component.translatable(key + ".description");
+        if (root) {
+            advancementBuilder.rootDisplay(icon.asItem(), title, description, background, frame, toast, announce, hidden);
+        } else {
+            advancementBuilder.display(icon.asItem(), title, description, frame, toast, announce, hidden);
+        }
+        AdvancementHolder advancement = advancementBuilder.build(id);
         exporter.accept(advancement);
         return new Parent(advancement, group);
     }
 
-    public record Parent(AdvancementEntry parent, @Nullable String group) {
-        public AdvancementDisplayBuilder child(ItemConvertible icon) {
-            AdvancementDisplay display = parent.value().display().orElseThrow();
-            return new AdvancementDisplayBuilder(icon, Advancement.Builder.create().parent(parent),
-                    display.shouldShowToast(),
-                    display.shouldAnnounceToChat(),
-                    display.isHidden()
-            ).frame(display.getFrame()).background(display.getBackground().map(i -> i.id()).orElse(null)).group(group);
+    public record Parent(AdvancementHolder parent, @Nullable String group) {
+        public AdvancementDisplayBuilder child(ItemLike icon) {
+            DisplayInfo display = parent.value().display().orElseThrow();
+            return new AdvancementDisplayBuilder(icon, Advancement.Builder.advancement().parent(parent),
+                    display.showToast(),
+                    display.announceToChat(),
+                    display.hidden()
+            ).frame(display.type()).group(group);
         }
 
         public void children(Consumer<Parent> children) {
             children.accept(this);
         }
 
-        public void children(Consumer<AdvancementEntry> exporter, BiConsumer<Consumer<AdvancementEntry>, Parent> children) {
+        public void children(Consumer<AdvancementHolder> exporter, BiConsumer<Consumer<AdvancementHolder>, Parent> children) {
             children.accept(exporter, this);
         }
     }

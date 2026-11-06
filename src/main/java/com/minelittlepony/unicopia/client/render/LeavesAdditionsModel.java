@@ -7,18 +7,16 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.block.FruitBearingBlock;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelModifier;
-import net.fabricmc.fabric.api.renderer.v1.Renderer;
-import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
-import net.fabricmc.fabric.api.renderer.v1.material.MaterialFinder;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.model.BlockModelPart;
-import net.minecraft.client.render.model.BlockStateModel;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.BlockRenderView;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.block.state.BlockState;
 
 public final class LeavesAdditionsModel implements BlockStateModel {
     public static void bootstrap() {
@@ -39,23 +37,27 @@ public final class LeavesAdditionsModel implements BlockStateModel {
     }
 
     @Override
-    public void emitQuads(QuadEmitter emitter, BlockRenderView blockView, BlockPos pos, BlockState state, Random random, Predicate<@Nullable Direction> cullTest) {
-        MaterialFinder finder = Renderer.get().materialFinder();
+    public void emitQuads(QuadEmitter emitter, BlockAndTintGetter blockView, BlockPos pos, BlockState state, RandomSource random, Predicate<@Nullable Direction> cullTest) {
         emitter.pushTransform(quad -> {
-            quad.material(finder.copyFrom(quad.material()).blendMode(BlendMode.CUTOUT).find());
+            quad.chunkLayer(ChunkSectionLayer.CUTOUT);
             return true;
         });
-        BlockStateModel.super.emitQuads(emitter, blockView, pos, state, random, cullTest);
+        wrapped.emitQuads(emitter, blockView, pos, state, random, cullTest);
         emitter.popTransform();
     }
 
     @Override
-    public void addParts(Random random, List<BlockModelPart> parts) {
-        wrapped.addParts(random, parts);
+    public void collectParts(RandomSource random, List<BlockStateModelPart> parts) {
+        wrapped.collectParts(random, parts);
     }
 
     @Override
-    public Sprite particleSprite() {
-        return wrapped.particleSprite();
+    public Material.Baked particleMaterial() {
+        return wrapped.particleMaterial();
+    }
+
+    @Override
+    public int materialFlags() {
+        return wrapped.materialFlags();
     }
 }

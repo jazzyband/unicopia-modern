@@ -1,18 +1,17 @@
 package com.minelittlepony.unicopia.item;
 
 import com.minelittlepony.unicopia.Unicopia;
-
-import net.minecraft.block.jukebox.JukeboxSong;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.JukeboxSong;
 
 public interface UJukeboxSongs {
-    RegistryKey<JukeboxSong> CRUSADE = of("crusade");
-    RegistryKey<JukeboxSong> PET = of("pet");
-    RegistryKey<JukeboxSong> POPULAR = of("popular");
-    RegistryKey<JukeboxSong> FUNK = of("funk");
+    ResourceKey<JukeboxSong> CRUSADE = of("crusade");
+    ResourceKey<JukeboxSong> PET = of("pet");
+    ResourceKey<JukeboxSong> POPULAR = of("popular");
+    ResourceKey<JukeboxSong> FUNK = of("funk");
 
-    private static RegistryKey<JukeboxSong> of(String name) {
-        return RegistryKey.of(RegistryKeys.JUKEBOX_SONG, Unicopia.id(name));
+    private static ResourceKey<JukeboxSong> of(String name) {
+        return ResourceKey.create(Registries.JUKEBOX_SONG, Unicopia.id(name));
     }
 }

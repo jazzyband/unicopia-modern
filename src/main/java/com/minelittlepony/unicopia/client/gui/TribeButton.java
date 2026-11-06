@@ -4,12 +4,13 @@ import com.minelittlepony.common.client.gui.element.Button;
 import com.minelittlepony.common.client.gui.sprite.ISprite;
 import com.minelittlepony.common.client.gui.sprite.TextureSprite;
 import com.minelittlepony.unicopia.Race;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 
 public class TribeButton extends Button {
 
@@ -25,16 +26,16 @@ public class TribeButton extends Button {
     }
 
     @Override
-    public void renderWidget(DrawContext context, int mouseX, int mouseY, float partialTicks) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+    public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+        Minecraft mc = Minecraft.getInstance();
 
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, getX()  - 3, getY() - 13, 0, 0, 76, 69, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
-        if (isSelected()) {
-            context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, getX()  - 4, getY() - 14, 76, 0, 78, 71, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, getX()  - 3, getY() - 13, 0, 0, 76, 69, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        if (isHoveredOrFocused()) {
+            context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, getX()  - 4, getY() - 14, 76, 0, 78, 71, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
 
             if (isFocused() && screenWidth > 0) {
-                Identifier id = Race.REGISTRY.getId(race);
-                context.drawCenteredTextWithShadow(getFont(), Text.translatable("gui.unicopia.tribe_selection.describe." + id.getNamespace() + "." + id.getPath()), screenWidth / 2, getY() + height, 0xFFFFFFFF);
+                Identifier id = Race.REGISTRY.getKey(race);
+                context.centeredText(getFont(), Component.translatable("gui.unicopia.tribe_selection.describe." + id.getNamespace() + "." + id.getPath()), screenWidth / 2, getY() + height, 0xFFFFFFFF);
             }
         }
 
@@ -44,10 +45,11 @@ public class TribeButton extends Button {
             icon.render(context, getX(), getY(), mouseX, mouseY, partialTicks);
         }
 
-        int foreColor = getStyle().getColor();
+        int originalColor = getStyle().getColor();
+        int foreColor = originalColor;
         if (!active) {
             foreColor = 10526880;
-        } else if (isSelected()) {
+        } else if (isHoveredOrFocused()) {
             foreColor = 16777120;
         }
 
@@ -55,7 +57,9 @@ public class TribeButton extends Button {
 
         getStyle().setIcon(ISprite.EMPTY);
 
-        renderForeground(context, mc, mouseX, mouseY, foreColor | MathHelper.ceil(alpha * 255.0F) << 24);
+        getStyle().setColor(foreColor | Mth.ceil(alpha * 255.0F) << 24);
+        renderForeground(context, context.textRenderer(), mouseX, mouseY);
+        getStyle().setColor(originalColor);
 
         getStyle().setIcon(icon);
     }

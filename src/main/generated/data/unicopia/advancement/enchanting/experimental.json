@@ -1,0 +1,39 @@
+{
+  "parent": "minecraft:story/enchant_item",
+  "criteria": {
+    "enchant_with_consumption": {
+      "conditions": {
+        "item": {
+          "predicates": {
+            "minecraft:enchantments": [
+              {
+                "enchantments": "unicopia:consumption"
+              }
+            ]
+          }
+        }
+      },
+      "trigger": "minecraft:enchanted_item"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.experimental.description"
+    },
+    "icon": {
+      "id": "minecraft:netherite_scrap"
+    },
+    "title": {
+      "translate": "advancements.unicopia.experimental.title"
+    }
+  },
+  "requirements": [
+    [
+      "enchant_with_consumption"
+    ]
+  ],
+  "rewards": {
+    "experience": 120
+  },
+  "sends_telemetry_event": true
+}

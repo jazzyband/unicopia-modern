@@ -3,28 +3,27 @@ package com.minelittlepony.unicopia.particle;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.particle.ParticleTypes;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 
 public record SpiralParticleEffect(
         WeakTarget centerPoint,
         float angularVelocity,
-        ParticleEffect effect
-    ) implements ParticleEffect {
+        ParticleOptions effect
+    ) implements ParticleOptions {
     public static final MapCodec<SpiralParticleEffect> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             WeakTarget.CODEC.fieldOf("centerPoint").forGetter(SpiralParticleEffect::centerPoint),
             Codec.FLOAT.fieldOf("angularVelocity").forGetter(SpiralParticleEffect::angularVelocity),
-            ParticleTypes.TYPE_CODEC.fieldOf("effect").forGetter(SpiralParticleEffect::effect)
+            ParticleTypes.CODEC.fieldOf("effect").forGetter(SpiralParticleEffect::effect)
     ).apply(instance, SpiralParticleEffect::new));
-    public static final PacketCodec<RegistryByteBuf, SpiralParticleEffect> PACKET_CODEC = PacketCodec.tuple(
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpiralParticleEffect> PACKET_CODEC = StreamCodec.composite(
             WeakTarget.PACKET_CODEC, SpiralParticleEffect::centerPoint,
-            PacketCodecs.FLOAT, SpiralParticleEffect::angularVelocity,
-            ParticleTypes.PACKET_CODEC, SpiralParticleEffect::effect,
+            ByteBufCodecs.FLOAT, SpiralParticleEffect::angularVelocity,
+            ParticleTypes.STREAM_CODEC, SpiralParticleEffect::effect,
             SpiralParticleEffect::new
     );
 

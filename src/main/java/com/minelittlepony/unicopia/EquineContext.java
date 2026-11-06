@@ -5,11 +5,10 @@ import org.jetbrains.annotations.Nullable;
 import com.google.common.base.MoreObjects;
 import com.minelittlepony.unicopia.entity.Equine;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.block.EntityShapeContext;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemUsageContext;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
 
 public interface EquineContext {
     EquineContext ABSENT = () -> Race.UNSET;
@@ -40,17 +39,17 @@ public interface EquineContext {
         return false;
     }
 
-    static EquineContext of(ShapeContext context) {
-        if (context == ShapeContext.absent()) {
+    static EquineContext of(CollisionContext context) {
+        if (context == CollisionContext.empty()) {
             return InteractionManager.getInstance().getEquineContext();
         }
-        if (context instanceof EntityShapeContext esc) {
+        if (context instanceof EntityCollisionContext esc) {
             return of(esc.getEntity());
         }
         return ABSENT;
     }
 
-    static EquineContext of(ItemUsageContext context) {
+    static EquineContext of(UseOnContext context) {
         return MoreObjects.firstNonNull(Pony.of(context.getPlayer()), ABSENT);
     }
 

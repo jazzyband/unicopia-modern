@@ -5,10 +5,9 @@ import com.google.common.collect.Interners;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 
 public record Range(int min, int max) {
     private static final Interner<Range> INTERNER = Interners.newWeakInterner();
@@ -19,9 +18,9 @@ public record Range(int min, int max) {
                 Codec.INT.fieldOf("max").forGetter(Range::max)
             ).apply(instance, Range::of))
     ).xmap(either -> either.left().or(either::right).get(), l -> Either.right(l));
-    public static final PacketCodec<PacketByteBuf, Range> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.INTEGER, Range::min,
-            PacketCodecs.INTEGER, Range::max,
+    public static final StreamCodec<FriendlyByteBuf, Range> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.INT, Range::min,
+            ByteBufCodecs.INT, Range::max,
             Range::of
     );
 

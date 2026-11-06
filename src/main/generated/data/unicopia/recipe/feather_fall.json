@@ -1,0 +1,31 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:shield"
+    }
+  ],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:spell_traits": {
+        "unicopia:air": 0.1,
+        "unicopia:focus": 80.0,
+        "unicopia:kindness": 90.0,
+        "unicopia:order": 15.0,
+        "unicopia:power": 10.0
+      },
+      "unicopia:stored_spell": "unicopia:feather_fall"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:chaos": 4.0,
+    "unicopia:generosity": 10.0,
+    "unicopia:knowledge": 20.0,
+    "unicopia:life": 10.0
+  }
+}

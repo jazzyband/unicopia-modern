@@ -1,13 +1,11 @@
 package com.minelittlepony.unicopia.ability.data.tree;
 
 import java.util.Optional;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import com.minelittlepony.unicopia.util.PosHelper;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
 
 public class TreeTraverser {
     private static final Direction[] WIDE_DIRS = new Direction[] {
@@ -25,27 +23,27 @@ public class TreeTraverser {
         this.type = type;
     }
 
-    public PosHelper.PositionRecord collectLogs(World w, BlockPos pos) {
-        traverse(w, pos.mutableCopy());
+    public PosHelper.PositionRecord collectLogs(Level w, BlockPos pos) {
+        traverse(w, pos.mutable());
         return logs;
     }
 
-    public PosHelper.PositionRecord collectLeaves(World w, BlockPos pos) {
+    public PosHelper.PositionRecord collectLeaves(Level w, BlockPos pos) {
         traverse(w, findCanopy(w, pos));
         return leaves;
     }
 
-    public void traverse(World w, BlockPos pos) {
-        traverse(w, pos.mutableCopy());
+    public void traverse(Level w, BlockPos pos) {
+        traverse(w, pos.mutable());
     }
 
-    private void traverse(World w, BlockPos.Mutable pos) {
+    private void traverse(Level w, BlockPos.MutableBlockPos pos) {
         logs = new PosHelper.PositionRecord();
         leaves = new PosHelper.PositionRecord();
         innerTraverse(w, pos, 0);
     }
 
-    private void innerTraverse(World w, BlockPos.Mutable pos, int recurseLevel) {
+    private void innerTraverse(Level w, BlockPos.MutableBlockPos pos, int recurseLevel) {
         if (recurseLevel >= maxRecurse || logs.hasVisited(pos) || leaves.hasVisited(pos)) {
             return;
         }
@@ -69,8 +67,8 @@ public class TreeTraverser {
     /**
      * Locates the top of the tree's trunk. Usually the point where wood meets leaves.
      */
-    private BlockPos.Mutable findCanopy(World w, BlockPos pos) {
-        BlockPos.Mutable mutable = pos.mutableCopy();
+    private BlockPos.MutableBlockPos findCanopy(Level w, BlockPos pos) {
+        BlockPos.MutableBlockPos mutable = pos.mutable();
         while (type.isLog(w.getBlockState(mutable.move(Direction.UP)))) {
             if (PosHelper.fastAny(mutable, p -> type.isLeaves(w.getBlockState(p)), PosHelper.HORIZONTAL)) {
                 break;
@@ -79,12 +77,12 @@ public class TreeTraverser {
         return mutable.move(Direction.DOWN);
     }
 
-    public Optional<BlockPos> findBase(World w, BlockPos pos) {
+    public Optional<BlockPos> findBase(Level w, BlockPos pos) {
         logs.clear();
-        return findBase(w, pos.mutableCopy());
+        return findBase(w, pos.mutable());
     }
 
-    private Optional<BlockPos> findBase(World w, BlockPos.Mutable pos) {
+    private Optional<BlockPos> findBase(Level w, BlockPos.MutableBlockPos pos) {
         if (logs.hasVisited(pos) || !type.isLog(w.getBlockState(pos))) {
             return Optional.empty();
         }
@@ -100,6 +98,6 @@ public class TreeTraverser {
                     .ifPresent(pos::set), PosHelper.HORIZONTAL);
         }
 
-        return Optional.of(logs.visit(pos).toImmutable());
+        return Optional.of(logs.visit(pos).immutable());
     }
 }

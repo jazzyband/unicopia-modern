@@ -8,14 +8,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
-
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.network.track.TrackableObject.Status;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.registry.DynamicRegistryManager;
 
 public class ObjectTracker<T extends TrackableObject<T>> {
     private final Map<UUID, T> trackedObjects = new Object2ObjectOpenHashMap<>();
@@ -85,7 +84,7 @@ public class ObjectTracker<T extends TrackableObject<T>> {
         destination.quickAccess = Map.copyOf(destination.trackedObjects);
     }
 
-    synchronized Optional<MsgTrackedValues.TrackerObjects> getInitialPairs(DynamicRegistryManager lookup) {
+    synchronized Optional<MsgTrackedValues.TrackerObjects> getInitialPairs(RegistryAccess lookup) {
         if (trackedObjects.isEmpty()) {
             return Optional.empty();
         }
@@ -100,7 +99,7 @@ public class ObjectTracker<T extends TrackableObject<T>> {
         return Optional.of(new MsgTrackedValues.TrackerObjects(id, Set.of(), updates));
     }
 
-    synchronized Optional<MsgTrackedValues.TrackerObjects> getDirtyPairs(DynamicRegistryManager lookup) {
+    synchronized Optional<MsgTrackedValues.TrackerObjects> getDirtyPairs(RegistryAccess lookup) {
         if (!trackedObjects.isEmpty()) {
             Map<UUID, byte[]> updates = new HashMap<>();
             Set<UUID> removedTrackableObjects = new HashSet<>();
@@ -125,7 +124,7 @@ public class ObjectTracker<T extends TrackableObject<T>> {
         return Optional.empty();
     }
 
-    synchronized void load(MsgTrackedValues.TrackerObjects objects, DynamicRegistryManager lookup) {
+    synchronized void load(MsgTrackedValues.TrackerObjects objects, RegistryAccess lookup) {
         objects.removedValues().forEach(removedId -> {
             T o = trackedObjects.remove(removedId);
             if (o != null) {
@@ -139,7 +138,7 @@ public class ObjectTracker<T extends TrackableObject<T>> {
                 trackedObjects.put(id, o);
             }
 
-            o.read(new RegistryByteBuf(Unpooled.wrappedBuffer(data), lookup));
+            o.read(new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(data), lookup));
         });
         quickAccess = Map.copyOf(trackedObjects);
     }

@@ -9,72 +9,70 @@ import com.minelittlepony.unicopia.entity.mob.UEntities;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 import com.minelittlepony.unicopia.server.world.Altar;
 import com.minelittlepony.unicopia.util.Dispensable;
-
-import net.minecraft.block.DispenserBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPointer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Position;
+import net.minecraft.core.dispenser.BlockSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.phys.Vec3;
 
 public class SpellbookItem extends Item implements Dispensable {
-    public SpellbookItem(Settings settings) {
+    public SpellbookItem(Properties settings) {
         super(settings);
         DispenserBlock.registerBehavior(this, createDispenserBehaviour());
     }
 
     @Override
-    public ActionResult dispenseStack(BlockPointer pointer, ItemStack stack) {
-        Direction facing = pointer.state().get(DispenserBlock.FACING);
-        Position pos = DispenserBlock.getOutputLocation(pointer);
+    public InteractionResult dispenseStack(BlockSource pointer, ItemStack stack) {
+        Direction facing = pointer.state().getValue(DispenserBlock.FACING);
+        Position pos = DispenserBlock.getDispensePosition(pointer);
 
-        float yaw = facing.getOpposite().getPositiveHorizontalDegrees();
-        if (placeBook(stack, pointer.world(), pos, yaw, null)) {
-            stack.decrement(1);
+        float yaw = facing.getOpposite().toYRot();
+        if (placeBook(stack, pointer.level(), pos, yaw, null)) {
+            stack.shrink(1);
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
 
-        return ActionResult.FAIL;
+        return InteractionResult.FAIL;
     }
 
     @Override
-    public ActionResult useOnBlock(ItemUsageContext context) {
+    public InteractionResult useOn(UseOnContext context) {
 
         @Nullable
-        PlayerEntity player = context.getPlayer();
+        Player player = context.getPlayer();
 
-        if (!context.getWorld().isClient) {
-            BlockPos pos = context.getBlockPos().offset(context.getSide());
+        if (!context.getLevel().isClientSide()) {
+            BlockPos pos = context.getClickedPos().relative(context.getClickedFace());
 
-            if (placeBook(context.getStack(), context.getWorld(), Vec3d.ofBottomCenter(pos), context.getPlayerYaw() + 180, player)) {
-                if (!player.getAbilities().creativeMode) {
-                    player.getStackInHand(context.getHand()).decrement(1);
+            if (placeBook(context.getItemInHand(), context.getLevel(), Vec3.atBottomCenterOf(pos), context.getRotation() + 180, player)) {
+                if (!player.getAbilities().instabuild) {
+                    player.getItemInHand(context.getHand()).shrink(1);
                 }
 
-                return ActionResult.SUCCESS_SERVER;
+                return InteractionResult.SUCCESS;
             }
         }
-
-        return ActionResult.FAIL;
+        return InteractionResult.PASS;
     }
 
-    private static boolean placeBook(ItemStack stack, World world, Position pos, float yaw, @Nullable Entity placer) {
-        SpellbookEntity book = UEntities.SPELLBOOK.create(world, SpawnReason.MOB_SUMMONED);
+    private static boolean placeBook(ItemStack stack, Level world, Position pos, float yaw, @Nullable Entity placer) {
+        SpellbookEntity book = UEntities.SPELLBOOK.create(world, EntitySpawnReason.MOB_SUMMONED);
 
-        book.refreshPositionAndAngles(pos.getX(), pos.getY(), pos.getZ(), 0, 0);
-        book.setHeadYaw(yaw);
-        book.setYaw(yaw);
+        book.snapTo(pos.x(), pos.y(), pos.z(), 0, 0);
+        book.setYHeadRot(yaw);
+        book.setYRot(yaw);
 
-        if (!book.canSpawn(world)) {
+        if (!book.checkSpawnObstruction(world)) {
             return false;
         }
 
@@ -84,9 +82,9 @@ public class SpellbookItem extends Item implements Dispensable {
             book.setSpellbookState(state);
         }
 
-        world.spawnEntity(book);
+        world.addFreshEntity(book);
 
-        Altar.locateAltar(world, book.getBlockPos()).ifPresent(altar -> {
+        Altar.locateAltar(world, book.blockPosition()).ifPresent(altar -> {
             book.setAltar(altar);
             altar.generateDecorations(world);
             UCriteria.LIGHT_ALTAR.trigger(placer);

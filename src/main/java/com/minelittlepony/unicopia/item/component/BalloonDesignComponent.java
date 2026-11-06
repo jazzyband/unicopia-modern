@@ -1,31 +1,30 @@
 package com.minelittlepony.unicopia.item.component;
 
 import java.util.function.Consumer;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponentGetter;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipProvider;
 import com.minelittlepony.unicopia.entity.mob.AirBalloonEntity;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.item.ItemStack;
-import net.minecraft.component.ComponentsAccess;
-import net.minecraft.item.Item.TooltipContext;
-import net.minecraft.item.tooltip.TooltipAppender;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 
-public record BalloonDesignComponent(AirBalloonEntity.BalloonDesign design, boolean showInTooltip) implements TooltipAppender {
+public record BalloonDesignComponent(AirBalloonEntity.BalloonDesign design, boolean showInTooltip) implements TooltipProvider {
     public static final BalloonDesignComponent DEFAULT = new BalloonDesignComponent(AirBalloonEntity.BalloonDesign.NONE, false);
     public static final Codec<BalloonDesignComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             AirBalloonEntity.BalloonDesign.CODEC.fieldOf("design").forGetter(BalloonDesignComponent::design),
             Codec.BOOL.fieldOf("show_in_tooltip").forGetter(BalloonDesignComponent::showInTooltip)
     ).apply(instance, BalloonDesignComponent::new));
-    public static final PacketCodec<ByteBuf, BalloonDesignComponent> PACKET_CODEC = PacketCodec.tuple(
+    public static final StreamCodec<ByteBuf, BalloonDesignComponent> PACKET_CODEC = StreamCodec.composite(
             AirBalloonEntity.BalloonDesign.PACKET_CODEC, BalloonDesignComponent::design,
-            PacketCodecs.BOOLEAN, BalloonDesignComponent::showInTooltip,
+            ByteBufCodecs.BOOL, BalloonDesignComponent::showInTooltip,
             BalloonDesignComponent::new
     );
 
@@ -39,9 +38,9 @@ public record BalloonDesignComponent(AirBalloonEntity.BalloonDesign design, bool
     }
 
     @Override
-    public void appendTooltip(TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {
+    public void addToTooltip(TooltipContext context, Consumer<Component> textConsumer, TooltipFlag type, DataComponentGetter components) {
         if (showInTooltip() && design != AirBalloonEntity.BalloonDesign.NONE) {
-            textConsumer.accept(Text.literal(design().name()).formatted(Formatting.LIGHT_PURPLE));
+            textConsumer.accept(Component.literal(design().name()).withStyle(ChatFormatting.LIGHT_PURPLE));
         }
     }
 }

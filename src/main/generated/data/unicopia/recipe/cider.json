@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "unicopia:burned_juice",
+    "unicopia:mug",
+    "#unicopia:fresh_apples"
+  ],
+  "result": {
+    "id": "unicopia:cider"
+  }
+}

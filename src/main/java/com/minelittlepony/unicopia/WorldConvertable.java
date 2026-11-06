@@ -1,31 +1,31 @@
 package com.minelittlepony.unicopia;
 
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.World;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 
 public interface WorldConvertable {
     /**
      * Gets the minecraft world
      */
-    World asWorld();
+    Level asWorld();
 
     /**
      * Gets the minecraft server world
      */
-    default ServerWorld asServerWorld() {
-        return (ServerWorld)asWorld();
+    default ServerLevel asServerWorld() {
+        return (ServerLevel)asWorld();
     }
 
     /**
      * Returns true if we're executing on the client.
      */
     default boolean isClient() {
-        return asWorld().isClient();
+        return asWorld().isClientSide();
     }
 
-    default <T> RegistryEntry<T> entryFor(RegistryKey<T> key) {
-        return asWorld().getRegistryManager().getOrThrow(key.getRegistryRef()).getEntry(key.getValue()).orElseThrow();
+    default <T> Holder<T> entryFor(ResourceKey<T> key) {
+        return asWorld().registryAccess().lookupOrThrow(key.registryKey()).get(key.identifier()).orElseThrow();
     }
 }

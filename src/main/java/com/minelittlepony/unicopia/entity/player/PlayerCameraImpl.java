@@ -4,8 +4,7 @@ import com.minelittlepony.common.util.animation.MotionCompositor;
 import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 import com.minelittlepony.unicopia.ability.magic.spell.AbstractDisguiseSpell;
 import com.minelittlepony.unicopia.client.render.spell.DarkVortexSpellRenderer;
-
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 public class PlayerCameraImpl extends MotionCompositor implements PlayerCamera {
 
@@ -24,11 +23,11 @@ public class PlayerCameraImpl extends MotionCompositor implements PlayerCamera {
     }
 
     private double getMotionRoll() {
-        if (!player.getMotion().isFlying() || player.asEntity().hasVehicle() || player.asEntity().isOnGround()) {
+        if (!player.getMotion().isFlying() || player.asEntity().isPassenger() || player.asEntity().onGround()) {
             return 0;
         }
 
-        Vec3d vel = player.asEntity().getVelocity();
+        Vec3 vel = player.asEntity().getDeltaMovement();
         return calculateRoll(player.asEntity(), vel.x, vel.y, vel.z);
     }
 
@@ -61,7 +60,7 @@ public class PlayerCameraImpl extends MotionCompositor implements PlayerCamera {
 
     @Override
     public float calculateFieldOfView(float fov, boolean firstPerson, float fovEffectScale) {
-        if (player.asEntity().isUsingItem() && firstPerson && player.asEntity().isUsingSpyglass()) {
+        if (player.asEntity().isUsingItem() && firstPerson && player.asEntity().isScoping()) {
             return fov;
         }
         fov += (player.getMagicalReserves().getExertion().get() / 5F) * fovEffectScale;
@@ -77,7 +76,7 @@ public class PlayerCameraImpl extends MotionCompositor implements PlayerCamera {
             return 0;
         }
 
-        float energyAddition = (player.asWorld().random.nextInt(maxE) - maxE/2) / 100F;
+        float energyAddition = (player.asWorld().getRandom().nextInt(maxE) - maxE/2) / 100F;
 
         if (Math.abs(energyAddition) <= 0.001) {
             return 0;

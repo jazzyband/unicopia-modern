@@ -2,65 +2,47 @@ package com.minelittlepony.unicopia.entity.collision;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.EntityGetter;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.util.function.BooleanBiFunction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.EntityView;
-
 public class EntityCollisions {
 
-    public static Map<Box, List<Entity>> getCollidingEntities(Entity entity, Stream<Box> boundingBoxes, Predicate<? super Entity> predicate) {
-        return boundingBoxes.collect(Collectors.toMap(Function.identity(), box -> {
-            return entity.getWorld().getOtherEntities(entity, box
-                    .expand(0.001)
-                    .stretch(entity.getVelocity())
-                    .stretch(entity.getVelocity().multiply(-1)), predicate)
-                    .stream()
-                    .distinct()
-                    .toList();
-        }));
-    }
-
-    public static void getCollissionShapes(@Nullable Entity entity, ShapeContext context, Consumer<VoxelShape> output) {
+    public static void getCollissionShapes(@Nullable Entity entity, CollisionContext context, Consumer<VoxelShape> output) {
         if (entity == null) {
             return;
         }
 
-        if (entity.isCollidable()) {
-            output.accept(VoxelShapes.cuboid(entity.getBoundingBox()));
+        if (entity.canBeCollidedWith(context instanceof EntityCollisionContext collision ? collision.getEntity() : null)) {
+            output.accept(Shapes.create(entity.getBoundingBox()));
             if (entity instanceof ComplexCollidable collidable) {
                 collidable.getCollissionShapes(context, output);
             }
         } else if (entity instanceof FallingBlockEntity) {
-            BlockPos pos = entity.getBlockPos();
+            BlockPos pos = entity.blockPosition();
             output.accept(((FallingBlockEntity) entity).getBlockState()
-                    .getCollisionShape(entity.getWorld(), entity.getBlockPos(), context)
-                    .offset(pos.getX(), pos.getY(), pos.getZ())
+                    .getCollisionShape(entity.level(), entity.blockPosition(), context)
+                    .move(pos.getX(), pos.getY(), pos.getZ())
             );
         }
     }
 
-    public static List<VoxelShape> getColissonShapes(@Nullable Entity entity, EntityView world, Box box) {
-        ShapeContext ctx = entity == null ? ShapeContext.absent() : ShapeContext.of(entity);
+    public static List<VoxelShape> getColissonShapes(@Nullable Entity entity, EntityGetter world, AABB box) {
+        CollisionContext ctx = entity == null ? CollisionContext.empty() : CollisionContext.of(entity);
         return collectCollisionBoxes(box, collector -> {
-            world.getOtherEntities(entity, box.expand(50), e -> {
+            world.getEntities(entity, box.inflate(50), e -> {
                 Caster.of(e).flatMap(c -> c.getSpellSlot().get(SpellPredicate.IS_DISGUISE)).ifPresent(p -> {
                     p.getAppearance().getCollissionShapes(ctx, collector);
                 });
@@ -72,11 +54,11 @@ public class EntityCollisions {
         });
     }
 
-    static List<VoxelShape> collectCollisionBoxes(Box box, Consumer<Consumer<VoxelShape>> generator) {
+    static List<VoxelShape> collectCollisionBoxes(AABB box, Consumer<Consumer<VoxelShape>> generator) {
         List<VoxelShape> shapes = new ArrayList<>();
-        VoxelShape entityShape = VoxelShapes.cuboid(box.expand(1.0E-6D));
+        VoxelShape entityShape = Shapes.create(box.inflate(1.0E-6D));
         generator.accept(shape -> {
-            if (!shape.isEmpty() && VoxelShapes.matchesAnywhere(shape, entityShape, BooleanBiFunction.AND)) {
+            if (!shape.isEmpty() && Shapes.joinIsNotEmpty(shape, entityShape, BooleanOp.AND)) {
                 shapes.add(shape);
             }
         });
@@ -84,6 +66,6 @@ public class EntityCollisions {
     }
 
     public interface ComplexCollidable {
-        void getCollissionShapes(ShapeContext context, Consumer<VoxelShape> output);
+        void getCollissionShapes(CollisionContext context, Consumer<VoxelShape> output);
     }
 }

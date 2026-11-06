@@ -2,7 +2,25 @@ package com.minelittlepony.unicopia.client.render.entity.state;
 
 import java.util.List;
 import java.util.stream.Stream;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.component.DyedItemColor;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -35,25 +53,7 @@ import com.minelittlepony.unicopia.item.FriendshipBraceletItem;
 import com.minelittlepony.unicopia.item.GlassesItem;
 import com.minelittlepony.unicopia.item.GlowableItem;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.Perspective;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.type.DyedColorComponent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 public class CasterState {
     public boolean present;
@@ -64,7 +64,7 @@ public class CasterState {
     public boolean ponified;
     public float eatingHeadAngle;
 
-    public List<Text> debugLines;
+    public List<Component> debugLines;
     public float width;
     public boolean isCamera;
     public boolean isProjectile;
@@ -73,12 +73,12 @@ public class CasterState {
     public boolean showDebugInfo;
     public boolean hasDebugInfo;
 
-    public Vec3d originVector = Vec3d.ZERO;
+    public Vec3 originVector = Vec3.ZERO;
 
     public final EntityRenderState entityState;
 
     @Nullable
-    public Text masterDisplayName;
+    public Component masterDisplayName;
 
     public List<SpellRenderState> spells = List.of();
 
@@ -126,7 +126,7 @@ public class CasterState {
         present = false;
         living = false;
         debugLines = null;
-        originVector = Vec3d.ZERO;
+        originVector = Vec3.ZERO;
         isCamera = false;
         isProjectile = false;
         ponified = false;
@@ -169,24 +169,32 @@ public class CasterState {
             living = caster instanceof Living;
             hasDebugInfo = caster instanceof Pony || caster instanceof CastSpellEntity;
             type = caster.asEntity().getType();
-            width = caster.asEntity().getWidth();
+            width = caster.asEntity().getBbWidth();
             originVector = caster.getOriginVector();
 
-            if (type == EntityType.PIG && caster instanceof Creature creature) {
+            if (type == EntityTypes.PIG && caster instanceof Creature creature) {
                 eatingHeadAngle = creature.getHeadAngle(tickDelta);
             }
 
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
 
-            isCamera = caster.asEntity() == client.cameraEntity && client.options.getPerspective() == Perspective.FIRST_PERSON;
+            isCamera = caster.asEntity() == client.getCameraEntity();
             isProjectile = caster.asEntity() instanceof MagicProjectileEntity;
             isPlacement = caster.asEntity() instanceof CastSpellEntity;
-            inHell = caster.asEntity().getWorld().getDimension().ultrawarm();
+            inHell = caster.asEntity().level().dimension().equals(net.minecraft.world.level.Level.NETHER);
 
             showDebugInfo = hasDebugInfo
-                    && client.getEntityRenderDispatcher().shouldRenderHitboxes()
-                    && !client.hasReducedDebugInfo()
-                    && !isCamera;
+                    && client.getDebugOverlay().showDebugScreen()
+                    && !client.showOnlyReducedInfo()
+                    && !(caster.asEntity() == client.getCameraEntity() && client.options.getCameraType() == CameraType.FIRST_PERSON);
+
+            spells = caster.getSpellSlot().stream().map(spell -> {
+                SpellRenderer<?, ?> renderer = SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell);
+                SpellRenderState spellState = renderer.createRenderState();
+                ((SpellRenderer)renderer).updateRenderState(spell, spellState, caster, tickDelta);
+                return spellState;
+            }).toList();
+            activeMagicColor = spells.stream().filter(i -> i.type.type() != SpellType.PLACE_CONTROL_SPELL).map(spell -> spell.type.type().getColor()).findFirst().orElse(0);
 
             appearance = caster.getSpellSlot().get(SpellPredicate.IS_DISGUISE)
                     .map(Disguise.class::cast)
@@ -197,7 +205,7 @@ public class CasterState {
             if (caster instanceof Pony pony) {
                 species = pony.getCompositeRace();
                 skinFeatures = pony.getSkinFeatures();
-                Vec3d motion = pony.getMotion().getTrackedVelocity();
+                Vec3 motion = pony.getMotion().getTrackedVelocity();
                 flying = pony.getMotion().isFlying();
                 dashing = (flying && (Math.sqrt(motion.x * motion.x + motion.z * motion.z) > 0.4 || pony.getMotion().isDiving())) || pony.getMotion().isRainbooming();
                 wingsAngle = pony.getMotion().getWingAngle();
@@ -212,47 +220,39 @@ public class CasterState {
                 pegasusAmulet = AmuletSelectors.PEGASUS_AMULET.test(l.asEntity());
                 mainhandBangle.update(FriendshipBraceletItem.getWornBangles(l.asEntity(), TrinketsDelegate.MAIN_GLOVE).findFirst().orElse(TrinketsDelegate.EquippedStack.EMPTY));
                 offhandBangle.update(FriendshipBraceletItem.getWornBangles(l.asEntity(), TrinketsDelegate.SECONDARY_GLOVE).findFirst().orElse(TrinketsDelegate.EquippedStack.EMPTY));
-                isLeftPolearm = l.asEntity().getStackInArm(Arm.LEFT).isIn(UTags.Items.POLEARMS);
-                isRightPolearm = l.asEntity().getStackInArm(Arm.RIGHT).isIn(UTags.Items.POLEARMS);
+                isLeftPolearm = l.asEntity().getItemHeldByArm(HumanoidArm.LEFT).is(UTags.Items.POLEARMS);
+                isRightPolearm = l.asEntity().getItemHeldByArm(HumanoidArm.RIGHT).is(UTags.Items.POLEARMS);
                 eyewear = GlassesItem.getForEntity(l.asEntity());
                 hasCoolShades = eyewear.stack().getCustomName() != null && "Cool Shades".equals(eyewear.stack().getCustomName().getString());
                 leanAmount = ((LivingEntityDuck)l.asEntity()).getLeaningPitch();
-                yawOffset = -(((LivingEntityRenderState)this.entityState).relativeHeadYaw + ((LivingEntityRenderState)this.entityState).bodyYaw) * MathHelper.RADIANS_PER_DEGREE;
-                gemYaw = l.asEntity().isSleeping() ? 0 : 180 - ((LivingEntityRenderState)this.entityState).bodyYaw;
+                yawOffset = -(((LivingEntityRenderState)this.entityState).yRot + ((LivingEntityRenderState)this.entityState).bodyRot);
+                gemYaw = l.asEntity().isSleeping() ? 0 : 180 - ((LivingEntityRenderState)this.entityState).bodyRot;
+            }
+
+            if (client.getDebugOverlay().showDebugScreen()
+                    && !client.showOnlyReducedInfo()
+                    && !(caster.asEntity() == client.getCameraEntity() && client.options.getCameraType() == CameraType.FIRST_PERSON)) {
+                if (caster instanceof Pony || caster instanceof CastSpellEntity) {
+                    debugLines = Stream.concat(
+                            Stream.of(
+                                    caster.asEntity().getDisplayName().copy().append(" (" + BuiltInRegistries.ENTITY_TYPE.getKey(caster.asEntity().getType()) + ")"),
+                                    caster.getMaster() != null ? Component.literal("Master: ").append(caster.getMaster().getDisplayName()) : Component.empty()
+                            ),
+                            caster.getSpellSlot().stream(SpellPredicate.ALL).flatMap(spell ->
+                                Stream.of(
+                                        Component.literal("UUID: " + spell.getUuid()),
+                                        Component.literal("|>Type: ").append(Component.literal(spell.getTypeAndTraits().type().getId().toString()).withStyle(s -> s.withColor(spell.getTypeAndTraits().type().getColor()))),
+                                        Component.nullToEmpty("|>Traits: " + spell.getTypeAndTraits().traits()),
+                                        Component.literal("|>HasRenderer: ").append(Component.literal((SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell) != null) + "").withStyle(SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell) != null ? ChatFormatting.GREEN : ChatFormatting.RED))
+                                )
+                            )
+                    ).toList();
+                }
             }
 
             LivingEntity master = caster.getMaster();
             if (master != null) {
                 masterDisplayName = master.getDisplayName();
-            }
-
-            spells = caster.getSpellSlot().stream().map(spell -> {
-                SpellRenderer<?, ?> renderer = SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell);
-                SpellRenderState spellState = renderer.createRenderState();
-                ((SpellRenderer)renderer).updateRenderState(spell, spellState, this, caster, tickDelta);
-                return spellState;
-            }).toList();
-            activeMagicColor = spells.stream().filter(i -> i.type.type() != SpellType.PLACE_CONTROL_SPELL).map(spell -> spell.type.type().getColor()).findFirst().orElse(0);
-
-            if (client.getEntityRenderDispatcher().shouldRenderHitboxes()
-                    && !client.hasReducedDebugInfo()
-                    && !(caster.asEntity() == client.cameraEntity && client.options.getPerspective() == Perspective.FIRST_PERSON)) {
-                if (caster instanceof Pony || caster instanceof CastSpellEntity) {
-                    debugLines = Stream.concat(
-                            Stream.of(
-                                    caster.asEntity().getDisplayName().copy().append(" (" + Registries.ENTITY_TYPE.getId(caster.asEntity().getType()) + ")"),
-                                    caster.getMaster() != null ? Text.literal("Master: ").append(caster.getMaster().getDisplayName()) : Text.empty()
-                            ),
-                            caster.getSpellSlot().stream(SpellPredicate.ALL).flatMap(spell ->
-                                Stream.of(
-                                        Text.literal("UUID: " + spell.getUuid()),
-                                        Text.literal("|>Type: ").append(Text.literal(spell.getTypeAndTraits().type().getId().toString()).styled(s -> s.withColor(spell.getTypeAndTraits().type().getColor()))),
-                                        Text.of("|>Traits: " + spell.getTypeAndTraits().traits()),
-                                        Text.literal("|>HasRenderer: ").append(Text.literal((SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell) != null) + "").formatted(SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell) != null ? Formatting.GREEN : Formatting.RED))
-                                )
-                            )
-                    ).toList();
-                }
             }
         }
     }
@@ -266,7 +266,7 @@ public class CasterState {
     }
 
     public static CasterState of(Entity entity, float tickDelta) {
-        return of(MinecraftClient.getInstance().getEntityRenderDispatcher().getRenderer(entity).getAndUpdateRenderState(entity, tickDelta));
+        return of(Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity).createRenderState(entity, tickDelta));
     }
 
     public static class BangleState {
@@ -276,14 +276,14 @@ public class CasterState {
 
         public void update(TrinketsDelegate.EquippedStack stack) {
             empty = stack.isEmpty();
-            color = empty ? Colors.WHITE : DyedColorComponent.getColor(stack.stack(), Colors.WHITE);
+            color = empty ? CommonColors.WHITE : DyedItemColor.getOrDefault(stack.stack(), CommonColors.WHITE);
             glowing = !empty && GlowableItem.isGlowing(stack.stack());
         }
     }
 
     public static class AbilityState {
         public Identifier id;
-        public Text name;
+        public Component name;
         public int color;
         public float fillProgress;
 
@@ -297,7 +297,7 @@ public class CasterState {
     }
 
     public static class PassengerState<T extends LivingEntity, S extends LivingEntityRenderState> {
-        public Vec3d carryPosition = Vec3d.ZERO;
+        public Vec3 carryPosition = Vec3.ZERO;
         public Vector3fc viewportPosition = new Vector3f();
         public boolean isPony;
 
@@ -311,15 +311,15 @@ public class CasterState {
             if (passenger != null) {
                 isPony = passenger instanceof Pony;
                 carryPosition = HeldEntityFeatureRenderer.getCarryPosition(entity, passenger)
-                        .rotateX(-state.leanAmount * MathHelper.PI / 4F)
-                        .add(new Vec3d(0, -0.5F, 0).multiply(state.leanAmount));
+                        .xRot(-state.leanAmount * Mth.PI / 4F)
+                        .add(new Vec3(0, -0.5F, 0).scale(state.leanAmount));
                 viewportPosition = HeldEntityFeatureRenderer.getViewportPosition(entity, passenger, tickDelta);
-                this.renderer = (EntityRenderer<T, S>)MinecraftClient.getInstance().getEntityRenderDispatcher().getRenderer(entity.asEntity());
+                this.renderer = (EntityRenderer<T, S>)Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity.asEntity());
                 this.state = renderer.createRenderState();
-                renderer.updateRenderState(entity.asEntity(), this.state, tickDelta);
-                this.state.relativeHeadYaw = 0;
-                this.state.bodyYaw = 0;
-                this.state.limbSwingAnimationProgress = 0;
+                renderer.extractRenderState(entity.asEntity(), this.state, tickDelta);
+                this.state.yRot = 0;
+                this.state.bodyRot = 0;
+                this.state.walkAnimationPos = 0;
             } else {
                 this.renderer = null;
                 this.state = null;
@@ -331,9 +331,14 @@ public class CasterState {
             this.state = null;
         }
 
-        public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+        public void render(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light) {
             if (renderer != null) {
-                renderer.render(state, matrices, vertexConsumers, light);
+                var camera = Minecraft.getInstance().gameRenderer.mainCamera();
+                var cameraState = new net.minecraft.client.renderer.state.level.CameraRenderState();
+                cameraState.pos = camera.position();
+                cameraState.orientation = camera.rotation();
+                cameraState.initialized = true;
+                renderer.submit(state, matrices, vertexConsumers, cameraState);
             }
         }
     }

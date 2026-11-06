@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:chicken",
+  "author": {
+    "translate": "painting.unicopia.chicken.author"
+  },
+  "height": 1,
+  "title": {
+    "translate": "painting.unicopia.chicken.title"
+  },
+  "width": 2
+}

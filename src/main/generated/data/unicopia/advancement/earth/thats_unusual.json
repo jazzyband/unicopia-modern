@@ -1,0 +1,33 @@
+{
+  "parent": "unicopia:earth/born_on_a_rock_farm",
+  "criteria": {
+    "has_rock": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:weird_rock"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.thats_unusual.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:weird_rock"
+    },
+    "title": {
+      "translate": "advancements.unicopia.thats_unusual.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_rock"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

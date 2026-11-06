@@ -10,18 +10,18 @@ import com.minelittlepony.unicopia.mixin.server.MixinStructurePool;
 import com.minelittlepony.unicopia.mixin.server.MixinStructureProcessorList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.event.registry.DynamicRegistrySetupCallback;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.registries.Registries;
 
 public interface StructureExtensions {
     static void bootstrap() {
         DynamicRegistrySetupCallback.EVENT.register(registries -> {
-            registries.registerEntryAdded(RegistryKeys.TEMPLATE_POOL, new DynamicEntryMerger<>(Unicopia.VANILLA_EXTENSIONS_NAMESPACE, biMapped(MixinStructurePool.class::cast, (source, target) -> {
-                target.setElements(new ObjectArrayList<>(union(target.getElements(), source.getElements())));
+            registries.registerEntryAdded(Registries.TEMPLATE_POOL, new DynamicEntryMerger<>(Unicopia.VANILLA_EXTENSIONS_NAMESPACE, biMapped(MixinStructurePool.class::cast, (source, target) -> {
+                target.setTemplates(new ObjectArrayList<>(union(target.getTemplates(), source.getTemplates())));
                 target.setElementCounts(union(target.getElementCounts(), source.getElementCounts()));
             })));
 
-            registries.registerEntryAdded(RegistryKeys.PROCESSOR_LIST, new DynamicEntryMerger<>(Unicopia.VANILLA_EXTENSIONS_NAMESPACE, (source, target) -> {
-                ((MixinStructureProcessorList)target).setList(union(source.getList(), target.getList()));
+            registries.registerEntryAdded(Registries.PROCESSOR_LIST, new DynamicEntryMerger<>(Unicopia.VANILLA_EXTENSIONS_NAMESPACE, (source, target) -> {
+                ((MixinStructureProcessorList)target).setList(union(source.list(), target.list()));
             }));
         });
     }

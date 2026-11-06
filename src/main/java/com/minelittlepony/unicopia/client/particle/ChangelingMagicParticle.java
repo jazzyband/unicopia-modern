@@ -1,17 +1,16 @@
 package com.minelittlepony.unicopia.client.particle;
 
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.core.particles.ParticleOptions;
 import org.joml.Vector3f;
-
-import net.minecraft.client.particle.SpriteProvider;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.particle.ParticleEffect;
 
 public class ChangelingMagicParticle extends MagicParticle {
 
-    private final SpriteProvider provider;
+    private final SpriteSet provider;
 
-    public ChangelingMagicParticle(ParticleEffect effect, SpriteProvider provider, ClientWorld world, double x, double y, double z, double dx, double dy, double dz) {
-        super(effect, provider, world, x, y, z, dx, dy, dz, nextColor(world.random.nextFloat() * 0.6F + 0.4F), 1);
+    public ChangelingMagicParticle(ParticleOptions effect, SpriteSet provider, ClientLevel world, double x, double y, double z, double dx, double dy, double dz) {
+        super(effect, provider, world, x, y, z, dx, dy, dz, nextColor(world.getRandom().nextFloat() * 0.6F + 0.4F), 1);
         this.provider = provider;
     }
 
@@ -21,7 +20,7 @@ public class ChangelingMagicParticle extends MagicParticle {
 
     @Override
     public void tick() {
-        setSpriteForAge(provider);
+        setSpriteFromAge(provider);
         super.tick();
     }
 }

@@ -1,7 +1,15 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.UTags;
@@ -15,16 +23,6 @@ import com.minelittlepony.unicopia.entity.damage.UDamageTypes;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.RegistryUtils;
 import com.minelittlepony.unicopia.util.VecHelper;
-
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.event.GameEvent;
 
 /**
  * An ability to scream very loud
@@ -61,14 +59,14 @@ public class ScreechAbility implements Ability<Numeric> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Numeric> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Numeric> getSerializer() {
         return Numeric.CODEC;
     }
 
     @Override
     public boolean apply(Pony player, Numeric data) {
-        float strength = 1 - MathHelper.clamp(data.type() / (float)getWarmupTime(player), 0, 1);
-        Random rng = player.asWorld().random;
+        float strength = 1 - Mth.clamp(data.type() / (float)getWarmupTime(player), 0, 1);
+        RandomSource rng = player.asWorld().getRandom();
 
         playSounds(player, rng, strength);
 
@@ -91,35 +89,36 @@ public class ScreechAbility implements Ability<Numeric> {
         return true;
     }
 
-    protected void playSounds(Pony player, Random rng, float strength) {
+    protected void playSounds(Pony player, RandomSource rng, float strength) {
         player.playSound(USounds.ENTITY_PLAYER_HIPPOGRIFF_SCREECH,
                 (1.2F + (rng.nextFloat() - 0.5F) / 2F) * strength,
                 1.1F + (rng.nextFloat() - 0.5F)
         );
-        player.asWorld().emitGameEvent(player.asEntity(), GameEvent.ENTITY_ACTION, player.asEntity().getEyePos());
+        player.asWorld().gameEvent(player.asEntity(), GameEvent.ENTITY_ACTION, player.asEntity().getEyePosition());
     }
 
     protected void spookMob(Pony player, LivingEntity living, float strength) {
         boolean isEarthPony = EquinePredicates.PLAYER_EARTH.test(living);
-        boolean isBracing = isEarthPony && player.asEntity().isSneaking();
+        boolean isBracing = isEarthPony && player.asEntity().isShiftKeyDown();
 
         if (!isBracing) {
-            living.damage((ServerWorld)player.asWorld(), player.damageOf(UDamageTypes.BAT_SCREECH, player), isEarthPony ? 0.1F : 0.3F);
+            living.hurtServer((ServerLevel)player.asWorld(), player.damageOf(UDamageTypes.BAT_SCREECH, player), isEarthPony ? 0.1F : 0.3F);
 
 
-            if (living.getWorld().random.nextInt(MOB_SPOOK_PROBABILITY) == 0) {
-                RegistryUtils.pickRandom(living.getWorld(), UTags.Items.SPOOKED_MOB_DROPS).ifPresent(drop -> {
-                    living.dropStack((ServerWorld)living.getWorld(), drop.getDefaultStack());
-                    living.playSound(USounds.Vanilla.ENTITY_ITEM_PICKUP, 1, 0.1F);
+            if (living.level().getRandom().nextInt(MOB_SPOOK_PROBABILITY) == 0) {
+                RegistryUtils.pickRandom(living.level(), UTags.Items.SPOOKED_MOB_DROPS).ifPresent(drop -> {
+                    living.spawnAtLocation((ServerLevel)living.level(), drop.getDefaultInstance());
+                    living.playSound(USounds.Vanilla.ITEM_PICKUP, 1, 0.1F);
                     UCriteria.SPOOK_MOB.trigger(player.asEntity());
                 });
             }
         }
 
-        Vec3d knockVec = player.getOriginVector().subtract(living.getPos()).multiply(strength);
-        living.takeKnockback((isBracing ? 0.2F : isEarthPony ? 0.3F : 0.5F) * strength, knockVec.getX(), knockVec.getZ());
+        Vec3 knockVec = player.getOriginVector().subtract(living.position()).scale(strength);
+        living.knockback((isBracing ? 0.2F : isEarthPony ? 0.3F : 0.5F) * strength, knockVec.x(), knockVec.z(),
+                player.asWorld().damageSources().mobAttack(player.asEntity()), 0);
         if (!isEarthPony) {
-            living.addVelocity(0, 0.1 * strength, 0);
+            living.push(0, 0.1 * strength, 0);
         }
         Living.updateVelocity(living);
     }
@@ -130,7 +129,7 @@ public class ScreechAbility implements Ability<Numeric> {
 
     @Override
     public void coolDown(Pony player, AbilitySlot slot) {
-        Vec3d eyePos = player.asEntity().getPos().add(0, MineLPDelegate.getInstance().getPonyHeight(player.asEntity()) * 0.8, 0);
+        Vec3 eyePos = player.asEntity().position().add(0, MineLPDelegate.getInstance().getPonyHeight(player.asEntity()) * 0.8, 0);
 
         for (int i = 0; i < 20; i++) {
             player.addParticle(ParticleTypes.BUBBLE_POP, eyePos,

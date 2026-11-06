@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet_convert",
+  "key": {
+    "#": "minecraft:red_wool",
+    "X": {
+      "fabric:type": "unicopia:exclusive",
+      "exclude": "unicopia:red_bed_sheets",
+      "include": "#unicopia:wool_bed_sheets"
+    }
+  },
+  "pattern": [
+    "###",
+    "# #",
+    "X##"
+  ],
+  "result": {
+    "count": 2,
+    "id": "unicopia:red_bed_sheets"
+  }
+}

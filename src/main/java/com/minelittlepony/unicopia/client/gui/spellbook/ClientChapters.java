@@ -5,9 +5,7 @@ import java.util.stream.Collectors;
 
 import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookChapterList.*;
 import com.minelittlepony.unicopia.container.spellbook.SpellbookChapter;
-import com.minelittlepony.unicopia.container.spellbook.SpellbookRecipes;
-
-import net.minecraft.util.*;
+import net.minecraft.resources.Identifier;
 
 public class ClientChapters {
     private static Map<Identifier, Chapter> CHAPTERS = Map.of();
@@ -16,7 +14,7 @@ public class ClientChapters {
         return CHAPTERS;
     }
 
-    public static void load(Map<Identifier, SpellbookChapter> chapters, SpellbookRecipes recipes) {
-        CHAPTERS = chapters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> new Chapter(entry.getKey(), entry.getValue(), recipes)));
+    public static void load(Map<Identifier, SpellbookChapter> chapters) {
+        CHAPTERS = chapters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> new Chapter(entry.getKey(), entry.getValue())));
     }
 }

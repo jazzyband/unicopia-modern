@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_clam_shell": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:clam_shell"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:shelly"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_clam_shell"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:shelly"
+    ]
+  }
+}

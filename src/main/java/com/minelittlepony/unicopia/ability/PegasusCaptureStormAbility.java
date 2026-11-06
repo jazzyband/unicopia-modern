@@ -1,23 +1,21 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ServerLevelData;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
-import net.minecraft.world.level.ServerWorldProperties;
 
 /**
  * Pegasus ability to capture a storm and store it in a jar
@@ -41,7 +39,7 @@ public class PegasusCaptureStormAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -53,48 +51,48 @@ public class PegasusCaptureStormAbility implements Ability<Hit> {
     @Override
     public boolean apply(Pony player, Hit data) {
 
-        World w = player.asWorld();
-        ItemStack stack = player.asEntity().getStackInHand(Hand.MAIN_HAND);
+        Level w = player.asWorld();
+        ItemStack stack = player.asEntity().getItemInHand(InteractionHand.MAIN_HAND);
         boolean thundering = w.isThundering();
 
-        if (!stack.isOf(UItems.EMPTY_JAR)) {
+        if (!stack.is(UItems.EMPTY_JAR)) {
             tell(player, "ability.unicopia.empty_hooves");
-        } else if (!w.isSkyVisible(player.getOrigin())) {
+        } else if (!w.canSeeSky(player.getOrigin())) {
             tell(player, "ability.unicopia.indoors");
         } else if (!(w.isRaining() || thundering)) {
             tell(player, "ability.unicopia.clear_skies");
         } else if (player.getOrigin().getY() < 120) {
             tell(player, "ability.unicopia.too_low");
         } else {
-            if (!player.asEntity().getAbilities().creativeMode) {
-                stack.decrement(1);
+            if (!player.asEntity().getAbilities().instabuild) {
+                stack.shrink(1);
             }
 
-            if (thundering && w.random.nextBoolean()) {
-                player.asEntity().giveItemStack(UItems.STORM_CLOUD_JAR.getDefaultStack());
+            if (thundering && w.getRandom().nextBoolean()) {
+                player.asEntity().addItem(UItems.STORM_CLOUD_JAR.getDefaultInstance());
 
-                if (w instanceof ServerWorld) {
-                    ServerWorldProperties props = (ServerWorldProperties)w.getLevelProperties();
+                if (w instanceof ServerLevel) {
+                    var props = ((ServerLevel)w).getWeatherData();
 
                     int timer = (int)Math.floor(props.getRainTime() * 0.1);
 
                     props.setThundering(timer > 0);
-                    props.setClearWeatherTime((int)(w.random.nextFloat() * 150000));
+                    props.setClearWeatherTime((int)(w.getRandom().nextFloat() * 150000));
                     props.setThunderTime(timer);
-                    ((ServerWorld)w).getServer().getPlayerManager().sendToDimension(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.THUNDER_GRADIENT_CHANGED, w.getRainGradient(1)), w.getRegistryKey());
+                    ((ServerLevel)w).getServer().getPlayerList().broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, w.getRainLevel(1)), w.dimension());
                 }
             } else {
-                player.asEntity().giveItemStack(UItems.RAIN_CLOUD_JAR.getDefaultStack());
+                player.asEntity().addItem(UItems.RAIN_CLOUD_JAR.getDefaultInstance());
 
-                if (w instanceof ServerWorld) {
-                    ServerWorldProperties props = (ServerWorldProperties)w.getLevelProperties();
+                if (w instanceof ServerLevel) {
+                    var props = ((ServerLevel)w).getWeatherData();
 
                     int timer = (int)Math.floor(props.getRainTime() * 0.1);
 
                     props.setRaining(timer > 0);
-                    props.setClearWeatherTime((int)(w.random.nextFloat() * 150000));
+                    props.setClearWeatherTime((int)(w.getRandom().nextFloat() * 150000));
                     props.setRainTime(timer);
-                    ((ServerWorld)w).getServer().getPlayerManager().sendToDimension(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.RAIN_GRADIENT_CHANGED, w.getRainGradient(1)), w.getRegistryKey());
+                    ((ServerLevel)w).getServer().getPlayerList().broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, w.getRainLevel(1)), w.dimension());
                 }
             }
         }
@@ -103,7 +101,7 @@ public class PegasusCaptureStormAbility implements Ability<Hit> {
     }
 
     private void tell(Pony player, String translation) {
-        player.asEntity().sendMessage(Text.translatable(translation), true);
+        player.asEntity().sendOverlayMessage(Component.translatable(translation));
     }
 
     @Override

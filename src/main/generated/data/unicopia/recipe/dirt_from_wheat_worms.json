@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": "#minecraft:sand",
+    "*": "unicopia:wheat_worms"
+  },
+  "pattern": [
+    "*#",
+    "#*"
+  ],
+  "result": {
+    "id": "minecraft:dirt"
+  }
+}

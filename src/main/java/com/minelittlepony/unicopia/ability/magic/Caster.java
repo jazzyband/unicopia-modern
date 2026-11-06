@@ -3,7 +3,13 @@ package com.minelittlepony.unicopia.ability.magic;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.*;
@@ -18,15 +24,6 @@ import com.minelittlepony.unicopia.server.world.ModificationType;
 import com.minelittlepony.unicopia.server.world.OfflinePlayerCache;
 import com.minelittlepony.unicopia.util.SoundEmitter;
 import com.minelittlepony.unicopia.util.VecHelper;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameRules;
 
 /**
  * Interface for any magically capable entities that can cast or persist spells.
@@ -66,30 +63,30 @@ public interface Caster<E extends Entity> extends
     default boolean canModifyAt(BlockPos pos, ModificationType mod) {
 
         if (mod.checkPhysical()) {
-            if (asWorld().getBlockState(pos).getHardness(asWorld(), pos) < 0) {
+            if (asWorld().getBlockState(pos).getDestroySpeed(asWorld(), pos) < 0) {
                 return false;
             }
 
-            if (getMaster() instanceof PlayerEntity player) {
-                if (!player.canModifyBlocks() || !asWorld().canEntityModifyAt(player, pos)) {
+            if (getMaster() instanceof Player player) {
+                if (!player.mayBuild() || !asWorld().mayInteract(player, pos)) {
                     return false;
                 }
             } else {
-                if (asWorld() instanceof ServerWorld sw) {
+                if (asWorld() instanceof ServerLevel sw) {
                     @Nullable
-                    PlayerEntity player = OfflinePlayerCache.getOfflinePlayer(sw, getMasterId().orElse(null));
-                    if (player != null && !player.canModifyBlocks() || !sw.canEntityModifyAt(player, pos)) {
+                    Player player = OfflinePlayerCache.getOfflinePlayer(sw, getMasterId().orElse(null));
+                    if (player != null && !player.mayBuild() || !sw.mayInteract(player, pos)) {
                         return false;
                     }
                 }
 
-                if (!asWorld().getServer().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+                if (!asWorld().getServer().getGameRules().get(GameRules.MOB_GRIEFING)) {
                     return false;
                 }
             }
         }
 
-        return !mod.checkMagical() || canCastAt(Vec3d.ofCenter(pos));
+        return !mod.checkMagical() || canCastAt(Vec3.atCenterOf(pos));
     }
 
     default Stream<Caster<?>> findAllSpellsInRange(double radius) {
@@ -112,7 +109,7 @@ public interface Caster<E extends Entity> extends
         return canCastAt(getOriginVector());
     }
 
-    default boolean canCastAt(Vec3d pos) {
+    default boolean canCastAt(Vec3 pos) {
         return !Ether.get(asWorld()).anyMatch(SpellType.ARCANE_PROTECTION, entry -> {
             var target = entry.entity.getTarget().orElse(null);
             if (target != null && target.pos().distanceTo(pos) <= entry.radius()) {
@@ -128,7 +125,7 @@ public interface Caster<E extends Entity> extends
         });
     }
 
-    default boolean canUse(RegistryEntry<Ability<?>> ability) {
+    default boolean canUse(Ability<?> ability) {
         return false;
     }
 

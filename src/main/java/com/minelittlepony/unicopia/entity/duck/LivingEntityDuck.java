@@ -1,15 +1,12 @@
 package com.minelittlepony.unicopia.entity.duck;
 
-import com.minelittlepony.unicopia.entity.Equine;
-import com.minelittlepony.unicopia.entity.Living;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
-
-public interface LivingEntityDuck extends EntityDuck, Equine.Container<Living<?>> {
-    void updateItemUsage(Hand hand, ItemStack stack, int time);
+public interface LivingEntityDuck extends EntityDuck {
+    void updateItemUsage(InteractionHand hand, ItemStack stack, int time);
 
     boolean isJumping();
 
@@ -26,7 +23,7 @@ public interface LivingEntityDuck extends EntityDuck, Equine.Container<Living<?>
         setLastLeaningPitch(other.getLastLeaningPitch());
     }
 
-    static Vec3d serverPos(LivingEntity entity) {
-        return entity.getTrackedPosition().getPos();
+    static Vec3 serverPos(LivingEntity entity) {
+        return entity.getPositionCodec().getBase();
     }
 }

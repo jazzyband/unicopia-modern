@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 20,
+  "experience": 1.0,
+  "group": "coal",
+  "ingredient": "unicopia:burned_juice",
+  "result": {
+    "id": "minecraft:charcoal"
+  }
+}

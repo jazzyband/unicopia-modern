@@ -1,52 +1,50 @@
 package com.minelittlepony.unicopia.particle;
 
 import java.util.Optional;
-
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.math.Vec3d;
 
 public record FollowingParticleEffect (
         ParticleType<FollowingParticleEffect> type,
         WeakTarget target,
         float followSpeed,
-        Optional<ParticleEffect> childEffect
-    ) implements ParticleEffect {
+        Optional<ParticleOptions> childEffect
+    ) implements ParticleOptions {
     public static MapCodec<FollowingParticleEffect> createCodec(ParticleType<FollowingParticleEffect> type) {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
             WeakTarget.CODEC.fieldOf("target").forGetter(FollowingParticleEffect::target),
             Codec.FLOAT.fieldOf("follow_speed").forGetter(FollowingParticleEffect::followSpeed),
-            ParticleTypes.TYPE_CODEC.optionalFieldOf("child_effect").forGetter(FollowingParticleEffect::childEffect)
+            ParticleTypes.CODEC.optionalFieldOf("child_effect").forGetter(FollowingParticleEffect::childEffect)
         ).apply(instance, (target, speed, effect) -> new FollowingParticleEffect(type, target, speed, effect)));
     }
 
-    public static final PacketCodec<RegistryByteBuf, FollowingParticleEffect> createPacketCodec(ParticleType<FollowingParticleEffect> type) {
-        return PacketCodec.tuple(
+    public static final StreamCodec<RegistryFriendlyByteBuf, FollowingParticleEffect> createPacketCodec(ParticleType<FollowingParticleEffect> type) {
+        return StreamCodec.composite(
                 WeakTarget.PACKET_CODEC, FollowingParticleEffect::target,
-                PacketCodecs.FLOAT, FollowingParticleEffect::followSpeed,
-                PacketCodecs.optional(ParticleTypes.PACKET_CODEC), FollowingParticleEffect::childEffect,
+                ByteBufCodecs.FLOAT, FollowingParticleEffect::followSpeed,
+                ByteBufCodecs.optional(ParticleTypes.STREAM_CODEC), FollowingParticleEffect::childEffect,
                 (target, speed, effect) -> new FollowingParticleEffect(type, target, speed, effect)
         );
     }
 
-    public FollowingParticleEffect(ParticleType<FollowingParticleEffect> type, Vec3d target, float followSpeed) {
+    public FollowingParticleEffect(ParticleType<FollowingParticleEffect> type, Vec3 target, float followSpeed) {
         this(type, new WeakTarget(target, (Entity)null), followSpeed, Optional.empty());
     }
 
     public FollowingParticleEffect(ParticleType<FollowingParticleEffect> type, Entity target, float followSpeed) {
-        this(type, new WeakTarget(target.getCameraPosVec(1), target), followSpeed, Optional.empty());
+        this(type, new WeakTarget(target.getEyePosition(1), target), followSpeed, Optional.empty());
     }
 
-    public FollowingParticleEffect withChild(ParticleEffect child) {
+    public FollowingParticleEffect withChild(ParticleOptions child) {
         return new FollowingParticleEffect(type, target, followSpeed, Optional.of(child));
     }
 

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_sweet_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:sweet_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:sweet_apple_seeds_from_sweet_apple"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_sweet_apple"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:sweet_apple_seeds_from_sweet_apple"
+    ]
+  }
+}

@@ -1,27 +1,25 @@
 package com.minelittlepony.unicopia.particle;
 
 import java.util.Optional;
-
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.minelittlepony.unicopia.util.serialization.PacketCodecUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.util.math.Vec3d;
-
 public record LightningBoltParticleEffect (
         boolean silent,
         int changeFrequency,
         int maxBranches,
         float maxDeviation,
-        Optional<Vec3d> pathEndPoint
-    ) implements ParticleEffect {
+        Optional<Vec3> pathEndPoint
+    ) implements ParticleOptions {
     public static final LightningBoltParticleEffect DEFAULT = new LightningBoltParticleEffect(false, 10, 6, 3, Optional.empty());
 
     public static final MapCodec<LightningBoltParticleEffect> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -31,11 +29,11 @@ public record LightningBoltParticleEffect (
             Codec.FLOAT.fieldOf("maxDeviation").forGetter(LightningBoltParticleEffect::maxDeviation),
             CodecUtils.VECTOR.optionalFieldOf("pathEndPoint").forGetter(LightningBoltParticleEffect::pathEndPoint)
     ).apply(instance, LightningBoltParticleEffect::new));
-    public static final PacketCodec<RegistryByteBuf, LightningBoltParticleEffect> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.BOOLEAN, LightningBoltParticleEffect::silent,
-            PacketCodecs.INTEGER, LightningBoltParticleEffect::changeFrequency,
-            PacketCodecs.INTEGER, LightningBoltParticleEffect::maxBranches,
-            PacketCodecs.FLOAT, LightningBoltParticleEffect::maxDeviation,
+    public static final StreamCodec<RegistryFriendlyByteBuf, LightningBoltParticleEffect> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.BOOL, LightningBoltParticleEffect::silent,
+            ByteBufCodecs.INT, LightningBoltParticleEffect::changeFrequency,
+            ByteBufCodecs.INT, LightningBoltParticleEffect::maxBranches,
+            ByteBufCodecs.FLOAT, LightningBoltParticleEffect::maxDeviation,
             PacketCodecUtils.OPTIONAL_VECTOR, LightningBoltParticleEffect::pathEndPoint,
             LightningBoltParticleEffect::new
     );

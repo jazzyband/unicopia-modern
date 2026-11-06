@@ -1,0 +1,22 @@
+{
+  "drops": [
+    {
+      "tag": "c:rods/wooden",
+      "weight": 4
+    },
+    {
+      "tag": "c:foods/pinecone",
+      "weight": 1
+    }
+  ],
+  "leaves": [
+    "minecraft:spruce_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:spruce_log",
+    "minecraft:spruce_wood"
+  ],
+  "rarity": 3,
+  "wideTrunk": true
+}

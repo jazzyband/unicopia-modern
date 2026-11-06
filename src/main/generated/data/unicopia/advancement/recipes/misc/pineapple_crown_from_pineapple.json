@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_pineapple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:pineapple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:pineapple_crown_from_pineapple"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_pineapple"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:pineapple_crown_from_pineapple"
+    ]
+  }
+}

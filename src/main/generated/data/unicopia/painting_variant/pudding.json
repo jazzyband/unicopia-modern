@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:pudding",
+  "author": {
+    "translate": "painting.unicopia.pudding.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.pudding.title"
+  },
+  "width": 2
+}

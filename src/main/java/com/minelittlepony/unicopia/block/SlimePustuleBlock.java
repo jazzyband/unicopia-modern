@@ -1,81 +1,77 @@
 package com.minelittlepony.unicopia.block;
 
+import net.minecraft.world.phys.Vec3;
+
 import java.util.Arrays;
 import java.util.Locale;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.monster.cubemob.Slime;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SupportType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.redstone.ExperimentalRedstoneUtils;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import com.minelittlepony.unicopia.USounds;
 import com.mojang.serialization.MapCodec;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.SideShapeType;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.mob.SlimeEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.particle.DustParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.EnumProperty;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Direction.Axis;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-import net.minecraft.world.block.OrientationHelper;
-import net.minecraft.world.tick.ScheduledTickView;
-
 public class SlimePustuleBlock extends Block {
-    public static final MapCodec<SlimePustuleBlock> CODEC = createCodec(SlimePustuleBlock::new);
-    public static final EnumProperty<Shape> SHAPE = EnumProperty.of("shape", Shape.class);
-    private static final BooleanProperty POWERED = Properties.POWERED;
+    public static final EnumProperty<Shape> SHAPE = EnumProperty.create("shape", Shape.class);
+    private static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     private static final Direction[] DIRECTIONS = Arrays.stream(Direction.values())
             .filter(direction -> direction != Direction.UP)
             .toArray(Direction[]::new);
-    private static final VoxelShape SHAFT_SHAPE = Block.createCuboidShape(7.5, 0, 7.5, 8.5, 16, 8.5);
-    private static final VoxelShape DRIP_SHAPE = VoxelShapes.union(
-            Block.createCuboidShape(7, 10, 7, 9, 16, 9),
-            Block.createCuboidShape(3, 15, 4, 9, 16, 10),
-            Block.createCuboidShape(7, 15, 7, 12, 16, 12)
+    private static final VoxelShape SHAFT_SHAPE = Block.box(7.5, 0, 7.5, 8.5, 16, 8.5);
+    private static final VoxelShape DRIP_SHAPE = Shapes.or(
+            Block.box(7, 10, 7, 9, 16, 9),
+            Block.box(3, 15, 4, 9, 16, 10),
+            Block.box(7, 15, 7, 12, 16, 12)
     );
-    private static final VoxelShape BULB_SHAPE = VoxelShapes.union(
-            Block.createCuboidShape(4, 1, 4, 12, 10, 12),
-            Block.createCuboidShape(5, 10, 5, 11, 13, 11),
-            Block.createCuboidShape(6, 13, 6, 10, 15, 10),
-            Block.createCuboidShape(7, 13, 7, 9, 20, 9)
+    private static final VoxelShape BULB_SHAPE = Shapes.or(
+            Block.box(4, 1, 4, 12, 10, 12),
+            Block.box(5, 10, 5, 11, 13, 11),
+            Block.box(6, 13, 6, 10, 15, 10),
+            Block.box(7, 13, 7, 9, 20, 9)
     );
-    private static final VoxelShape CAP_SHAPE = VoxelShapes.union(SHAFT_SHAPE, DRIP_SHAPE);
-    private static final int DUST_COLOR = ColorHelper.fromFloats(1, 1F, 0.2F, 0.1F);
+    private static final VoxelShape CAP_SHAPE = Shapes.or(SHAFT_SHAPE, DRIP_SHAPE);
+    private static final int DUST_COLOR = ARGB.colorFromFloat(1, 1F, 0.2F, 0.1F);
 
-    public SlimePustuleBlock(Settings settings) {
-        super(settings.ticksRandomly());
-        setDefaultState(getDefaultState().with(SHAPE, Shape.DRIP).with(POWERED, false));
+    public SlimePustuleBlock(Properties settings) {
+        super(settings.randomTicks());
+        registerDefaultState(defaultBlockState().setValue(SHAPE, Shape.DRIP).setValue(POWERED, false));
     }
 
-    @Override
-    protected MapCodec<? extends SlimePustuleBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return switch (state.get(SHAPE)) {
+    protected VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return switch (state.getValue(SHAPE)) {
             case POD -> BULB_SHAPE;
             case DRIP -> DRIP_SHAPE;
             case CAP -> CAP_SHAPE;
@@ -84,24 +80,24 @@ public class SlimePustuleBlock extends Block {
     }
 
     @Override
-    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
-        super.randomDisplayTick(state, world, pos, random);
+    public void animateTick(BlockState state, Level world, BlockPos pos, RandomSource random) {
+        super.animateTick(state, world, pos, random);
 
-        if (state.get(POWERED)) {
-            VoxelShape shape = state.getCullingShape();
-            float x = (float)MathHelper.lerp(random.nextFloat(), shape.getMin(Axis.X), shape.getMax(Axis.X));
-            float z = (float)MathHelper.lerp(random.nextFloat(), shape.getMin(Axis.Z), shape.getMax(Axis.Z));
-            world.addParticleClient(new DustParticleEffect(DUST_COLOR, 1),
+        if (state.getValue(POWERED)) {
+            VoxelShape shape = state.getOcclusionShape();
+            float x = (float)Mth.lerp(random.nextFloat(), shape.min(Axis.X), shape.max(Axis.X));
+            float z = (float)Mth.lerp(random.nextFloat(), shape.min(Axis.Z), shape.max(Axis.Z));
+            world.addParticle(new DustParticleOptions(DUST_COLOR, 1),
                     pos.getX() + x,
                     pos.getY() + random.nextDouble(),
                     pos.getZ() + z, 0, 0, 0);
         }
 
         if (random.nextInt(15) == 0) {
-            VoxelShape shape = state.getCullingShape();
-            float x = (float)MathHelper.lerp(random.nextFloat(), shape.getMin(Axis.X), shape.getMax(Axis.X));
-            float z = (float)MathHelper.lerp(random.nextFloat(), shape.getMin(Axis.Z), shape.getMax(Axis.Z));
-            world.addParticleClient(ParticleTypes.DRIPPING_HONEY,
+            VoxelShape shape = state.getOcclusionShape();
+            float x = (float)Mth.lerp(random.nextFloat(), shape.min(Axis.X), shape.max(Axis.X));
+            float z = (float)Mth.lerp(random.nextFloat(), shape.min(Axis.Z), shape.max(Axis.Z));
+            world.addParticle(ParticleTypes.DRIPPING_HONEY,
                     pos.getX() + x,
                     pos.getY() + random.nextDouble(),
                     pos.getZ() + z, 0, 0, 0);
@@ -109,133 +105,133 @@ public class SlimePustuleBlock extends Block {
     }
 
     @Override
-    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (state.get(SHAPE) == Shape.POD && random.nextInt(130) == 0) {
-            SlimeEntity slime = EntityType.SLIME.create(world, SpawnReason.NATURAL);
+    protected void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        if (state.getValue(SHAPE) == Shape.POD && random.nextInt(130) == 0) {
+            Slime slime = EntityTypes.SLIME.create(world, EntitySpawnReason.NATURAL);
             slime.setSize(1, true);
-            slime.setPosition(pos.toCenterPos());
-            world.spawnEntity(slime);
+            slime.setPos(Vec3.atCenterOf(pos));
+            world.addFreshEntity(slime);
         }
     }
 
     @Override
-    public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-        if (state.get(SHAPE) == Shape.POD) {
-            if (world instanceof ServerWorld sw) {
-                world.getOtherEntities(player.canHarvest(state) ? player : null, new Box(pos).expand(1)).forEach(entity -> {
-                    entity.damage(sw, entity.getDamageSources().inFire(), 2);
-                    entity.setFireTicks(3);
+    public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
+        if (state.getValue(SHAPE) == Shape.POD) {
+            if (world instanceof ServerLevel sw) {
+                world.getEntities(player.hasCorrectToolForDrops(state) ? player : null, new AABB(pos).inflate(1)).forEach(entity -> {
+                    entity.hurtServer(sw, entity.damageSources().inFire(), 2);
+                    entity.setRemainingFireTicks(3);
                 });
             }
 
-            world.playSound(null, pos, USounds.BLOCK_SLIME_PUSTULE_POP, SoundCategory.BLOCKS, 5, 1);
+            world.playSound(null, pos, USounds.BLOCK_SLIME_PUSTULE_POP, SoundSource.BLOCKS, 5, 1);
             for (int i = 0; i < 8; i++) {
-                world.addParticleClient(ParticleTypes.LAVA,
+                world.addParticle(ParticleTypes.LAVA,
                         pos.getX() + 0.5,
                         pos.getY() + 0.5,
                         pos.getZ() + 0.5,
-                        world.random.nextGaussian() * 1.5F,
+                        world.getRandom().nextGaussian() * 1.5F,
                         0,
-                        world.random.nextGaussian() * 1.5F
+                        world.getRandom().nextGaussian() * 1.5F
                 );
-                world.addParticleClient(ParticleTypes.CRIT,
+                world.addParticle(ParticleTypes.CRIT,
                         pos.getX() + 0.5,
                         pos.getY() + 0.5,
                         pos.getZ() + 0.5,
-                        world.random.nextGaussian() * 1.5F,
-                        world.random.nextGaussian() * 1.5F,
-                        world.random.nextGaussian() * 1.5F
+                        world.getRandom().nextGaussian() * 1.5F,
+                        world.getRandom().nextGaussian() * 1.5F,
+                        world.getRandom().nextGaussian() * 1.5F
                 );
-                world.addParticleClient(new BlockStateParticleEffect(ParticleTypes.BLOCK, state),
+                world.addParticle(new BlockParticleOption(ParticleTypes.BLOCK, state),
                         pos.getX() + 0.5,
                         pos.getY() + 0.5,
                         pos.getZ() + 0.5,
-                        world.random.nextGaussian() * 1.5F,
-                        world.random.nextGaussian() * 1.5F,
-                        world.random.nextGaussian() * 1.5F
+                        world.getRandom().nextGaussian() * 1.5F,
+                        world.getRandom().nextGaussian() * 1.5F,
+                        world.getRandom().nextGaussian() * 1.5F
                 );
             }
 
             return state;
         }
 
-        return super.onBreak(world, pos, state, player);
+        return super.playerWillDestroy(world, pos, state, player);
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(SHAPE, POWERED);
     }
 
     @Override
-    protected boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        pos = pos.up();
+    protected boolean canSurvive(BlockState state, LevelReader world, BlockPos pos) {
+        pos = pos.above();
         state = world.getBlockState(pos);
-        return state.isOf(this) || state.isSideSolid(world, pos, Direction.DOWN, SideShapeType.CENTER);
+        return state.is(this) || state.isFaceSturdy(world, pos, Direction.DOWN, SupportType.CENTER);
     }
 
     @Override
-    protected BlockState getStateForNeighborUpdate(BlockState state, WorldView world, ScheduledTickView tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, Random random) {
-        if (!canPlaceAt(state, world, pos)) {
-            return Blocks.AIR.getDefaultState();
+    protected BlockState updateShape(BlockState state, LevelReader world, ScheduledTickAccess tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        if (!canSurvive(state, world, pos)) {
+            return Blocks.AIR.defaultBlockState();
         }
 
         if (direction.getAxis() == Direction.Axis.Y) {
-            Shape currentShape = state.get(SHAPE);
+            Shape currentShape = state.getValue(SHAPE);
 
             if (direction == Direction.DOWN && (currentShape == Shape.CAP || currentShape == Shape.STRING)) {
-                return state.with(POWERED, getReceivedRedstonePower(world, pos) > 0);
+                return state.setValue(POWERED, getReceivedRedstonePower(world, pos) > 0);
             }
 
             Shape shape = determineShape(world, pos);
-            return state.with(SHAPE, shape).with(POWERED, getReceivedRedstonePower(world, pos) > 0);
+            return state.setValue(SHAPE, shape).setValue(POWERED, getReceivedRedstonePower(world, pos) > 0);
         }
 
-        return state.with(POWERED, getReceivedRedstonePower(world, pos) > 0);
+        return state.setValue(POWERED, getReceivedRedstonePower(world, pos) > 0);
     }
 
     @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        Shape shape = determineShape(ctx.getWorld(), ctx.getBlockPos());
-        return super.getPlacementState(ctx)
-                .with(SHAPE, shape == Shape.STRING ? Shape.POD : shape)
-                .with(POWERED, getReceivedRedstonePower(ctx.getWorld(), ctx.getBlockPos()) > 0);
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        Shape shape = determineShape(ctx.getLevel(), ctx.getClickedPos());
+        return super.getStateForPlacement(ctx)
+                .setValue(SHAPE, shape == Shape.STRING ? Shape.POD : shape)
+                .setValue(POWERED, getReceivedRedstonePower(ctx.getLevel(), ctx.getClickedPos()) > 0);
     }
 
     @Override
-    protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
-        super.onStateReplaced(state, world, pos, moved);
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+        super.affectNeighborsAfterRemoval(state, world, pos, moved);
         BlockState newState = world.getBlockState(pos);
-        if (state.isOf(this) && newState.isOf(this) && state.get(POWERED) != newState.get(POWERED)) {
-            world.updateNeighborsAlways(pos.up(), this, OrientationHelper.getEmissionOrientation(world, null, Direction.UP));
+        if (state.is(this) && newState.is(this) && state.getValue(POWERED) != newState.getValue(POWERED)) {
+            world.updateNeighborsAt(pos.above(), this, ExperimentalRedstoneUtils.initialOrientation(world, null, Direction.UP));
         }
     }
 
     @Override
-    protected boolean emitsRedstonePower(BlockState state) {
-        return state.get(POWERED);
+    protected boolean isSignalSource(BlockState state) {
+        return state.getValue(POWERED);
     }
 
     @Override
-    protected int getWeakRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
-        if (direction == Direction.DOWN && emitsRedstonePower(state)) {
+    protected int getSignal(BlockState state, BlockGetter world, BlockPos pos, Direction direction) {
+        if (direction == Direction.DOWN && isSignalSource(state)) {
             return 15;
         }
         return 0;
     }
 
     @Override
-    protected int getStrongRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
-        if (direction == Direction.DOWN && emitsRedstonePower(state)) {
+    protected int getDirectSignal(BlockState state, BlockGetter world, BlockPos pos, Direction direction) {
+        if (direction == Direction.DOWN && isSignalSource(state)) {
             return 15;
         }
         return 0;
     }
 
-    private int getReceivedRedstonePower(BlockView world, BlockPos pos) {
+    private int getReceivedRedstonePower(BlockGetter world, BlockPos pos) {
         int power = 0;
-        for (Direction direction : DIRECTIONS) {
-            power = Math.max(power, world.getBlockState(pos.offset(direction)).getStrongRedstonePower(world, pos, direction));
+        for (Direction direction : UPDATE_SHAPE_ORDER) {
+            power = Math.max(power, world.getBlockState(pos.relative(direction)).getDirectSignal(world, pos, direction));
             if (power >= 15) {
                 return Math.min(15, power);
             }
@@ -243,13 +239,13 @@ public class SlimePustuleBlock extends Block {
         return Math.min(15, power);
     }
 
-    private Shape determineShape(WorldView world, BlockPos pos) {
-        BlockState above = world.getBlockState(pos.up());
-        BlockState below = world.getBlockState(pos.down());
+    private Shape determineShape(LevelReader world, BlockPos pos) {
+        BlockState above = world.getBlockState(pos.above());
+        BlockState below = world.getBlockState(pos.below());
 
-        boolean hasAbove = above.isOf(this);
-        boolean hasRoof = !hasAbove && above.isSideSolid(world, pos.up(), Direction.DOWN, SideShapeType.CENTER);
-        boolean hasBelow = below.isOf(this);
+        boolean hasAbove = above.is(this);
+        boolean hasRoof = !hasAbove && above.isFaceSturdy(world, pos.above(), Direction.DOWN, SupportType.CENTER);
+        boolean hasBelow = below.is(this);
 
         if (hasRoof && below.isAir()) {
             return Shape.DRIP;
@@ -265,7 +261,7 @@ public class SlimePustuleBlock extends Block {
         return Shape.POD;
     }
 
-    public enum Shape implements StringIdentifiable {
+    public enum Shape implements StringRepresentable {
         DRIP,
         CAP,
         STRING,
@@ -274,7 +270,7 @@ public class SlimePustuleBlock extends Block {
         private final String name = name().toLowerCase(Locale.ROOT);
 
         @Override
-        public String asString() {
+        public String getSerializedName() {
             return name;
         }
     }

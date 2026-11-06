@@ -1,25 +1,24 @@
 package com.minelittlepony.unicopia.diet.affliction;
 
 import java.util.function.Consumer;
-
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 public interface Affliction {
-    void afflict(PlayerEntity player, ItemStack stack);
+    void afflict(Player player, ItemStack stack);
 
     default boolean isEmpty() {
         return getType() == AfflictionType.EMPTY;
     }
 
-    default void appendTooltip(Consumer<Text> tooltip) {
-        tooltip.accept(Text.literal(" ").append(getName()).formatted(Formatting.DARK_GRAY));
+    default void appendTooltip(Consumer<Component> tooltip) {
+        tooltip.accept(Component.literal(" ").append(getName()).withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    default Text getName() {
-        return Text.translatable(getType().getTranslationKey());
+    default Component getName() {
+        return Component.translatable(getType().getTranslationKey());
     }
 
     AfflictionType<?> getType();

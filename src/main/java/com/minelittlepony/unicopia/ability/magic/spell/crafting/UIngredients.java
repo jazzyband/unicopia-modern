@@ -6,14 +6,14 @@ import com.mojang.serialization.MapCodec;
 
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredientSerializer;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 
 public interface UIngredients {
     CustomIngredientSerializer<IngredientWithSpell> ENCHANTED_ITEM = register("enchanted_item", IngredientWithSpell.CODEC, IngredientWithSpell.PACKET_CODEC);
 
-    private static <T extends CustomIngredient> CustomIngredientSerializer<T> register(String name, Codec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec) {
+    private static <T extends CustomIngredient> CustomIngredientSerializer<T> register(String name, Codec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec) {
         var serializer = new Serializer<>(Unicopia.id(name), MapCodec.assumeMapUnsafe(codec), packetCodec);
         CustomIngredientSerializer.register(serializer);
         return serializer;
@@ -21,7 +21,7 @@ public interface UIngredients {
 
     static void bootstrap() {}
 
-    record Serializer<T extends CustomIngredient>(Identifier id, MapCodec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec) implements CustomIngredientSerializer<T> {
+    record Serializer<T extends CustomIngredient>(Identifier id, MapCodec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec) implements CustomIngredientSerializer<T> {
 
         @Override
         public Identifier getIdentifier() {
@@ -34,7 +34,7 @@ public interface UIngredients {
         }
 
         @Override
-        public PacketCodec<RegistryByteBuf, T> getPacketCodec() {
+        public StreamCodec<RegistryFriendlyByteBuf, T> getStreamCodec() {
             return packetCodec;
         }
     }

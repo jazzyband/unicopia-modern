@@ -1,0 +1,6 @@
+{
+  "parent": "unicopia:item/template_mug",
+  "textures": {
+    "layer0": "unicopia:item/cider"
+  }
+}

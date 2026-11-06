@@ -6,26 +6,25 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-
-@Mixin(PlayerManager.class)
+@Mixin(PlayerList.class)
 abstract class MixinPlayerManager {
     @Inject(method = "remove", at = @At("HEAD"))
-    public void onRemove(ServerPlayerEntity player, CallbackInfo info) {
-        player.getPassengerList().stream()
+    public void onRemove(ServerPlayer player, CallbackInfo info) {
+        player.getPassengers().stream()
             .flatMap(passenger -> Pony.of(passenger).stream())
             .forEach(passenger -> passenger.setCarrier((Entity)null));
-        player.removeAllPassengers();
+        player.ejectPassengers();
 
         @Nullable
         Entity vehicle = null;
-        if (player.hasVehicle() && (vehicle = player.getRootVehicle()).hasPlayerRider()) {
-            if (vehicle.streamPassengersAndSelf().anyMatch(e -> {
-                return e != player && e instanceof PlayerEntity;
+        if (player.isPassenger() && (vehicle = player.getRootVehicle()).hasExactlyOnePlayerPassenger()) {
+            if (vehicle.getPassengersAndSelf().anyMatch(e -> {
+                return e != player && e instanceof Player;
             })) {
                 player.stopRiding();
                 Pony.of(player).setCarrier((Entity)null);

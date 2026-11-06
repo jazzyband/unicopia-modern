@@ -1,0 +1,34 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:many",
+      "afflictions": [
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 2
+          },
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 50,
+            "min": 50
+          }
+        },
+        {
+          "type": "unicopia:lose_hunger",
+          "multiplier": 0.5
+        }
+      ]
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 4,
+      "saturation": 1.0
+    }
+  },
+  "tags": [
+    "unicopia:container_with_love"
+  ]
+}

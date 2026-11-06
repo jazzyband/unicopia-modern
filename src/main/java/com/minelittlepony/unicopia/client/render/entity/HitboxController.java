@@ -1,9 +1,8 @@
 package com.minelittlepony.unicopia.client.render.entity;
 
 import com.minelittlepony.unicopia.util.Untyped;
-
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.world.entity.Entity;
 
 public interface HitboxController<T extends Entity> {
     HitboxController<?> DEFAULT = e -> true;

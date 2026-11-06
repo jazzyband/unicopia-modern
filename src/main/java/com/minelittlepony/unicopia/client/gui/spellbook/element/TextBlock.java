@@ -2,20 +2,19 @@ package com.minelittlepony.unicopia.client.gui.spellbook.element;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import com.minelittlepony.common.client.gui.IViewRoot;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
 import com.minelittlepony.unicopia.client.gui.ParagraphWrappingVisitor;
 import com.minelittlepony.unicopia.container.spellbook.ChapterPageElement;
 import com.minelittlepony.unicopia.container.spellbook.Flow;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 class TextBlock implements PageElement {
     private final List<TextBlock.Line> wrappedText = new ArrayList<>();
@@ -38,20 +37,20 @@ class TextBlock implements PageElement {
             visitor.advance();
         });
         visitor.forceAdvance();
-        bounds.height = MinecraftClient.getInstance().textRenderer.fontHeight * (wrappedText.size());
+        bounds.height = Minecraft.getInstance().font.lineHeight * (wrappedText.size());
     }
 
     @Override
-    public void draw(DynamicContent.GuiPage page, DrawContext context, int mouseX, int mouseY, IViewRoot container) {
-        TextRenderer font = MinecraftClient.getInstance().textRenderer;
-        boolean needsMoreXp = page.getLevel() < 0 || Pony.of(MinecraftClient.getInstance().player).getLevel().get() < page.getLevel();
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
+    public void draw(DynamicContent.GuiPage page, GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
+        Font font = Minecraft.getInstance().font;
+        boolean needsMoreXp = page.getLevel() < 0 || Pony.of(Minecraft.getInstance().player).getLevel().get() < page.getLevel();
+        org.joml.Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
         wrappedText.forEach(line -> {
-            context.drawText(font, needsMoreXp ? line.text().copy().formatted(Formatting.OBFUSCATED) : line.text().copy(), line.x(), 0, page.getColor(), false);
-            matrices.translate(0, font.fontHeight, 0);
+            context.text(font, needsMoreXp ? line.text().copy().withStyle(ChatFormatting.OBFUSCATED) : line.text().copy(), line.x(), 0, page.getColor(), false);
+            matrices.translate(0, font.lineHeight);
         });
-        matrices.pop();
+        matrices.popMatrix();
     }
 
     @Override
@@ -64,5 +63,5 @@ class TextBlock implements PageElement {
         return Flow.NONE;
     }
 
-    private record Line(Text text, int x) { }
+    private record Line(Component text, int x) { }
 }

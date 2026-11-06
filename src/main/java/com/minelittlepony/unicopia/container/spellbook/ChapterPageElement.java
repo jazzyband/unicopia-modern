@@ -1,234 +1,241 @@
 package com.minelittlepony.unicopia.container.spellbook;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
-
+import net.minecraft.commands.arguments.blocks.BlockStateParser;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.registries.codec.RegistryFileCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.state.BlockState;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
-import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.ability.magic.spell.crafting.IngredientWithSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.block.state.Schematic;
 import com.minelittlepony.unicopia.util.Untyped;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
+import com.minelittlepony.unicopia.util.serialization.PacketCodecUtils;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.util.Either;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.text.TranslatableTextContent;
-import net.minecraft.util.Identifier;
 
-public interface ChapterPageElement extends UnaryOperator<SpellbookChapter.Page.Builder> {
-    record Type<T extends ChapterPageElement>(Identifier id, Codec<? extends T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec) {
-        private static final Map<Identifier, Type<?>> REGISTRY = new HashMap<>();
+public interface ChapterPageElement {
+    byte IMAGE = 0;
+    byte RECIPE = 1;
+    byte STACK = 2;
+    byte TEXT_BLOCK = 3;
+    byte INGREDIENTS = 4;
+    byte STRUCTURE = 5;
 
-        public static final Codec<Type<?>> CODEC = Identifier.CODEC.xmap(REGISTRY::get, Type::id);
-        public static final PacketCodec<ByteBuf, Type<?>> PACKET_CODEC = Identifier.PACKET_CODEC.xmap(REGISTRY::get, Type::id);
-
-        public static final Type<Image> IMAGE = create(Unicopia.id("image"), Image.MAP_CODEC, Image.PACKET_CODEC);
-        public static final Type<Recipe> RECIPE = create(Unicopia.id("recipe"), Recipe.MAP_CODEC, Recipe.PACKET_CODEC);
-        public static final Type<Stack> STACK = create(Unicopia.id("stack"), Stack.MAP_CODEC, Stack.PACKET_CODEC);
-        public static final Type<TextBlock> TEXT_BLOCK = create(Unicopia.id("text_block"), TextBlock.CODEC, TextBlock.PACKET_CODEC);
-        public static final Type<Ingredients> INGREDIENTS = create(Unicopia.id("ingredients"), Ingredients.MAP_CODEC, Ingredients.PACKET_CODEC);
-        public static final Type<Structure> STRUCTURE = create(Unicopia.id("structure"), Structure.MAP_CODEC, Structure.PACKET_CODEC);
-
-        public static final <T extends ChapterPageElement> Type<T> create(Identifier id, Codec<T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec) {
-            var type = new Type<>(id, codec, packetCodec);
-            REGISTRY.put(id, type);
-            return type;
-        }
-
-        public static final <T extends ChapterPageElement> Type<T> create(Identifier id, MapCodec<T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec) {
-            return create(id, codec.codec(), packetCodec);
-        }
-    }
-
-    MapCodec<Bounds> BOUNDS_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    Codec<Bounds> BOUNDS_CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.INT.optionalFieldOf("y", 0).forGetter(o -> o.top),
             Codec.INT.optionalFieldOf("x", 0).forGetter(o -> o.left),
             Codec.INT.optionalFieldOf("width", 0).forGetter(o -> o.width),
             Codec.INT.optionalFieldOf("height", 0).forGetter(o -> o.height)
     ).apply(i, Bounds::new));
-    PacketCodec<PacketByteBuf, Bounds> BOUNDS_PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.INTEGER, o -> o.top,
-            PacketCodecs.INTEGER, o -> o.left,
-            PacketCodecs.INTEGER, o -> o.width,
-            PacketCodecs.INTEGER, o -> o.height,
+    StreamCodec<FriendlyByteBuf, Bounds> BOUNDS_PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.INT, o -> o.left,
+            ByteBufCodecs.INT, o -> o.top,
+            ByteBufCodecs.INT, o -> o.width,
+            ByteBufCodecs.INT, o -> o.height,
             Bounds::new
     );
-    Codec<ChapterPageElement> CODEC = CodecUtils.fuzzy(Type.CODEC, () -> Type.REGISTRY.values().stream(), ChapterPageElement::type, Type::codec);
-    PacketCodec<RegistryByteBuf, ChapterPageElement> PACKET_CODEC = Type.PACKET_CODEC.<RegistryByteBuf>cast().dispatch(ChapterPageElement::type, Type::packetCodec);
+    Codec<ChapterPageElement> CODEC = new Codec<>() {
+        @Override
+        public <T> DataResult<T> encode(ChapterPageElement input, DynamicOps<T> ops, T prefix) {
+            return switch(input.getType()) {
+                case IMAGE -> Image.CODEC.encode((Image)input, ops, prefix);
+                case STACK -> Stack.CODEC.encode((Stack)input, ops, prefix);
+                case RECIPE -> ops.mapBuilder().add(ops.createString("recipe"), Recipe.CODEC.encode((Recipe)input, ops, prefix)).build(prefix);
+                case TEXT_BLOCK -> TextBlock.CODEC.encode((TextBlock)input, ops, prefix);
+                case STRUCTURE -> ops.mapBuilder().add(ops.createString("structure"), Structure.CODEC.encode((Structure)input, ops, prefix)).build(prefix);
+                case INGREDIENTS -> ops.mapBuilder().add(ops.createString("ingredients"), Ingredients.CODEC.encode((Ingredients)input, ops, prefix)).build(prefix);
+                default -> DataResult.error(() -> "Don't know how to serialize " + input + "(" + input.getType() + ")");
+            };
+        }
 
-    Type<?> type();
+        @Override
+        public <T> DataResult<Pair<ChapterPageElement, T>> decode(DynamicOps<T> ops, T input) {
+            return ops.getMap(input).result().<DataResult<Pair<ChapterPageElement, T>>>map(mapLike -> {
+                if (mapLike.get("texture") != null) return Untyped.cast(Image.CODEC.decode(ops, input));
+                if (mapLike.get("recipe") != null) return Untyped.cast(Recipe.CODEC.decode(ops, mapLike.get("recipe")));
+                if (mapLike.get("item") != null) return Untyped.cast(Stack.CODEC.decode(ops, input));
+                if (mapLike.get("ingredients") != null) return Untyped.cast(Ingredients.CODEC.decode(ops, mapLike.get("ingredients")));
+                if (mapLike.get("structure") != null) return Untyped.cast(Structure.CODEC.decode(ops, mapLike.get("structure")));
+                return Untyped.cast(TextBlock.CODEC.decode(ops, input));
+            }).orElseGet(() -> Untyped.cast(TextBlock.CODEC.decode(ops, input)));
+        }
+    };
+    StreamCodec<RegistryFriendlyByteBuf, ChapterPageElement> PACKET_CODEC = ByteBufCodecs.BYTE.<RegistryFriendlyByteBuf>cast().dispatch(ChapterPageElement::getType, type -> switch (type) {
+            case IMAGE -> Image.PACKET_CODEC;
+            case STACK -> Stack.PACKET_CODEC;
+            case RECIPE -> Recipe.PACKET_CODEC;
+            case TEXT_BLOCK -> TextBlock.PACKET_CODEC;
+            case STRUCTURE -> Structure.PACKET_CODEC;
+            case INGREDIENTS -> Ingredients.PACKET_CODEC;
+            default -> throw new IllegalArgumentException("Don't know how to serialize " + type);
+    });
 
-    @Override
-    default SpellbookChapter.Page.Builder apply(SpellbookChapter.Page.Builder builder) {
-        return builder.element(this);
-    }
+    byte getType();
 
     record Image (Identifier texture, Bounds bounds, Flow flow) implements ChapterPageElement {
-        public static final MapCodec<Image> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        public static final Codec<Image> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("texture").forGetter(Image::texture),
                 BOUNDS_CODEC.fieldOf("bounds").forGetter(Image::bounds),
-                Flow.CODEC.optionalFieldOf("flow", Flow.RIGHT).forGetter(Image::flow)
+                Flow.CODEC.optionalFieldOf("flow", Flow.NONE).forGetter(Image::flow)
         ).apply(i, Image::new));
-        public static final PacketCodec<RegistryByteBuf, Image> PACKET_CODEC = PacketCodec.tuple(
-                Identifier.PACKET_CODEC, Image::texture,
+        public static final StreamCodec<RegistryFriendlyByteBuf, Image> PACKET_CODEC = StreamCodec.composite(
+                Identifier.STREAM_CODEC, Image::texture,
                 BOUNDS_PACKET_CODEC, Image::bounds,
                 Flow.PACKET_CODEC, Image::flow,
                 Image::new
         );
 
         @Override
-        public Type<?> type() {
-            return Type.IMAGE;
+        public byte getType() {
+            return IMAGE;
         }
     }
 
-    record Recipe(RegistryKey<net.minecraft.recipe.Recipe<?>> recipe) implements ChapterPageElement {
-        public static final MapCodec<Recipe> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                RegistryKey.createCodec(RegistryKeys.RECIPE).fieldOf("recipe").forGetter(Recipe::recipe)
-        ).apply(i, Recipe::new));
-        public static final PacketCodec<ByteBuf, Recipe> PACKET_CODEC = RegistryKey.createPacketCodec(RegistryKeys.RECIPE).xmap(Recipe::new, Recipe::recipe);
+    record Recipe(Holder<net.minecraft.world.item.crafting.Recipe<?>> recipe, List<RecipeDisplay> recipeDisplays) implements ChapterPageElement {
+        public static final Codec<Recipe> CODEC = net.minecraft.world.item.crafting.Recipe.CODEC
+                .xmap(entry -> new Recipe(entry, List.of()), recipe -> recipe.recipe());
+        public static final StreamCodec<RegistryFriendlyByteBuf, Recipe> PACKET_CODEC = RecipeDisplay.STREAM_CODEC.apply(ByteBufCodecs.list()).map(displays -> new Recipe(null, displays), Recipe::recipeDisplays);
 
         @Override
-        public Type<?> type() {
-            return Type.RECIPE;
+        public List<RecipeDisplay> recipeDisplays() {
+            return recipe != null && recipe.isBound() ? recipe.value().display() : recipeDisplays;
+        }
+
+        @Override
+        public byte getType() {
+            return RECIPE;
         }
     }
 
     record Stack (IngredientWithSpell ingredient, Bounds bounds) implements ChapterPageElement {
-        public static final MapCodec<Stack> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        public static final Codec<Stack> CODEC = RecordCodecBuilder.create(i -> i.group(
                 IngredientWithSpell.FLEXIBLE_CODEC.fieldOf("item").forGetter(Stack::ingredient),
-                BOUNDS_CODEC.forGetter(Stack::bounds)
+                MapCodec.assumeMapUnsafe(BOUNDS_CODEC).forGetter(Stack::bounds)
         ).apply(i, Stack::new));
-        public static final PacketCodec<RegistryByteBuf, Stack> PACKET_CODEC = PacketCodec.tuple(
+        public static final StreamCodec<RegistryFriendlyByteBuf, Stack> PACKET_CODEC = StreamCodec.composite(
                 IngredientWithSpell.PACKET_CODEC, Stack::ingredient,
                 BOUNDS_PACKET_CODEC, Stack::bounds,
                 Stack::new
         );
 
         @Override
-        public Type<?> type() {
-            return Type.STACK;
+        public byte getType() {
+            return STACK;
         }
     }
 
     interface TextElement extends ChapterPageElement {
-        Stream<Text> lines();
+        Stream<Component> lines();
     }
 
-    record TextBlock (Text text) implements TextElement {
-        public static final Codec<Text> FLEXIBLE_TEXT_CODEC = Codec.either(Codec.STRING, TextCodecs.CODEC).xmap(
-                        either -> Either.unwrap(either.mapLeft(Text::translatable)),
-                        text -> {
-            if (text.getStyle().isEmpty()) {
-                if (text.getLiteralString() != null) {
-                    return Either.left(text.getLiteralString());
-                }
-                if (text.getContent() instanceof TranslatableTextContent c && c.getFallback() == null) {
-                    return Either.left(c.getKey());
-                }
-            }
-            return Either.right(text);
-        });
+    record TextBlock (Component text) implements TextElement {
+        public static final Codec<Component> FLEXIBLE_TEXT_CODEC = ComponentSerialization.CODEC;
         public static final Codec<TextBlock> CODEC = FLEXIBLE_TEXT_CODEC.xmap(TextBlock::new, TextBlock::text);
-        public static final PacketCodec<ByteBuf, TextBlock> PACKET_CODEC = TextCodecs.PACKET_CODEC.xmap(TextBlock::new, TextBlock::text);
+        public static final StreamCodec<ByteBuf, TextBlock> PACKET_CODEC = ComponentSerialization.TRUSTED_CONTEXT_FREE_STREAM_CODEC.map(TextBlock::new, TextBlock::text);
 
         @Override
-        public Type<?> type() {
-            return Type.TEXT_BLOCK;
+        public byte getType() {
+            return TEXT_BLOCK;
         }
 
         @Override
-        public Stream<Text> lines() {
+        public Stream<Component> lines() {
             return Stream.of(text);
         }
     }
 
     record Ingredients(List<Multi<?>> entries) implements TextElement {
-        public static final MapCodec<Ingredients> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                Multi.CODEC.listOf().fieldOf("ingredients").forGetter(Ingredients::entries)
-        ).apply(i, Ingredients::new));
-
-        public static final PacketCodec<RegistryByteBuf, Ingredients> PACKET_CODEC = Multi.PACKET_CODEC.collect(PacketCodecs.toList()).xmap(Ingredients::new, Ingredients::entries);
+        public static final Codec<Ingredients> CODEC = Multi.CODEC.listOf().xmap(Ingredients::new, Ingredients::entries);
+        public static final StreamCodec<RegistryFriendlyByteBuf, Ingredients> PACKET_CODEC = Multi.PACKET_CODEC.apply(ByteBufCodecs.list()).map(Ingredients::new, Ingredients::entries);
 
         @Override
-        public Type<?> type() {
-            return Type.INGREDIENTS;
+        public byte getType() {
+            return INGREDIENTS;
         }
 
         @Override
-        public Stream<Text> lines() {
+        public Stream<Component> lines() {
             return entries().stream().map(Multi::text);
         }
 
         public record Multi<T>(T element, int count) {
-            public record Type<T>(Identifier id, Codec<T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec, Function<Multi<T>, Text> textFunction) {
-                private static final Map<Identifier, Type<?>> REGISTRY = new HashMap<>();
-                public static final Codec<Type<?>> CODEC = CodecUtils.identifierWithDefaultnamespace(Unicopia.DEFAULT_NAMESPACE).xmap(REGISTRY::get, Type::id);
-                public static final PacketCodec<ByteBuf, Type<?>> PACKET_CODEC = Identifier.PACKET_CODEC.xmap(REGISTRY::get, Type::id);
-
-                private static final MapCodec<Object> ELEMENT_CODEC = CodecUtils.mapFuzzy(CODEC, () -> REGISTRY.values().stream(), Type::of, Type::codec);
-                private static final PacketCodec<? super RegistryByteBuf, Object> ELEMENT_PACKET_CODEC = PACKET_CODEC.<RegistryByteBuf>cast().dispatch(Type::of, Type::packetCodec);
-
-                public static final Type<Item> ITEM = create(Unicopia.id("item"), Registries.ITEM.getCodec(), PacketCodecs.registryValue(RegistryKeys.ITEM), i -> formatLine(i.element().getDefaultStack().getName(), "item", i.count()));
-                public static final Type<Trait> TRAIT = create(Unicopia.id("trait"), Trait.CODEC, Trait.PACKET_CODEC, i -> formatLine(i.element().getShortName(), "trait", i.count()));
-                public static final Type<Text> TEXT = create(Unicopia.id("text"), TextBlock.FLEXIBLE_TEXT_CODEC, TextCodecs.PACKET_CODEC, Multi::element);
-                public static final Type<SpellType<?>> SPELL = create(Unicopia.id("spell"), SpellType.CODEC, SpellType.PACKET_CODEC, i -> formatLine(i.element().getName(), "spell", i.count()));
-
-                private static Text formatLine(Text line, String kind, int count) {
-                    return Text.translatable("gui.unicopia.spellbook.page.requirements.entry." + kind, count, line);
-                }
-
-                public static <T> Type<T> create(Identifier id, Codec<T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec, Function<Multi<T>, Text> textFunction) {
-                    var type = new Type<>(id, codec, packetCodec, textFunction);
-                    REGISTRY.put(id, type);
-                    return type;
-                }
-
-                public static <T> Type<T> of(T element) {
-                    return Untyped.cast(switch (element) {
-                        case Item i -> Type.ITEM;
-                        case Trait t -> Type.TRAIT;
-                        case Text t -> Type.TEXT;
-                        case SpellType<?> s -> Type.SPELL;
-                        default -> throw new IllegalArgumentException("Don't know how to serialize " + element);
-                    });
-                }
-            }
-
+            private static final MapCodec<Object> ELEMENT_CODEC = CodecUtils.dispatched(Multi::getType, Map.of(
+                "item", BuiltInRegistries.ITEM.byNameCodec(),
+                "trait", Trait.CODEC,
+                "text", TextBlock.FLEXIBLE_TEXT_CODEC,
+                "spell", SpellType.CODEC
+            ));
             public static final Codec<Multi<?>> CODEC = RecordCodecBuilder.create(i -> i.group(
-                    Type.ELEMENT_CODEC.forGetter(Multi::element),
+                    ELEMENT_CODEC.forGetter(Multi::element),
                     Codec.INT.optionalFieldOf("count", 1).forGetter(Multi::count)
             ).apply(i, Multi::new));
-
-            public static final PacketCodec<RegistryByteBuf, Multi<?>> PACKET_CODEC = PacketCodec.tuple(
-                    Type.ELEMENT_PACKET_CODEC, Multi::element,
-                    PacketCodecs.INTEGER, Multi::count,
+            private static final StreamCodec<RegistryFriendlyByteBuf, Item> ITEM_PACKET_CODEC = ByteBufCodecs.registry(Registries.ITEM);
+            private static final StreamCodec<RegistryFriendlyByteBuf, Object> ELEMENT_PACKET_CODEC = ByteBufCodecs.STRING_UTF8.<RegistryFriendlyByteBuf>cast().dispatch(Multi::getType, type -> switch (type) {
+                case "item" -> ITEM_PACKET_CODEC;
+                case "trait" -> Trait.PACKET_CODEC;
+                case "text" -> ComponentSerialization.TRUSTED_CONTEXT_FREE_STREAM_CODEC;
+                case "spell" -> SpellType.PACKET_CODEC;
+                default -> throw new IllegalArgumentException("Don't know how to serialize " + type);
+            });
+            public static final StreamCodec<RegistryFriendlyByteBuf, Multi<?>> PACKET_CODEC = StreamCodec.composite(
+                    ELEMENT_PACKET_CODEC, Multi::element,
+                    ByteBufCodecs.INT, Multi::count,
                     Multi::new
             );
 
-            public Text text() {
-                return Type.of(element).textFunction().apply(this);
+            public String type() {
+                return getType(element);
+            }
+
+            public Component text() {
+                return switch (element) {
+                    case Item item -> formatLine(item.getDefaultInstance().getHoverName(), "item", count());
+                    case Trait trait -> formatLine(trait.getShortName(), "trait", count());
+                    case SpellType<?> spell -> formatLine(spell.getName(), "spell", count());
+                    case Component text -> text;
+                    default -> throw new IllegalArgumentException("Unexpected value: " + element);
+                };
+            }
+
+            private static Component formatLine(Component line, String kind, int count) {
+                return Component.translatable("gui.unicopia.spellbook.page.requirements.entry." + kind, count, line);
+            }
+
+            private static String getType(Object element) {
+                return switch (element) {
+                    case Item i -> "item";
+                    case Trait t -> "trait";
+                    case Component t -> "text";
+                    case SpellType<?> s -> "spell";
+                    default -> throw new IllegalArgumentException("Don't know how to serialize " + element);
+                };
             }
         }
 
@@ -241,12 +248,8 @@ public interface ChapterPageElement extends UnaryOperator<SpellbookChapter.Page.
 
             private Builder() {}
 
-            public Builder all(Map<? extends ItemConvertible, Integer> materials) {
-                materials.forEach((a, b) -> item(b, a));
-                return this;
-            }
-
-            public Builder item(int count, ItemConvertible item) {
+            @SuppressWarnings("deprecation")
+            public Builder item(int count, ItemLike item) {
                 entries.add(new Multi<>(item.asItem(), count));
                 return this;
             }
@@ -256,7 +259,7 @@ public interface ChapterPageElement extends UnaryOperator<SpellbookChapter.Page.
                 return this;
             }
 
-            public Builder text(int count, Text text) {
+            public Builder text(int count, Component text) {
                 entries.add(new Multi<>(text, count));
                 return this;
             }
@@ -272,19 +275,109 @@ public interface ChapterPageElement extends UnaryOperator<SpellbookChapter.Page.
         }
     }
 
-    record Structure(Schematic.Unbaked schematic) implements ChapterPageElement {
-        public static final MapCodec<Structure> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                Schematic.Unbaked.CODEC.fieldOf("schematic").forGetter(Structure::schematic)
-        ).apply(i, Structure::new));
-        public static final PacketCodec<ByteBuf, Structure> PACKET_CODEC = Schematic.Unbaked.PACKET_CODEC.xmap(Structure::new, Structure::schematic);
+    record Structure(List<Command> commands) implements ChapterPageElement {
+        @Deprecated
+        public static final Codec<BlockState> STATE_CODEC = new Codec<>() {
+            @Override
+            public <T> DataResult<T> encode(BlockState input, DynamicOps<T> ops, T prefix) {
+                return DataResult.success(ops.createString(BlockStateParser.serialize(input)));
+            }
+
+            @Override
+            public <T> DataResult<Pair<BlockState, T>> decode(DynamicOps<T> ops, T input) {
+                return ops.getStringValue(input).flatMap(pair -> {
+                    try {
+                        return DataResult.success(new Pair<>(BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, pair, false).blockState(), input));
+                    } catch (CommandSyntaxException e) {
+                        return DataResult.error(() -> e.getMessage());
+                    }
+                });
+            }
+        };
+
+        public static final Codec<Structure> CODEC = Codec.xor(Set.CODEC, Fill.CODEC)
+                .xmap(either -> (Command)Either.unwrap(either), element -> element instanceof Set s ? Either.left(s) : Either.right((Fill)element))
+                .listOf().xmap(Structure::new, Structure::commands);
+
+        private static final StreamCodec<ByteBuf, Command> COMMAND_PACKET_CODEC = ByteBufCodecs.BYTE.dispatch(element -> element instanceof Set ? (byte)1 : (byte)2, Map.of(
+                (byte)1, Set.PACKET_CODEC,
+                (byte)2, Fill.PACKET_CODEC
+        )::get);
+        public static final StreamCodec<ByteBuf, Structure> PACKET_CODEC = COMMAND_PACKET_CODEC.apply(ByteBufCodecs.list()).map(Structure::new, Structure::commands);
 
         @Override
-        public Type<?> type() {
-            return Type.STRUCTURE;
+        public byte getType() {
+            return STRUCTURE;
         }
 
         public Schematic toSchematic() {
-            return schematic.bake();
+            Schematic.Builder builder = new Schematic.Builder();
+            commands.forEach(command -> command.apply(builder));
+            return builder.build();
+        }
+
+        interface Command {
+            void apply(Schematic.Builder builder);
+        }
+
+        private record Set(Vec3i pos, BlockState state) implements Command {
+            public static final Codec<Set> CODEC = RecordCodecBuilder.create(i -> i.group(
+                    Vec3i.CODEC.fieldOf("pos").forGetter(Set::pos),
+                    STATE_CODEC.fieldOf("state").forGetter(Set::state)
+            ).apply(i, Set::new));
+            public static final StreamCodec<ByteBuf, Set> PACKET_CODEC = StreamCodec.composite(
+                    Vec3i.STREAM_CODEC, Set::pos,
+                    PacketCodecUtils.BLOCK_STATE, Set::state,
+                    Set::new
+            );
+
+            @Override
+            public void apply(Schematic.Builder builder) {
+                builder.set(pos.getX(), pos.getY(), pos.getZ(), state);
+            }
+        }
+
+        private record Fill(Vec3i min, Vec3i max, BlockState state) implements Command {
+            public static final Codec<Fill> CODEC = RecordCodecBuilder.create(i -> i.group(
+                    Vec3i.CODEC.fieldOf("min").forGetter(Fill::min),
+                    Vec3i.CODEC.fieldOf("max").forGetter(Fill::max),
+                    STATE_CODEC.fieldOf("state").forGetter(Fill::state)
+            ).apply(i, Fill::new));
+            public static final StreamCodec<ByteBuf, Fill> PACKET_CODEC = StreamCodec.composite(
+                    Vec3i.STREAM_CODEC, Fill::min,
+                    Vec3i.STREAM_CODEC, Fill::max,
+                    PacketCodecUtils.BLOCK_STATE, Fill::state,
+                    Fill::new
+            );
+
+            @Override
+            public void apply(Schematic.Builder builder) {
+                builder.fill(min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), state);
+            }
+        }
+
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        public static final class Builder {
+            private final List<Command> commands = new ArrayList<>();
+
+            private Builder() {}
+
+            public Builder set(Vec3i pos, BlockState state) {
+                commands.add(new Set(pos, state));
+                return this;
+            }
+
+            public Builder fill(Vec3i min, Vec3i max, BlockState state) {
+                commands.add(new Fill(min, max, state));
+                return this;
+            }
+
+            public Structure build() {
+                return new Structure(List.copyOf(commands));
+            }
         }
     }
 }

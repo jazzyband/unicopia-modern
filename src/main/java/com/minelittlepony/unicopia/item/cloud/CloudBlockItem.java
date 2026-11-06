@@ -1,40 +1,39 @@
 package com.minelittlepony.unicopia.item.cloud;
 
 import com.minelittlepony.unicopia.InteractionManager;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class CloudBlockItem extends BlockItem {
-    public CloudBlockItem(Block block, Item.Settings settings) {
+    public CloudBlockItem(Block block, Item.Properties settings) {
         super(block, settings);
     }
 
     @Override
-    public ActionResult useOnBlock(ItemUsageContext context) {
-        return super.useOnBlock(context);
+    public InteractionResult useOn(UseOnContext context) {
+        return super.useOn(context);
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity user, Hand hand) {
+    public InteractionResult use(Level world, Player user, InteractionHand hand) {
         InteractionManager.getInstance().sendPlayerLookAngles(user);
-        Vec3d targetPos = user.getEyePos().add(user.getRotationVec(1).multiply(1, 1.5, 1).normalize().multiply(2));
-        ItemPlacementContext context = new ItemPlacementContext(user, hand, user.getStackInHand(hand), new BlockHitResult(
+        Vec3 targetPos = user.getEyePosition().add(user.getViewVector(1).multiply(1, 1.5, 1).normalize().scale(2));
+        BlockPlaceContext context = new BlockPlaceContext(user, hand, user.getItemInHand(hand), new BlockHitResult(
             targetPos,
             Direction.UP,
-            BlockPos.ofFloored(targetPos),
+            BlockPos.containing(targetPos),
             true
         ));
 
@@ -42,7 +41,7 @@ public class CloudBlockItem extends BlockItem {
     }
 
     @Override
-    protected boolean canPlace(ItemPlacementContext context, BlockState state) {
-        return !checkStatePlacement() || state.canPlaceAt(context.getWorld(), context.getBlockPos());
+    protected boolean canPlace(BlockPlaceContext context, BlockState state) {
+        return !mustSurvive() || state.canSurvive(context.getLevel(), context.getClickedPos());
     }
 }

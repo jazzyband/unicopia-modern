@@ -12,20 +12,19 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.client.UnicopiaClient;
+import com.mojang.blaze3d.audio.Channel;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.client.sound.Source;
-import net.minecraft.util.math.Vec3d;
-
-@Mixin(Source.class)
+@Mixin(Channel.class)
 abstract class MixinSoundSource {
     @Shadow
-    private @Final int pointer;
+    private @Final int source;
 
     @Nullable
-    private Vec3d unicopiaOriginalPos = null;
+    private Vec3 unicopiaOriginalPos = null;
 
-    @ModifyVariable(method = "setPosition", at = @At("HEAD"))
-    private Vec3d modifyPosition(Vec3d pos) {
+    @ModifyVariable(method = "setSelfPosition", at = @At("HEAD"))
+    private Vec3 modifyPosition(Vec3 pos) {
         unicopiaOriginalPos = pos;
         return UnicopiaClient.getAdjustedSoundPosition(pos, isRelative());
     }
@@ -33,13 +32,13 @@ abstract class MixinSoundSource {
     @Inject(method = "setRelative", at = @At("RETURN"))
     private void onSetRelative(boolean relative, CallbackInfo info) {
         if (unicopiaOriginalPos != null) {
-            ((Source)(Object)this).setPosition(unicopiaOriginalPos);
+            ((Channel)(Object)this).setSelfPosition(unicopiaOriginalPos);
             unicopiaOriginalPos = null;
         }
     }
 
     @Unique
     private boolean isRelative() {
-        return AL10.alGetSourcei(pointer, AL10.AL_SOURCE_RELATIVE) == Source.field_31894 /*(1)*/;
+        return AL10.alGetSourcei(source, AL10.AL_SOURCE_RELATIVE) == Channel.BUFFER_DURATION_SECONDS /*(1)*/;
     }
 }

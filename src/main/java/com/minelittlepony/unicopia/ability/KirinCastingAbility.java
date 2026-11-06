@@ -2,7 +2,7 @@ package com.minelittlepony.unicopia.ability;
 
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import net.minecraft.particle.ParticleTypes;
+import net.minecraft.core.particles.ParticleTypes;
 
 public class KirinCastingAbility extends UnicornCastingAbility {
     @Override

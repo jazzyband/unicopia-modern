@@ -3,10 +3,9 @@ package com.minelittlepony.unicopia.server.world.chunk;
 import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
-
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
 
 public class Section<T extends PositionalDataMap.Hotspot> {
     private final Set<T> entries = weakSet();
@@ -30,7 +29,7 @@ public class Section<T extends PositionalDataMap.Hotspot> {
         return false;
     }
 
-    public boolean update(T entry, Box box) {
+    public boolean update(T entry, AABB box) {
         entries.add(entry);
         states = null;
         return true;
@@ -51,13 +50,13 @@ public class Section<T extends PositionalDataMap.Hotspot> {
 
         for (T entry : entries) {
             BlockPos center = entry.getCenter();
-            int radius = MathHelper.ceil(entry.radius());
+            int radius = Mth.ceil(entry.radius());
 
             if (pos.equals(center)
                    || (isInRange(pos.getX(), center.getX(), radius)
                     && isInRange(pos.getZ(), center.getZ(), radius)
                     && isInRange(pos.getY(), center.getY(), radius)
-                    && center.isWithinDistance(pos, radius))) {
+                    && center.closerThan(pos, radius))) {
                 state.add(entry);
             }
         }

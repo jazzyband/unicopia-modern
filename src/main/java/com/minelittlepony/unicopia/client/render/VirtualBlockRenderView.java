@@ -1,17 +1,23 @@
 package com.minelittlepony.unicopia.client.render;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockRenderView;
-import net.minecraft.world.biome.ColorResolver;
-import net.minecraft.world.chunk.light.LightingProvider;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.level.CardinalLighting;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LevelLightEngine;
+import net.minecraft.world.level.material.FluidState;
 
-public interface VirtualBlockRenderView extends BlockRenderView {
+public interface VirtualBlockRenderView extends BlockAndTintGetter {
 
-    BlockRenderView proxy();
+    BlockAndTintGetter proxy();
+
+    @Override
+    default CardinalLighting cardinalLighting() {
+        return proxy().cardinalLighting();
+    }
 
     @Override
     default BlockEntity getBlockEntity(BlockPos pos) {
@@ -34,22 +40,17 @@ public interface VirtualBlockRenderView extends BlockRenderView {
     }
 
     @Override
-    default int getBottomY() {
-        return proxy().getBottomY();
+    default int getMinY() {
+        return proxy().getMinY();
     }
 
     @Override
-    default float getBrightness(Direction direction, boolean shaded) {
-        return proxy().getBrightness(direction, shaded);
+    default LevelLightEngine getLightEngine() {
+        return proxy().getLightEngine();
     }
 
     @Override
-    default LightingProvider getLightingProvider() {
-        return proxy().getLightingProvider();
-    }
-
-    @Override
-    default int getColor(BlockPos pos, ColorResolver colorResolver) {
-        return proxy().getColor(pos, colorResolver);
+    default int getBlockTint(BlockPos pos, ColorResolver colorResolver) {
+        return proxy().getBlockTint(pos, colorResolver);
     }
 }

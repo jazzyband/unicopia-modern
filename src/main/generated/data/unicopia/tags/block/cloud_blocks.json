@@ -1,0 +1,17 @@
+{
+  "values": [
+    "unicopia:cloud",
+    "unicopia:cloud_planks",
+    "unicopia:cloud_bricks",
+    "unicopia:dense_cloud",
+    "unicopia:etched_cloud",
+    "unicopia:carved_cloud",
+    "unicopia:cloud_pillar",
+    "unicopia:compacted_cloud",
+    "unicopia:compacted_cloud_planks",
+    "unicopia:compacted_cloud_bricks",
+    "unicopia:unstable_cloud",
+    "unicopia:soggy_cloud",
+    "unicopia:shaping_bench"
+  ]
+}

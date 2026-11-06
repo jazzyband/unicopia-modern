@@ -7,7 +7,7 @@ import io.github.mattidragon.tlaapi.api.gui.TextureConfig;
 import io.github.mattidragon.tlaapi.api.plugin.PluginContext;
 import io.github.mattidragon.tlaapi.api.plugin.TlaApiPlugin;
 import io.github.mattidragon.tlaapi.api.recipe.TlaStackComparison;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 public class Main implements TlaApiPlugin {
     static final Identifier WIDGETS = Unicopia.id("textures/gui/widgets.png");

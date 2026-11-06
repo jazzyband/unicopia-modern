@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "seeds",
+  "ingredients": [
+    "unicopia:sweet_apple"
+  ],
+  "result": {
+    "count": 3,
+    "id": "unicopia:sweet_apple_seeds"
+  }
+}

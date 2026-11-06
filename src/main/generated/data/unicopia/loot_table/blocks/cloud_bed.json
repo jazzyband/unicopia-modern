@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:cloud_bed",
+            "state": {
+              "part": "head"
+            }
+          },
+          "name": "unicopia:cloud_bed"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

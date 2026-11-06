@@ -1,0 +1,199 @@
+{
+  "parent": "unicopia:pegasus/molting_season_4",
+  "criteria": {
+    "shed_feather_1": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_10": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 10
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_11": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 11
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_12": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 12
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_13": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 13
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_14": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 14
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_15": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 15
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_16": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 16
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_2": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 2
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_3": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 3
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_4": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 4
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_5": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 5
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_6": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 6
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_7": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 7
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_8": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 8
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_9": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 9
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.molting_season_5.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:pegasus_feather"
+    },
+    "title": {
+      "translate": "advancements.unicopia.molting_season_5.title"
+    }
+  },
+  "requirements": [
+    [
+      "shed_feather_1"
+    ],
+    [
+      "shed_feather_2"
+    ],
+    [
+      "shed_feather_3"
+    ],
+    [
+      "shed_feather_4"
+    ],
+    [
+      "shed_feather_5"
+    ],
+    [
+      "shed_feather_6"
+    ],
+    [
+      "shed_feather_7"
+    ],
+    [
+      "shed_feather_8"
+    ],
+    [
+      "shed_feather_9"
+    ],
+    [
+      "shed_feather_10"
+    ],
+    [
+      "shed_feather_11"
+    ],
+    [
+      "shed_feather_12"
+    ],
+    [
+      "shed_feather_13"
+    ],
+    [
+      "shed_feather_14"
+    ],
+    [
+      "shed_feather_15"
+    ],
+    [
+      "shed_feather_16"
+    ]
+  ],
+  "rewards": {
+    "experience": 40
+  },
+  "sends_telemetry_event": true
+}

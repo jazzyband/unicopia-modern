@@ -1,76 +1,76 @@
 package com.minelittlepony.unicopia.item;
 
 import java.util.function.Consumer;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import com.minelittlepony.unicopia.USounds;
-import net.minecraft.block.Blocks;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ToolMaterial;
-import net.minecraft.item.consume.UseAction;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
 
 public class StaffItem extends Item {
-    public StaffItem(Settings settings) {
+    public StaffItem(Properties settings) {
         super(settings.sword(ToolMaterial.WOOD, 2, -3));
     }
 
     @Override
-    public ActionResult useOnEntity(ItemStack stack, PlayerEntity player, LivingEntity target, Hand hand) {
-        World w = player.getEntityWorld();
+    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+        Level w = player.level();
 
         EntityDimensions dims = target.getDimensions(target.getPose());
 
         for (int i = 0; i < 130; i++) {
-            w.addParticleClient(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_LOG.getDefaultState()),
-                    target.getX() + (target.getWorld().random.nextFloat() - 0.5F) * (dims.width() + 1),
-                    (target.getY() + dims.height() / 2) + (target.getWorld().random.nextFloat() - 0.5F) * dims.height(),
-                    target.getZ() + (target.getWorld().random.nextFloat() - 0.5F) * (dims.width() + 1),
+            w.addParticle(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.OAK_LOG.defaultBlockState()),
+                    target.getX() + (target.level().getRandom().nextFloat() - 0.5F) * (dims.width() + 1),
+                    (target.getY() + dims.height() / 2) + (target.level().getRandom().nextFloat() - 0.5F) * dims.height(),
+                    target.getZ() + (target.level().getRandom().nextFloat() - 0.5F) * (dims.width() + 1),
                     0, 0, 0
             );
         }
 
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, Item.TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
-        textConsumer.accept(Text.translatable(getTranslationKey() + ".lore").formatted(Formatting.GRAY));
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
+        textConsumer.accept(Component.translatable(getDescriptionId() + ".lore").withStyle(ChatFormatting.GRAY));
     }
 
     @Override
-    public void postHit(ItemStack stack, LivingEntity entity, LivingEntity attacker) {
-        super.postHit(stack, entity, attacker);
+    public void hurtEnemy(ItemStack stack, LivingEntity entity, LivingEntity attacker) {
+        super.hurtEnemy(stack, entity, attacker);
 
         // TODO: Maybe swing?
         castContainedEffect(stack, entity, attacker);
     }
 
     protected boolean castContainedEffect(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        target.getEntityWorld().playSound(null, target.getBlockPos(), USounds.ITEM_STAFF_STRIKE, attacker.getSoundCategory(), 1, 1);
+        target.level().playSound(null, target.blockPosition(), USounds.ITEM_STAFF_STRIKE, attacker.getSoundSource(), 1, 1);
 
-        target.takeKnockback(attacker.getVelocity().subtract(target.getVelocity()).horizontalLength(),
-                MathHelper.sin(attacker.getYaw() * 0.017453292F),
-               -MathHelper.cos(attacker.getYaw() * 0.017453292F)
+        target.knockback(attacker.getDeltaMovement().subtract(target.getDeltaMovement()).horizontalDistance(),
+                Mth.sin(attacker.getYRot() * 0.017453292F),
+               -Mth.cos(attacker.getYRot() * 0.017453292F),
+               attacker.damageSources().mobAttack(attacker), 0
         );
 
         return true;
     }
 
     @Override
-    public UseAction getUseAction(ItemStack stack) {
-        return UseAction.BOW;
+    public ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.BOW;
     }
 }

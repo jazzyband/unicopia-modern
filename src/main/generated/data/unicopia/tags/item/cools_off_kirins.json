@@ -1,0 +1,15 @@
+{
+  "values": [
+    "minecraft:melon_slice",
+    "unicopia:juice",
+    "#c:buckets/water",
+    {
+      "id": "farmersdelight:melon_popsicle",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:melon_juice",
+      "required": false
+    }
+  ]
+}

@@ -3,16 +3,13 @@ package com.minelittlepony.unicopia.client.gui.spellbook;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
-
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import com.minelittlepony.common.client.gui.IViewRoot;
 import com.minelittlepony.unicopia.Debug;
 import com.minelittlepony.unicopia.client.gui.spellbook.element.DynamicContent;
 import com.minelittlepony.unicopia.container.spellbook.SpellbookChapter;
-import com.minelittlepony.unicopia.container.spellbook.SpellbookRecipes;
 import com.minelittlepony.unicopia.container.spellbook.TabSide;
-
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.Identifier;
 
 public class SpellbookChapterList {
     private final SpellbookScreen screen;
@@ -54,8 +51,8 @@ public class SpellbookChapterList {
         Identifier id,
         SpellbookChapter details,
         Optional<Content> content) {
-        public Chapter(Identifier id, SpellbookChapter details, SpellbookRecipes recipes) {
-            this(id, details, Optional.of(new DynamicContent(details.pages(), recipes)));
+        public Chapter(Identifier id, SpellbookChapter details) {
+            this(id, details, Optional.of(new DynamicContent(details.pages())));
         }
 
         public static Identifier createIcon(Identifier id, String suffex) {
@@ -80,7 +77,7 @@ public class SpellbookChapterList {
                 }
 
                 @Override
-                public void draw(DrawContext context, int mouseX, int mouseY, IViewRoot container) {
+                public void draw(GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
                     obj.draw(context, mouseX, mouseY, container);
                 }
             });
@@ -88,6 +85,6 @@ public class SpellbookChapterList {
     }
 
     public interface Drawable {
-        void draw(DrawContext context, int mouseX, int mouseY, IViewRoot container);
+        void draw(GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container);
     }
 }

@@ -1,0 +1,8 @@
+{
+  "type": "unicopia:crafting_zap_apple",
+  "appearance": "unicopia:horse_shoe_fries",
+  "ingredients": [
+    "unicopia:zap_apple",
+    "unicopia:iron_horse_shoe"
+  ]
+}

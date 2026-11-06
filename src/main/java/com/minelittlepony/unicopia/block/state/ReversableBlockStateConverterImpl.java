@@ -2,16 +2,14 @@ package com.minelittlepony.unicopia.block.state;
 
 import java.util.*;
 import java.util.function.Supplier;
-
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.world.World;
 
 class ReversableBlockStateConverterImpl implements ReversableBlockStateConverter {
     public static final Codec<ReversableBlockStateConverter> CODEC = Entry.CODEC.listOf().xmap(
@@ -34,7 +32,7 @@ class ReversableBlockStateConverterImpl implements ReversableBlockStateConverter
     }
 
     @Override
-    public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
+    public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
         return entries.stream()
                 .filter(entry -> entry.canConvert(state))
                 .findFirst()
@@ -65,7 +63,7 @@ class ReversableBlockStateConverterImpl implements ReversableBlockStateConverter
             return state != null && match.test(state);
         }
 
-        public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
+        public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
             return stateChange.getConverted(world, state);
         }
 

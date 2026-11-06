@@ -1,0 +1,8 @@
+{
+  "parent": "unicopia:block/template_pillar",
+  "textures": {
+    "bottom": "unicopia:block/cloud_pillar_end",
+    "side": "unicopia:block/cloud_pillar_side",
+    "top": "unicopia:block/cloud_pillar_lip"
+  }
+}

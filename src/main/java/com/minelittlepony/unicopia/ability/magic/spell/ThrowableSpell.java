@@ -1,7 +1,9 @@
 package com.minelittlepony.unicopia.ability.magic.spell;
 
 import java.util.Optional;
-
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
@@ -9,10 +11,6 @@ import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.projectile.MagicBeamEntity;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
-
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.world.World;
 
 public final class ThrowableSpell extends AbstractDelegatingSpell implements
     ProjectileDelegate.ConfigurationListener, ProjectileDelegate.BlockHitListener, ProjectileDelegate.EntityHitListener {
@@ -45,9 +43,9 @@ public final class ThrowableSpell extends AbstractDelegatingSpell implements
      * Returns the resulting projectile entity for customization (or null if on the client).
      */
     public Optional<MagicBeamEntity> throwProjectile(Caster<?> caster, float divergance) {
-        World world = caster.asWorld();
+        Level world = caster.asWorld();
 
-        caster.playSound(USounds.SPELL_CAST_SHOOT, 0.7F, 0.4F / (world.random.nextFloat() * 0.4F + 0.8F));
+        caster.playSound(USounds.SPELL_CAST_SHOOT, 0.7F, 0.4F / (world.getRandom().nextFloat() * 0.4F + 0.8F));
 
         if (caster.isClient()) {
             return Optional.empty();
@@ -57,7 +55,7 @@ public final class ThrowableSpell extends AbstractDelegatingSpell implements
             MagicBeamEntity projectile = new MagicBeamEntity(world, caster.asEntity(), divergance, s);
 
             configureProjectile(projectile, caster);
-            world.spawnEntity(projectile);
+            world.addFreshEntity(projectile);
 
             return projectile;
         });

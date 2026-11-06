@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 100,
+  "experience": 2.2,
+  "ingredient": "unicopia:frog_legs",
+  "result": {
+    "id": "unicopia:cooked_frog_legs"
+  }
+}

@@ -2,10 +2,9 @@ package com.minelittlepony.unicopia.entity.player;
 
 import com.minelittlepony.unicopia.entity.damage.UDamageSources;
 import com.minelittlepony.unicopia.entity.damage.UDamageTypes;
-
-import net.minecraft.entity.player.HungerManager;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodData;
 
 public interface ManaConsumptionUtil {
     float MANA_PER_FOOD = 10F;
@@ -30,8 +29,8 @@ public interface ManaConsumptionUtil {
         return (float)foodSubtract - (availableMana / MANA_PER_FOOD);
     }
 
-    static float burnFood(PlayerEntity entity, float foodSubtract) {
-        HungerManager hunger = entity.getHungerManager();
+    static float burnFood(Player entity, float foodSubtract) {
+        FoodData hunger = entity.getFoodData();
 
         if (foodSubtract <= 0) {
             return 0;
@@ -44,7 +43,7 @@ public interface ManaConsumptionUtil {
             foodSubtract = addExhaustion(hunger, foodSubtract);
             if (consumedSaturation > 0) {
                 foodSubtract -= (consumedSaturation / SATURATION_PER_FOOD);
-                hunger.setSaturationLevel(availableSaturation - consumedSaturation);
+                hunger.setSaturation(availableSaturation - consumedSaturation);
             }
         }
 
@@ -54,7 +53,7 @@ public interface ManaConsumptionUtil {
             foodSubtract = addExhaustion(hunger, foodSubtract);
             if (consumedFood > 0) {
                 foodSubtract -= consumedFood;
-                hunger.add(-consumedFood, 0.3F);
+                hunger.eat(-consumedFood, 0.3F);
             }
         }
 
@@ -63,8 +62,8 @@ public interface ManaConsumptionUtil {
             float consumedHearts = Math.max(0, Math.min(availableHearts - 1, foodSubtract * HEARTS_PER_FOOD));
             foodSubtract = addExhaustion(hunger, foodSubtract);
             foodSubtract -= (consumedHearts / HEARTS_PER_FOOD);
-            if (consumedHearts > 0 && !entity.getWorld().isClient) {
-                entity.damage((ServerWorld)entity.getWorld(), UDamageSources.of(entity.getWorld()).damageOf(UDamageTypes.EXHAUSTION), consumedHearts);
+            if (consumedHearts > 0 && !entity.level().isClientSide()) {
+                entity.hurtServer((ServerLevel)entity.level(), UDamageSources.of(entity.level()).damageOf(UDamageTypes.EXHAUSTION), consumedHearts);
             }
         }
 
@@ -72,14 +71,14 @@ public interface ManaConsumptionUtil {
     }
 
     static float getCombinedTotalMana(Pony pony) {
-        HungerManager hunger = pony.asEntity().getHungerManager();
+        FoodData hunger = pony.asEntity().getFoodData();
         return hunger.getFoodLevel()
             + (pony.getMagicalReserves().getMana().get() / MANA_PER_FOOD)
             + (hunger.getSaturationLevel() / SATURATION_PER_FOOD)
             + ((pony.asEntity().getHealth() - 1) / HEARTS_PER_FOOD);
     }
 
-    static float addExhaustion(HungerManager hunger, float foodSubtract) {
+    static float addExhaustion(FoodData hunger, float foodSubtract) {
         hunger.addExhaustion(0.1F);
         return Math.max(0, foodSubtract - 0.1F);
     }

@@ -1,10 +1,32 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.SupportType;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -12,93 +34,73 @@ import com.minelittlepony.unicopia.entity.behaviour.Guest;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 
-import net.minecraft.block.SideShapeType;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
-
 public class CrystalShardsEntity extends StationaryObjectEntity {
     static final byte SHAKE = 1;
 
     static final int FULL_GROWTH_AGE = 25;
 
     private static final Set<Direction> ALL_DIRECTIONS = Set.of(Direction.values());
-    private static final TrackedData<Direction> ATTACHMENT_FACE = DataTracker.registerData(CrystalShardsEntity.class, TrackedDataHandlerRegistry.FACING);
-    private static final TrackedData<Integer> GROWTH = DataTracker.registerData(CrystalShardsEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Boolean> DECAYING = DataTracker.registerData(CrystalShardsEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final TrackedData<Boolean> CORRUPT = DataTracker.registerData(CrystalShardsEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final EntityDataAccessor<Direction> ATTACHMENT_FACE = SynchedEntityData.defineId(CrystalShardsEntity.class, EntityDataSerializers.DIRECTION);
+    private static final EntityDataAccessor<Integer> GROWTH = SynchedEntityData.defineId(CrystalShardsEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DECAYING = SynchedEntityData.defineId(CrystalShardsEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> CORRUPT = SynchedEntityData.defineId(CrystalShardsEntity.class, EntityDataSerializers.BOOLEAN);
 
-    public static boolean infestBlock(ServerWorld world, BlockPos pos) {
-        if (world.isAir(pos) || !world.getFluidState(pos).isOf(Fluids.EMPTY)) {
+    public static boolean infestBlock(ServerLevel world, BlockPos pos) {
+        if (world.isEmptyBlock(pos) || !world.getFluidState(pos).is(Fluids.EMPTY)) {
             return false;
         }
         boolean success = false;
         for (Direction face : getFreeFaces(world, pos)) {
-            CrystalShardsEntity shards = UEntities.CRYSTAL_SHARDS.create(world, SpawnReason.EVENT);
-            shards.setPosition(pos.offset(face).toCenterPos());
+            CrystalShardsEntity shards = UEntities.CRYSTAL_SHARDS.create(world, EntitySpawnReason.EVENT);
+            shards.setPos(Vec3.atCenterOf(pos.relative(face)));
             shards.setAttachmentFace(face);
             shards.setCorrupt(true);
 
-            world.spawnEntity(shards);
+            world.addFreshEntity(shards);
             success = true;
         }
         return success;
     }
 
-    public static Set<Direction> getFreeFaces(World world, BlockPos pos) {
+    public static Set<Direction> getFreeFaces(Level world, BlockPos pos) {
         Set<Direction> freeFaces = new HashSet<>(ALL_DIRECTIONS);
         freeFaces.removeAll(getOccupiedFaces(world, pos));
-        freeFaces.removeIf(face -> isInvalid(world, pos.offset(face), face));
+        freeFaces.removeIf(face -> isInvalid(world, pos.relative(face), face));
         return freeFaces;
     }
 
-    public static Set<Direction> getOccupiedFaces(World world, BlockPos pos) {
-        return world.getEntitiesByClass(CrystalShardsEntity.class, new Box(pos).expand(4), EntityPredicates.VALID_ENTITY)
+    public static Set<Direction> getOccupiedFaces(Level world, BlockPos pos) {
+        return world.getEntitiesOfClass(CrystalShardsEntity.class, new AABB(pos).inflate(4), EntitySelector.ENTITY_STILL_ALIVE)
                 .stream()
                 .map(e -> e.getAttachmentFace())
                 .distinct()
                 .collect(Collectors.toSet());
     }
 
-    static boolean isInvalid(World world, BlockPos crystalPos, Direction attachmentFace) {
-        if (!world.isAir(crystalPos) || world.isOutOfHeightLimit(crystalPos)) {
+    static boolean isInvalid(Level world, BlockPos crystalPos, Direction attachmentFace) {
+        if (!world.isEmptyBlock(crystalPos) || world.isOutsideBuildHeight(crystalPos)) {
             return true;
         }
-        BlockPos attachmentPos = crystalPos.offset(attachmentFace.getOpposite());
-        return !world.getBlockState(attachmentPos).isSideSolid(world, attachmentPos, attachmentFace, SideShapeType.RIGID);
+        BlockPos attachmentPos = crystalPos.relative(attachmentFace.getOpposite());
+        return !world.getBlockState(attachmentPos).isFaceSturdy(world, attachmentPos, attachmentFace, SupportType.RIGID);
     }
 
     private int prevAge;
 
     private int ticksShaking;
 
-    public CrystalShardsEntity(EntityType<CrystalShardsEntity> type, World world) {
+    public CrystalShardsEntity(EntityType<CrystalShardsEntity> type, Level world) {
         super(type, world);
-        setYaw(world.getRandom().nextFloat() * 360);
+        setYRot(world.getRandom().nextFloat() * 360);
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(ATTACHMENT_FACE, Direction.UP);
-        builder.add(GROWTH, 0);
-        builder.add(DECAYING, false);
-        builder.add(CORRUPT, false);
+    protected void defineSynchedData(Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ATTACHMENT_FACE, Direction.UP);
+        builder.define(GROWTH, 0);
+        builder.define(DECAYING, false);
+        builder.define(CORRUPT, false);
     }
 
     @Override
@@ -108,31 +110,31 @@ public class CrystalShardsEntity extends StationaryObjectEntity {
 
     public float getGrowth(float tickDelta) {
         int age = getGrowth();
-        float lerped = MathHelper.clamp(MathHelper.lerp(tickDelta, prevAge, age), 0, FULL_GROWTH_AGE) / (float)FULL_GROWTH_AGE;
-        return lerped * 2 * (1 + Math.abs(getUuid().getLeastSignificantBits() % 20) / 20F);
+        float lerped = Mth.clamp(Mth.lerpInt(tickDelta, prevAge, age), 0, FULL_GROWTH_AGE) / (float)FULL_GROWTH_AGE;
+        return lerped * 2 * (1 + Math.abs(getUUID().getLeastSignificantBits() % 20) / 20F);
     }
 
     public int getGrowth() {
-        return dataTracker.get(GROWTH);
+        return entityData.get(GROWTH);
     }
 
     public void setGrowth(int growth) {
-        dataTracker.set(GROWTH, Math.max(0, growth));
+        entityData.set(GROWTH, Math.max(0, growth));
     }
 
     public void setDecaying(boolean decaying) {
-        dataTracker.set(DECAYING, decaying);
+        entityData.set(DECAYING, decaying);
     }
 
     public boolean isDecaying() {
-        return dataTracker.get(DECAYING);
+        return entityData.get(DECAYING);
     }
     public void setCorrupt(boolean corrupted) {
-        dataTracker.set(CORRUPT, corrupted);
+        entityData.set(CORRUPT, corrupted);
     }
 
     public boolean isCorrupt() {
-        return dataTracker.get(CORRUPT);
+        return entityData.get(CORRUPT);
     }
 
     public boolean isShaking() {
@@ -140,21 +142,21 @@ public class CrystalShardsEntity extends StationaryObjectEntity {
     }
 
     public Direction getAttachmentFace() {
-        return Objects.requireNonNullElse(dataTracker.get(ATTACHMENT_FACE), Direction.UP);
+        return Objects.requireNonNullElse(entityData.get(ATTACHMENT_FACE), Direction.UP);
     }
 
     public void setAttachmentFace(@Nullable Direction face) {
-        dataTracker.set(ATTACHMENT_FACE, face == null ? Direction.UP : face);
+        entityData.set(ATTACHMENT_FACE, face == null ? Direction.UP : face);
     }
 
     @Override
     public void tick() {
         prevAge = getGrowth();
-        if (!getWorld().isClient) {
-            int growAmount = 1 + Math.abs((int)getUuid().getLeastSignificantBits() % 5);
+        if (!level().isClientSide()) {
+            int growAmount = 1 + Math.abs((int)getUUID().getLeastSignificantBits() % 5);
             setGrowth(prevAge + (isDecaying() ? -growAmount : growAmount));
         }
-        setFireTicks(0);
+        setRemainingFireTicks(0);
 
         if (isDecaying() && getGrowth() == 0) {
             discard();
@@ -164,20 +166,20 @@ public class CrystalShardsEntity extends StationaryObjectEntity {
             ticksShaking--;
         }
 
-        setPosition(getBlockPos().toCenterPos());
+        setPos(Vec3.atCenterOf(blockPosition()));
 
         super.tick();
 
         if (ticksShaking > 0 || getGrowth() < FULL_GROWTH_AGE) {
-            if (age % random.nextBetween(2, 5) == 0) {
+            if (tickCount % random.nextIntBetweenInclusive(2, 5) == 0) {
                 playSound(USounds.ENTITY_CRYSTAL_SHARDS_AMBIENT, 1,
-                        1 - MathHelper.clamp(getGrowth(1), 0, 1) * 0.5F);
+                        1 - Mth.clamp(getGrowth(1), 0, 1) * 0.5F);
             }
         }
 
         if (!Guest.of(this).hasHost()) {
-            if (isDead() || isInvalid(getWorld(), getBlockPos(), getAttachmentFace())) {
-                if (getWorld() instanceof ServerWorld sw) {
+            if (isDead() || isInvalid(level(), blockPosition(), getAttachmentFace())) {
+                if (level() instanceof ServerLevel sw) {
                     kill(sw);
                 }
                 ParticleUtils.spawnParticles(ParticleTypes.CLOUD, this, 10);
@@ -186,7 +188,7 @@ public class CrystalShardsEntity extends StationaryObjectEntity {
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel world, DamageSource source, float amount) {
         onHurt();
         setHealth(Math.max(0, getHealth() - amount));
         if (getHealth() <= 0) {
@@ -197,7 +199,7 @@ public class CrystalShardsEntity extends StationaryObjectEntity {
 
     @Override
     protected void onHurt() {
-        getWorld().sendEntityStatus(this, SHAKE);
+        level().broadcastEntityEvent(this, SHAKE);
         ticksShaking = 10;
     }
 
@@ -205,42 +207,42 @@ public class CrystalShardsEntity extends StationaryObjectEntity {
     public void remove(RemovalReason reason) {
         if (reason == RemovalReason.KILLED) {
             playSound(USounds.ENTITY_CRYSTAL_SHARDS_JOSTLE, 1, 1);
-            if (getWorld() instanceof ServerWorld sw) {
-                dropStack(sw, new ItemStack(UItems.CRYSTAL_SHARD, 6));
+            if (level() instanceof ServerLevel sw) {
+                spawnAtLocation(sw, new ItemStack(UItems.CRYSTAL_SHARD, 6));
             }
         }
         super.remove(reason);
     }
 
     @Override
-    public void handleStatus(byte status) {
+    public void handleEntityEvent(byte status) {
         switch (status) {
             case SHAKE:
                 ticksShaking = 10;
                 break;
             default:
-                super.handleStatus(status);
+                super.handleEntityEvent(status);
         }
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound nbt) {
-        super.writeCustomDataToNbt(nbt);
-        nbt.putFloat("yaw", getYaw());
+    public void addAdditionalSaveData(ValueOutput nbt) {
+        super.addAdditionalSaveData(nbt);
+        nbt.putFloat("yaw", getYRot());
         nbt.putInt("growth", getGrowth());
-        nbt.putNullable("face", Direction.CODEC, getAttachmentFace());
+        nbt.storeNullable("face", Direction.CODEC, getAttachmentFace());
         nbt.putBoolean("decaying", isDecaying());
         nbt.putBoolean("corrupt", isCorrupt());
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound nbt) {
-        super.readCustomDataFromNbt(nbt);
-        nbt.getFloat("yaw").ifPresent(this::setYaw);
-        setGrowth(nbt.getInt("growth", 0));
-        setAttachmentFace(nbt.get("face", Direction.CODEC).orElse(null));
-        setDecaying(nbt.getBoolean("decaying", false));
-        setCorrupt(nbt.getBoolean("corrupt", false));
+    public void readAdditionalSaveData(ValueInput nbt) {
+        super.readAdditionalSaveData(nbt);
+        setYRot(nbt.getFloatOr("yaw", getYRot()));
+        setGrowth(nbt.getIntOr("growth", 0));
+        setAttachmentFace(nbt.read("face", Direction.CODEC).orElse(null));
+        setDecaying(nbt.getBooleanOr("decaying", false));
+        setCorrupt(nbt.getBooleanOr("corrupt", false));
         prevAge = getGrowth();
     }
 }

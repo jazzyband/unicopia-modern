@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "group": "hull",
+  "key": {
+    "#": "unicopia:chiselled_chitin",
+    "o": "unicopia:chitin"
+  },
+  "pattern": [
+    "##",
+    "oo"
+  ],
+  "result": {
+    "count": 4,
+    "id": "unicopia:chiselled_chitin_hull"
+  }
+}

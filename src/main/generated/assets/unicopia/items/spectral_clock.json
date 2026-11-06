@@ -1,0 +1,599 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "cases": [
+      {
+        "model": {
+          "type": "minecraft:range_dispatch",
+          "entries": [
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_00"
+              },
+              "threshold": 0.0
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_05"
+              },
+              "threshold": -0.475
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_10"
+              },
+              "threshold": -0.45
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_15"
+              },
+              "threshold": -0.425
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_20"
+              },
+              "threshold": -0.4
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_25"
+              },
+              "threshold": -0.375
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_30"
+              },
+              "threshold": -0.35
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_35"
+              },
+              "threshold": -0.325
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_00"
+              },
+              "threshold": -0.3
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_05"
+              },
+              "threshold": -0.275
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_10"
+              },
+              "threshold": -0.25
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_15"
+              },
+              "threshold": -0.225
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_20"
+              },
+              "threshold": -0.19999999
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_25"
+              },
+              "threshold": -0.17500001
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_30"
+              },
+              "threshold": -0.15
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_greening_35"
+              },
+              "threshold": -0.125
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_00"
+              },
+              "threshold": -0.099999994
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_05"
+              },
+              "threshold": -0.07499999
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_10"
+              },
+              "threshold": -0.050000012
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_15"
+              },
+              "threshold": -0.025000006
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_20"
+              },
+              "threshold": 0.0
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_25"
+              },
+              "threshold": 0.024999976
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_30"
+              },
+              "threshold": 0.050000012
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_flowering_35"
+              },
+              "threshold": 0.07499999
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_00"
+              },
+              "threshold": 0.100000024
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_05"
+              },
+              "threshold": 0.125
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_10"
+              },
+              "threshold": 0.14999998
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_15"
+              },
+              "threshold": 0.17500001
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_20"
+              },
+              "threshold": 0.19999999
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_25"
+              },
+              "threshold": 0.22500002
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_30"
+              },
+              "threshold": 0.25
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_fruiting_35"
+              },
+              "threshold": 0.27499998
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_00"
+              },
+              "threshold": 0.3
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_05"
+              },
+              "threshold": 0.325
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_10"
+              },
+              "threshold": 0.35000002
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_15"
+              },
+              "threshold": 0.375
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_20"
+              },
+              "threshold": 0.39999998
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_25"
+              },
+              "threshold": 0.425
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_30"
+              },
+              "threshold": 0.45
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_ripe_35"
+              },
+              "threshold": 0.47500002
+            },
+            {
+              "model": {
+                "type": "minecraft:model",
+                "model": "unicopia:item/spectral_clock_00"
+              },
+              "threshold": 1.0
+            }
+          ],
+          "property": "unicopia:zap_apple_cycle",
+          "scale": 64.0
+        },
+        "when": "minecraft:overworld"
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:range_dispatch",
+      "entries": [
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_00"
+          },
+          "threshold": 0.0
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_05"
+          },
+          "threshold": -0.475
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_10"
+          },
+          "threshold": -0.45
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_15"
+          },
+          "threshold": -0.425
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_20"
+          },
+          "threshold": -0.4
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_25"
+          },
+          "threshold": -0.375
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_30"
+          },
+          "threshold": -0.35
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_35"
+          },
+          "threshold": -0.325
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_00"
+          },
+          "threshold": -0.3
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_05"
+          },
+          "threshold": -0.275
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_10"
+          },
+          "threshold": -0.25
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_15"
+          },
+          "threshold": -0.225
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_20"
+          },
+          "threshold": -0.19999999
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_25"
+          },
+          "threshold": -0.17500001
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_30"
+          },
+          "threshold": -0.15
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_greening_35"
+          },
+          "threshold": -0.125
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_00"
+          },
+          "threshold": -0.099999994
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_05"
+          },
+          "threshold": -0.07499999
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_10"
+          },
+          "threshold": -0.050000012
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_15"
+          },
+          "threshold": -0.025000006
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_20"
+          },
+          "threshold": 0.0
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_25"
+          },
+          "threshold": 0.024999976
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_30"
+          },
+          "threshold": 0.050000012
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_flowering_35"
+          },
+          "threshold": 0.07499999
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_00"
+          },
+          "threshold": 0.100000024
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_05"
+          },
+          "threshold": 0.125
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_10"
+          },
+          "threshold": 0.14999998
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_15"
+          },
+          "threshold": 0.17500001
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_20"
+          },
+          "threshold": 0.19999999
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_25"
+          },
+          "threshold": 0.22500002
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_30"
+          },
+          "threshold": 0.25
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_fruiting_35"
+          },
+          "threshold": 0.27499998
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_00"
+          },
+          "threshold": 0.3
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_05"
+          },
+          "threshold": 0.325
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_10"
+          },
+          "threshold": 0.35000002
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_15"
+          },
+          "threshold": 0.375
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_20"
+          },
+          "threshold": 0.39999998
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_25"
+          },
+          "threshold": 0.425
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_30"
+          },
+          "threshold": 0.45
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_ripe_35"
+          },
+          "threshold": 0.47500002
+        },
+        {
+          "model": {
+            "type": "minecraft:model",
+            "model": "unicopia:item/spectral_clock_00"
+          },
+          "threshold": 1.0
+        }
+      ],
+      "property": "minecraft:time",
+      "source": "random"
+    },
+    "property": "minecraft:context_dimension"
+  }
+}

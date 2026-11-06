@@ -1,41 +1,40 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.util.Util;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Direction.Axis;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-
 import java.util.function.Function;
+import net.minecraft.util.Util;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public interface VoxelShapeUtil {
-    Vec3d CENTER = new Vec3d(0.5, 0, 0.5);
+    Vec3 CENTER = new Vec3(0.5, 0, 0.5);
 
     static Function<Direction, VoxelShape> rotator(VoxelShape base) {
         return Util.memoize(d -> rotate(base, d));
     }
 
     static VoxelShape rotate(VoxelShape shape, Direction direction) {
-        if (direction.getHorizontalQuarterTurns() == 0) {
+        if (direction.get2DDataValue() == 0) {
             return shape;
         }
         if (direction.getAxis() == Axis.X) {
             direction = direction.getOpposite();
         }
-        float angle = direction.getPositiveHorizontalDegrees() * MathHelper.RADIANS_PER_DEGREE;
-        return VoxelShapes.union(VoxelShapes.empty(), shape.getBoundingBoxes().stream()
+        float angle = direction.get2DDataValue() * Mth.DEG_TO_RAD;
+        return Shapes.or(Shapes.empty(), shape.toAabbs().stream()
             .map(box -> {
                 //These first two are enough for orthogonal rotations
-                Vec3d a = rotate(box.minX, box.minZ, angle);
-                Vec3d b = rotate(box.maxX, box.maxZ, angle);
+                Vec3 a = rotate(box.minX, box.minZ, angle);
+                Vec3 b = rotate(box.maxX, box.maxZ, angle);
                 //These cover odd angles
-                Vec3d c = rotate(box.minX, box.maxZ, angle);
-                Vec3d d = rotate(box.maxX, box.minZ, angle);
+                Vec3 c = rotate(box.minX, box.maxZ, angle);
+                Vec3 d = rotate(box.maxX, box.minZ, angle);
 
-                return VoxelShapes.cuboid(new Box(
+                return Shapes.create(new AABB(
                         Math.min(Math.min(a.x, b.x), Math.min(c.x, d.x)),
                         box.minY,
                         Math.min(Math.min(a.z, b.z), Math.min(c.z, d.z)),
@@ -47,7 +46,7 @@ public interface VoxelShapeUtil {
             .toArray(VoxelShape[]::new));
     }
 
-    static Vec3d rotate(double x, double z, float angle) {
-        return new Vec3d(x, 0, z).subtract(CENTER).rotateY(angle).add(CENTER);
+    static Vec3 rotate(double x, double z, float angle) {
+        return new Vec3(x, 0, z).subtract(CENTER).yRot(angle).add(CENTER);
     }
 }

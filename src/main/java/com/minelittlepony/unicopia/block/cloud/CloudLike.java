@@ -1,13 +1,15 @@
 package com.minelittlepony.unicopia.block.cloud;
 
-import net.minecraft.block.Block;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnGroup;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.block.Block;
 
 public interface CloudLike {
-    static Block.Settings applyCloudProperties(Block.Settings settings) {
-        return settings.nonOpaque().dynamicBounds().allowsSpawning((state, world, pos, type) -> {
-            return type == EntityType.PHANTOM || type == EntityType.PARROT || type.getSpawnGroup() == SpawnGroup.AMBIENT;
+    static BlockBehaviour.Properties applyCloudProperties(BlockBehaviour.Properties settings) {
+        return settings.noOcclusion().dynamicShape().isValidSpawn((state, world, pos, type) -> {
+            return type == EntityTypes.PHANTOM || type == EntityTypes.PARROT || type.getCategory() == MobCategory.AMBIENT;
         });
     }
 }

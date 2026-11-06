@@ -4,20 +4,18 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.util.VecHelper;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.TargetPredicate;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.mob.MobEntity;
-
 public class DynamicTargetGoal extends Goal {
 
-    private final MobEntity mob;
+    private final Mob mob;
 
     private int interval;
 
@@ -26,7 +24,7 @@ public class DynamicTargetGoal extends Goal {
     @Nullable
     private Predicate<Entity> test;
 
-    public DynamicTargetGoal(MobEntity mob) {
+    public DynamicTargetGoal(Mob mob) {
         this.mob = mob;
     }
 
@@ -44,15 +42,15 @@ public class DynamicTargetGoal extends Goal {
     }
 
     @Override
-    public boolean canStart() {
+    public boolean canUse() {
         if (interval-- <= 0) {
             interval = 20;
 
-            if (mob.getTarget() != null && mob.getTarget().isDead()) {
+            if (mob.getTarget() != null && mob.getTarget().isDeadOrDying()) {
                 mob.setTarget(null);
             }
 
-            target = VecHelper.findInRange(mob, mob.getWorld(), mob.getPos(), 26, test)
+            target = VecHelper.findInRange(mob, mob.level(), mob.position(), 26, test)
                 .stream()
                 .sorted(Comparator.comparing(e -> mob.distanceTo(e)))
                 .findFirst();
@@ -74,8 +72,8 @@ public class DynamicTargetGoal extends Goal {
     }
 
     @Override
-    public boolean shouldContinue() {
+    public boolean canContinueToUse() {
         LivingEntity target = mob.getTarget();
-        return target != null && TargetPredicate.DEFAULT.test(castToServerWorld(mob.getWorld()), mob, target);
+        return target != null && TargetingConditions.DEFAULT.test(getServerLevel(mob.level()), mob, target);
     }
 }

@@ -1,0 +1,22 @@
+{
+  "values": [
+    "unicopia:bowl_of_nuts",
+    {
+      "id": "#c:crops/peanuts",
+      "required": false
+    },
+    "#c:foods/acorn",
+    {
+      "id": "garnished:nuts",
+      "required": false
+    },
+    {
+      "id": "garnished:nut_mix",
+      "required": false
+    },
+    {
+      "id": "garnished:neverable_delecacies",
+      "required": false
+    }
+  ]
+}

@@ -2,38 +2,31 @@ package com.minelittlepony.unicopia.client.particle;
 
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.client.particle.ParticleTextureSheet;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.particle.SimpleParticleType;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 public class GroundPoundParticle extends Particle {
 
-    public GroundPoundParticle(SimpleParticleType effect, ClientWorld world, double x, double y, double z, double dX, double dY, double dZ) {
+    public GroundPoundParticle(SimpleParticleType effect, ClientLevel world, double x, double y, double z, double dX, double dY, double dZ) {
         super(world, x, y, z, dX, dY, dZ);
-        maxAge = 10;
+        lifetime = 10;
     }
 
     @Override
-    public ParticleTextureSheet getType() {
-        return ParticleTextureSheet.NO_RENDER;
+    public ParticleRenderType getGroup() {
+        return ParticleRenderType.NO_RENDER;
     }
 
-    @Override
-    public void render(VertexConsumer vertexConsumer, Camera camera, float f) {
-    }
-
-    protected Vec3d getPos() {
-        return new Vec3d(x, y, z);
+    protected Vec3 getPos() {
+        return new Vec3(x, y, z);
     }
 
     @Override
@@ -43,20 +36,20 @@ public class GroundPoundParticle extends Particle {
     }
 
     protected void spawnChildParticles() {
-        Vec3d vel = new Vec3d(0, (0.5 + (Math.sin(age) * 2.5)) * 5, 0);
+        Vec3 vel = new Vec3(0, (0.5 + (Math.sin(age) * 2.5)) * 5, 0);
 
         new Sphere(true, age, 1, 0, 1).translate(getPos()).randomPoints(random).forEach(point -> {
-            BlockPos pos = BlockPos.ofFloored(point).down();
+            BlockPos pos = BlockPos.containing(point).below();
 
-            BlockState state = world.getBlockState(pos);
+            BlockState state = level.getBlockState(pos);
             if (state.isAir()) {
-                state = world.getBlockState(pos.down());
+                state = level.getBlockState(pos.below());
                 if (state.isAir()) {
-                    state = Blocks.DIRT.getDefaultState();
+                    state = Blocks.DIRT.defaultBlockState();
                 }
             }
 
-            ParticleUtils.spawnParticle(world, new BlockStateParticleEffect(ParticleTypes.BLOCK, state), point, vel);
+            ParticleUtils.spawnParticle(level, new BlockParticleOption(ParticleTypes.BLOCK, state), point, vel);
         });
     }
 }

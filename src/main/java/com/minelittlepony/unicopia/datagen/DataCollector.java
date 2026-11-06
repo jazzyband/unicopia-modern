@@ -1,7 +1,6 @@
 package com.minelittlepony.unicopia.datagen;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -12,24 +11,23 @@ import com.google.common.base.Preconditions;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
-
-import net.minecraft.data.DataOutput.PathResolver;
+import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.DataWriter;
-import net.minecraft.util.Identifier;
+import net.minecraft.data.PackOutput.PathProvider;
+import net.minecraft.resources.Identifier;
 
 public class DataCollector<T> {
     private final HashMap<Identifier, T> values = new HashMap<>();
 
-    private final PathResolver resolver;
+    private final PathProvider resolver;
     private final Function<T, JsonElement> jsonConversionFunction;
 
-    public DataCollector(PathResolver resolver, Function<T, JsonElement> jsonConversionFunction) {
+    public DataCollector(PathProvider resolver, Function<T, JsonElement> jsonConversionFunction) {
         this.resolver = resolver;
         this.jsonConversionFunction = jsonConversionFunction;
     }
 
-    public DataCollector(PathResolver resolver, Codec<T> codec) {
+    public DataCollector(PathProvider resolver, Codec<T> codec) {
         this(resolver, t -> codec.encodeStart(JsonOps.INSTANCE, t).getOrThrow());
     }
 
@@ -39,10 +37,6 @@ public class DataCollector<T> {
 
     public Stream<T> streamValues() {
         return values.values().stream();
-    }
-
-    public Stream<Map.Entry<Identifier, T>> streamEntries() {
-        return values.entrySet().stream();
     }
 
     public <V> Consumer<V> prime(BiConsumer<V, BiConsumer<Identifier, T>> converter) {
@@ -56,10 +50,10 @@ public class DataCollector<T> {
             Preconditions.checkState(values.put(id, value) == null, "Duplicate model definition for " + id);
     }
 
-    public CompletableFuture<?> upload(DataWriter cache) {
+    public CompletableFuture<?> upload(CachedOutput cache) {
         return CompletableFuture.allOf(values.entrySet()
                 .stream()
-                .map(entry -> DataProvider.writeToPath(cache, jsonConversionFunction.apply(entry.getValue()), resolver.resolveJson(entry.getKey())))
+                .map(entry -> DataProvider.saveStable(cache, jsonConversionFunction.apply(entry.getValue()), resolver.json(entry.getKey())))
                 .toArray(CompletableFuture[]::new)
         );
     }

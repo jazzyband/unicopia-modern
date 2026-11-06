@@ -1,0 +1,45 @@
+{
+  "anvil_cost": 1,
+  "description": {
+    "translate": "enchantment.unicopia.herds"
+  },
+  "effects": {
+    "minecraft:tick": [
+      {
+        "effect": {
+          "type": "unicopia:group_based_attribute",
+          "attribute": {
+            "amount": {
+              "type": "minecraft:linear",
+              "base": 0.0,
+              "per_level_above_first": 1.0
+            },
+            "attribute": "minecraft:attack_damage",
+            "id": "unicopia:enchantment.team.strength",
+            "operation": "add_value"
+          },
+          "range": {
+            "type": "minecraft:linear",
+            "base": 2.0,
+            "per_level_above_first": 2.0
+          },
+          "valid_teammate_enchantment_key": "#unicopia:herding"
+        }
+      }
+    ]
+  },
+  "max_cost": {
+    "base": 20,
+    "per_level_above_first": 0
+  },
+  "max_level": 3,
+  "min_cost": {
+    "base": 8,
+    "per_level_above_first": 8
+  },
+  "slots": [
+    "mainhand"
+  ],
+  "supported_items": "#minecraft:enchantable/weapon",
+  "weight": 2
+}

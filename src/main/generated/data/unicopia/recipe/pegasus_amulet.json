@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "#": "unicopia:gemstone",
+    "*": "unicopia:golden_wing"
+  },
+  "pattern": [
+    "*#*"
+  ],
+  "result": {
+    "id": "unicopia:pegasus_amulet"
+  }
+}

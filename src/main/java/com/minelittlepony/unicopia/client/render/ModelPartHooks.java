@@ -1,11 +1,11 @@
 package com.minelittlepony.unicopia.client.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.Stack;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.util.Mth;
 
 public class ModelPartHooks {
     private static final float PIXEL_SCALE = 0.0625F; // 1/16;
@@ -19,8 +19,8 @@ public class ModelPartHooks {
         return renderCalls.isEmpty() ? Set.of() : renderCalls.pop();
     }
 
-    public static void onHeadRendered(ModelPart part, MatrixStack matrices) {
-        if (part.hidden || !part.visible || renderCalls.isEmpty()) {
+    public static void onHeadRendered(ModelPart part, PoseStack matrices) {
+        if (part.skipDraw || !part.visible || renderCalls.isEmpty()) {
             return;
         }
 
@@ -32,7 +32,7 @@ public class ModelPartHooks {
 
         final var bestCandidate = new EnqueudHeadRender();
 
-        part.forEachCuboid(matrices, (entry, name, index, cube) -> {
+        part.visit(matrices, (entry, name, index, cube) -> {
             float x = cube.maxX - cube.minX;
             float y = cube.maxY - cube.minY;
             float z = cube.maxZ - cube.minZ;
@@ -57,18 +57,18 @@ public class ModelPartHooks {
     }
 
     public static final class EnqueudHeadRender {
-        private ModelPart.Cuboid cube;
-        private MatrixStack.Entry transformation;
+        private ModelPart.Cube cube;
+        private PoseStack.Pose transformation;
         private float volume;
         private float maxSideLength;
 
-        public void transform(MatrixStack matrices, float cubeSize) {
-            matrices.peek().getNormalMatrix().set(transformation.getNormalMatrix());
-            matrices.peek().getPositionMatrix().set(transformation.getPositionMatrix());
+        public void transform(PoseStack matrices, float cubeSize) {
+            matrices.last().normal().set(transformation.normal());
+            matrices.last().pose().set(transformation.pose());
 
-            float x = MathHelper.lerp(0.5F, cube.minX, cube.maxX);
-            float y = MathHelper.lerp(0.5F, cube.minY, cube.maxY);
-            float z = MathHelper.lerp(0.5F, cube.minZ, cube.maxZ);
+            float x = Mth.lerp(0.5F, cube.minX, cube.maxX);
+            float y = Mth.lerp(0.5F, cube.minY, cube.maxY);
+            float z = Mth.lerp(0.5F, cube.minZ, cube.maxZ);
             float scale = (maxSideLength / cubeSize) * PIXEL_SCALE;
 
             matrices.translate(x * PIXEL_SCALE, y * PIXEL_SCALE, z * PIXEL_SCALE);

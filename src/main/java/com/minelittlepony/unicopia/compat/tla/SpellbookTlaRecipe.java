@@ -5,7 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import org.jetbrains.annotations.Nullable;
 
 import com.google.common.base.Suppliers;
@@ -24,12 +26,9 @@ import io.github.mattidragon.tlaapi.api.plugin.PluginContext;
 import io.github.mattidragon.tlaapi.api.recipe.TlaIngredient;
 import io.github.mattidragon.tlaapi.api.recipe.TlaRecipe;
 import io.github.mattidragon.tlaapi.api.recipe.TlaStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.util.Identifier;
 
 class SpellbookTlaRecipe implements TlaRecipe, SpellbookRecipe.CraftingTreeBuilder {
-    private final RecipeEntry<SpellbookRecipe> recipe;
+    private final RecipeHolder<SpellbookRecipe> recipe;
 
     protected final List<TraitedTlaIngredient> inputs = new ArrayList<>();
     private final List<TlaStack> outputs = new ArrayList<>();
@@ -50,10 +49,10 @@ class SpellbookTlaRecipe implements TlaRecipe, SpellbookRecipe.CraftingTreeBuild
         });
     }
 
-    public SpellbookTlaRecipe(RecipeEntry<SpellbookRecipe> recipe) {
+    public SpellbookTlaRecipe(RecipeHolder<SpellbookRecipe> recipe) {
         this.recipe = recipe;
         this.ingredients = Suppliers.memoize(() -> inputs.stream().map(TraitedTlaIngredient::ingredient).toList());
-        ((SpellbookRecipeDisplay)recipe.value().getDisplays().get(0)).buildCraftingTree(this);
+        ((SpellbookRecipeDisplay)recipe.value().display().get(0)).buildCraftingTree(this);
     }
 
     @Override
@@ -64,7 +63,7 @@ class SpellbookTlaRecipe implements TlaRecipe, SpellbookRecipe.CraftingTreeBuild
     @Nullable
     @Override
     public Identifier getId() {
-        return recipe.id().getValue();
+        return recipe.id().identifier();
     }
 
     @Override

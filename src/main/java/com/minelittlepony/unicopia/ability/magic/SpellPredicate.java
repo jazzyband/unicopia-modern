@@ -2,12 +2,11 @@ package com.minelittlepony.unicopia.ability.magic;
 
 import java.util.UUID;
 import java.util.function.Predicate;
-
+import net.minecraft.world.entity.Entity;
 import com.minelittlepony.unicopia.Affinity;
 import com.minelittlepony.unicopia.ability.magic.spell.*;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.MimicSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.ShieldSpell;
-import net.minecraft.entity.Entity;
 
 public interface SpellPredicate<T extends Spell> extends Predicate<Spell> {
     SpellPredicate<?> ALL = spell -> true;

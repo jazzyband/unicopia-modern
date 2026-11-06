@@ -1,21 +1,20 @@
 package com.minelittlepony.unicopia.datagen.providers.recipe;
 
 import java.util.Arrays;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.recipes.ShapedRecipeBuilder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.ItemLike;
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.recipe.ExclusiveIngredient;
-
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.data.recipe.RecipeGenerator;
-import net.minecraft.data.recipe.ShapedRecipeJsonBuilder;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.book.RecipeCategory;
-import net.minecraft.registry.RegistryEntryLookup;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.Registries;
 
 public class BedSheetPatternRecipeBuilder {
     record PatternTemplate(int[] symbols, int[] uniqueSymbols, String[] pattern) {
@@ -33,48 +32,48 @@ public class BedSheetPatternRecipeBuilder {
             this(symbols, Arrays.stream(symbols).distinct().toArray(), pattern);
         }
 
-        void offerWithoutConversion(RecipeGenerator generator, RegistryEntryLookup<Item> items,RecipeExporter exporter, ItemConvertible output, ItemConvertible...wool) {
+        void offerWithoutConversion(RecipeProvider generator, HolderGetter<Item> items,RecipeOutput exporter, ItemLike output, ItemLike...wool) {
             offerRecipe(generator, items, this, exporter, output, wool);
         }
 
-        void offerTo(RecipeGenerator generator, RegistryEntryLookup<Item> items, RecipeExporter exporter, ItemConvertible output, ItemConvertible...wool) {
+        void offerTo(RecipeProvider generator, HolderGetter<Item> items, RecipeOutput exporter, ItemLike output, ItemLike...wool) {
             offerRecipe(generator, items, this, exporter, output, wool);
             offerBedSheetConversionRecipe(generator, items, this, exporter, output, wool);
         }
     }
 
-    private static void offerRecipe(RecipeGenerator generator, RegistryEntryLookup<Item> items, PatternTemplate template,
-            RecipeExporter exporter,
-            ItemConvertible output,
-            ItemConvertible...wool) {
-        var builder = ShapedRecipeJsonBuilder.create(items, RecipeCategory.DECORATIONS, output);
+    private static void offerRecipe(RecipeProvider generator, HolderGetter<Item> items, PatternTemplate template,
+            RecipeOutput exporter,
+            ItemLike output,
+            ItemLike...wool) {
+        var builder = ShapedRecipeBuilder.shaped(items, RecipeCategory.DECORATIONS, output);
         for (int i = 0; i < template.uniqueSymbols().length; i++) {
-            builder.input((char)template.uniqueSymbols()[i], wool[i]);
+            builder.define((char)template.uniqueSymbols()[i], wool[i]);
         }
         for (int i = 0; i < template.pattern().length; i++) {
             builder.pattern(template.pattern()[i]);
         }
         Arrays.asList(wool).stream().distinct().forEach(input -> {
-            builder.criterion(RecipeGenerator.hasItem(input), generator.conditionsFromItem(input));
+            builder.unlockedBy(RecipeProvider.getHasName(input), generator.has(input));
         });
-        builder.group("bed_sheet").offerTo(exporter);
+        builder.group("bed_sheet").save(exporter);
     }
 
-    private static void offerBedSheetConversionRecipe(RecipeGenerator generator, RegistryEntryLookup<Item> items, PatternTemplate template, RecipeExporter exporter, ItemConvertible output, ItemConvertible...wool) {
-        var builder = ShapedRecipeJsonBuilder.create(items, RecipeCategory.DECORATIONS, output, 2);
+    private static void offerBedSheetConversionRecipe(RecipeProvider generator, HolderGetter<Item> items, PatternTemplate template, RecipeOutput exporter, ItemLike output, ItemLike...wool) {
+        var builder = ShapedRecipeBuilder.shaped(items, RecipeCategory.DECORATIONS, output, 2);
 
         for (int i = 0; i < template.uniqueSymbols().length; i++) {
-            builder.input((char)template.uniqueSymbols()[i], wool[i]);
+            builder.define((char)template.uniqueSymbols()[i], wool[i]);
         }
-        builder.input('X', new ExclusiveIngredient(Ingredient.fromTag(items.getOrThrow(UTags.Items.WOOL_BED_SHEETS)), Ingredient.ofItems(output)).toVanilla());
+        builder.define('X', new ExclusiveIngredient(Ingredient.of(items.getOrThrow(UTags.Items.WOOL_BED_SHEETS)), Ingredient.of(output)).toVanilla());
         for (int i = 0; i < template.pattern().length - 1; i++) {
             builder.pattern(template.pattern()[i]);
         }
         builder.pattern(template.pattern()[template.pattern().length - 1].replace(' ', 'X'));
         builder
-            .criterion("has_bed_sheet", generator.conditionsFromItem(output))
+            .unlockedBy("has_bed_sheet", generator.has(output))
             .group("bed_sheet_convert")
-            .offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, Registries.ITEM.getId(output.asItem()).withPath(RecipeGenerator.convertBetween(output, UItems.WHITE_BED_SHEETS))));
+            .save(exporter, ResourceKey.create(Registries.RECIPE, BuiltInRegistries.ITEM.getKey(output.asItem()).withPath(RecipeProvider.getConversionRecipeName(output, UItems.WHITE_BED_SHEETS))));
     }
 
 }

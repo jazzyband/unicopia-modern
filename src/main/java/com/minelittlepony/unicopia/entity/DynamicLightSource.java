@@ -1,12 +1,10 @@
 package com.minelittlepony.unicopia.entity;
 
 import java.lang.ref.WeakReference;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.server.world.LightSources;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 
 public interface DynamicLightSource {
     default int getLightLevel() {
@@ -14,12 +12,12 @@ public interface DynamicLightSource {
     }
 
     default BlockPos getLightSourcePosition() {
-        return ((Entity)this).getBlockPos();
+        return ((Entity)this).blockPosition();
     }
 
     static final class LightEmitter<T extends Entity & DynamicLightSource> {
         private final T entity;
-        private WeakReference<World> lastWorld = new WeakReference<>(null);
+        private WeakReference<Level> lastWorld = new WeakReference<>(null);
 
         public LightEmitter(T entity) {
             this.entity = entity;
@@ -31,7 +29,7 @@ public interface DynamicLightSource {
                 return;
             }
 
-            World world = entity.getWorld();
+            Level world = entity.level();
             if (!lastWorld.refersTo(world)) {
                 remove();
                 lastWorld = new WeakReference<>(world);
@@ -41,9 +39,9 @@ public interface DynamicLightSource {
         }
 
         public void remove() {
-            World world = lastWorld.get();
+            Level world = lastWorld.get();
             if (world != null) {
-                LightSources.get(world).removeLightSource(entity.getUuid());
+                LightSources.get(world).removeLightSource(entity.getUUID());
                 lastWorld.clear();
             }
         }

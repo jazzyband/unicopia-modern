@@ -1,0 +1,48 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:weird_rock",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:rock"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:tom"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:rock_stew"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:pebbles"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:shelly"
+        },
+        {
+          "type": "minecraft:tag",
+          "expand": true,
+          "items": "#unicopia:shells"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:pearl_necklace"
+        }
+      ],
+      "rolls": {
+        "type": "minecraft:uniform",
+        "max": 4,
+        "min": 1
+      }
+    }
+  ]
+}

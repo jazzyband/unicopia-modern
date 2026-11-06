@@ -3,6 +3,9 @@ package com.minelittlepony.unicopia.compat.tla;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Unicopia;
@@ -13,9 +16,6 @@ import io.github.mattidragon.tlaapi.api.recipe.CategoryIcon;
 import io.github.mattidragon.tlaapi.api.recipe.TlaCategory;
 import io.github.mattidragon.tlaapi.api.recipe.TlaIngredient;
 import io.github.mattidragon.tlaapi.api.recipe.TlaStack;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.util.Identifier;
 
 public record RecipeCategory(Identifier id, CategoryIcon icon, TlaIngredient stations, int width, int height) implements TlaCategory {
     static final Map<RecipeCategory, @Nullable BiConsumer<RecipeCategory, PluginContext>> REGISTRY = new HashMap<>();
@@ -25,7 +25,7 @@ public record RecipeCategory(Identifier id, CategoryIcon icon, TlaIngredient sta
     static final RecipeCategory GROWING = register("growing", Blocks.FARMLAND, 130, 85, StructureInteractionTlaRecipe::generateFarmingRecipes);
     static final RecipeCategory ALTAR = register("altar", Blocks.CRYING_OBSIDIAN, 130, 160, StructureInteractionTlaRecipe::generateAltarRecipes);
 
-    static RecipeCategory register(String name, ItemConvertible item, int width, int height, @Nullable BiConsumer<RecipeCategory, PluginContext> recipeConstructor) {
+    static RecipeCategory register(String name, ItemLike item, int width, int height, @Nullable BiConsumer<RecipeCategory, PluginContext> recipeConstructor) {
         return register(new RecipeCategory(Unicopia.id(name), CategoryIcon.item(item), TlaStack.of(item).asIngredient(), width, height), recipeConstructor);
     }
 

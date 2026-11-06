@@ -1,7 +1,7 @@
 package com.minelittlepony.unicopia.block;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public interface BlockEntityTypeSupportHelper {
 

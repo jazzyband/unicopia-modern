@@ -15,51 +15,52 @@ import com.minelittlepony.unicopia.compat.trinkets.TrinketsDelegate;
 import com.minelittlepony.unicopia.entity.AmuletSelectors;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.component.Issuer;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.equipment.ArmorMaterials;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.stat.Stats;
-import net.minecraft.util.*;
-import net.minecraft.world.World;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.equipment.ArmorMaterials;
+import net.minecraft.world.level.Level;
 
 public class FriendshipBraceletItem extends WearableItem {
 
-    public FriendshipBraceletItem(Item.Settings settings) {
+    public FriendshipBraceletItem(Item.Properties settings) {
         super(settings, ArmorMaterials.LEATHER.equipSound());
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
+    public InteractionResult use(Level world, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
 
         if (!Issuer.isSigned(stack) && (
                    EquinePredicates.PLAYER_UNICORN.test(player)
                 || EquinePredicates.RACE_CAN_INFLUENCE_WEATHER.test(player)
                 || AmuletSelectors.PEARL_NECKLACE.test(player)
         )) {
-            player.setCurrentHand(hand);
+            player.startUsingItem(hand);
 
             ItemStack result = Issuer.set(stack.copyWithCount(1), player);
 
-            if (!player.getAbilities().creativeMode) {
-                stack.decrement(1);
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
             }
 
-            player.incrementStat(Stats.USED.getOrCreateStat(this));
+            player.awardStat(Stats.ITEM_USED.get(this));
             player.playSound(USounds.ITEM_BRACELET_SIGN, 1, 1);
 
             if (stack.isEmpty()) {
-                return ActionResult.CONSUME;
+                return InteractionResult.CONSUME;
             }
-            if (!player.giveItemStack(result) && world instanceof ServerWorld sw) {
-                player.dropStack(sw, result);
+            if (!player.addItem(result) && world instanceof ServerLevel sw) {
+                player.spawnAtLocation(sw, result);
             }
-            return ActionResult.CONSUME;
+            return InteractionResult.CONSUME;
         }
 
         return super.use(world, player, hand);
@@ -86,7 +87,7 @@ public class FriendshipBraceletItem extends WearableItem {
     }
 
     @Deprecated
-    public static boolean isSignedBy(ItemStack stack, PlayerEntity player) {
+    public static boolean isSignedBy(ItemStack stack, Player player) {
         return Issuer.isSignedBy(stack, player);
     }
 
@@ -109,7 +110,7 @@ public class FriendshipBraceletItem extends WearableItem {
         return Pony.stream(caster.findAllEntitiesInRange(radius, entity -> isComrade(caster, entity)));
     }
 
-    private static final Predicate<ItemStack> IS_BANGLE = stack -> stack.isOf(UItems.FRIENDSHIP_BRACELET);
+    private static final Predicate<ItemStack> IS_BANGLE = stack -> stack.is(UItems.FRIENDSHIP_BRACELET);
 
     public static Stream<TrinketsDelegate.EquippedStack> getWornBangles(LivingEntity entity) {
         return Stream.concat(

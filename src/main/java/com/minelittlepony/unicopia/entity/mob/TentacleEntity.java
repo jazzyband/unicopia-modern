@@ -1,7 +1,38 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.Comparator;
-
+import net.minecraft.commands.arguments.EntityAnchorArgument.Anchor;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityEvent;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -10,42 +41,11 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
-import net.minecraft.command.argument.EntityAnchorArgumentType.EntityAnchor;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityStatuses;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MovementType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.entity.decoration.AbstractDecorationEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
-
-public class TentacleEntity extends AbstractDecorationEntity {
+public class TentacleEntity extends HangingEntity {
     static final byte ATTACK_STATUS = 54;
     static final int MAX_GROWTH = 25;
-    private static final TrackedData<Integer> GROWTH = DataTracker.registerData(TentacleEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> MOTION_OFFSET = DataTracker.registerData(TentacleEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final EntityDataAccessor<Integer> GROWTH = SynchedEntityData.defineId(TentacleEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MOTION_OFFSET = SynchedEntityData.defineId(TentacleEntity.class, EntityDataSerializers.INT);
 
     private int prevGrowth;
     private int attackingTicks;
@@ -63,18 +63,18 @@ public class TentacleEntity extends AbstractDecorationEntity {
     @Nullable
     private IgnominiousBulbEntity bulb;
 
-    public TentacleEntity(EntityType<? extends TentacleEntity> type, World world) {
+    public TentacleEntity(EntityType<? extends TentacleEntity> type, Level world) {
         super(type, world);
     }
 
-    public TentacleEntity(World world, BlockPos pos) {
+    public TentacleEntity(Level world, BlockPos pos) {
         super(UEntities.TENTACLE, world, pos);
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        builder.add(GROWTH, 0);
-        builder.add(MOTION_OFFSET, 0);
+    protected void defineSynchedData(Builder builder) {
+        builder.define(GROWTH, 0);
+        builder.define(MOTION_OFFSET, 0);
     }
 
     public void setBulb(IgnominiousBulbEntity bulb) {
@@ -82,50 +82,50 @@ public class TentacleEntity extends AbstractDecorationEntity {
     }
 
     public void attack(BlockPos pos) {
-        var offset = pos.toCenterPos().subtract(getBlockPos().toCenterPos());
+        var offset = Vec3.atCenterOf(pos).subtract(Vec3.atCenterOf(blockPosition()));
 
         double dX = offset.x;
         double dY = offset.y;
         double dZ = offset.z;
         double radius = Math.sqrt(dX * dX + dZ * dZ);
 
-        setPitch(MathHelper.wrapDegrees((float)(-(MathHelper.atan2(dY, radius) * MathHelper.DEGREES_PER_RADIAN))));
-        setYaw(MathHelper.wrapDegrees((float)(MathHelper.atan2(dZ, dX) * MathHelper.DEGREES_PER_RADIAN) - 90));
-        getWorld().sendEntityStatus(this, ATTACK_STATUS);
+        setXRot(Mth.wrapDegrees((float)(-(Mth.atan2(dY, radius) * Mth.RAD_TO_DEG))));
+        setYRot(Mth.wrapDegrees((float)(Mth.atan2(dZ, dX) * Mth.RAD_TO_DEG) - 90));
+        level().broadcastEntityEvent(this, ATTACK_STATUS);
         attackingTicks = 30;
         if (bulb != null) {
             bulb.setAngryFor(10);
-            bulb.lookAt(EntityAnchor.FEET, pos.toCenterPos());
+            bulb.lookAt(Anchor.FEET, Vec3.atCenterOf(pos));
         }
     }
 
     public float getAttackProgress(float tickDelta) {
-        return (30F - MathHelper.lerp(tickDelta, prevAttackingTicks, attackingTicks)) / 30F;
+        return (30F - Mth.lerp(tickDelta, prevAttackingTicks, attackingTicks)) / 30F;
     }
 
     public float getGrowth(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevGrowth, getGrowth()) / (float)MAX_GROWTH;
+        return Mth.lerpInt(tickDelta, prevGrowth, getGrowth()) / (float)MAX_GROWTH;
     }
 
     public int getGrowth() {
-        return dataTracker.get(GROWTH);
+        return entityData.get(GROWTH);
     }
 
     public void setGrowth(int growth) {
-        dataTracker.set(GROWTH, Math.max(0, growth));
+        entityData.set(GROWTH, Math.max(0, growth));
     }
 
     public float getAnimationTimer(float tickDelta) {
-        return (age + tickDelta + (getUuid().getMostSignificantBits() % 100)) * 0.00043F
-            + MathHelper.lerp(tickDelta, prevMotionOffset, getMotionOffset()) * 0.002F;
+        return (tickCount + tickDelta + (getUUID().getMostSignificantBits() % 100)) * 0.00043F
+            + Mth.lerpInt(tickDelta, prevMotionOffset, getMotionOffset()) * 0.002F;
     }
 
     public int getMotionOffset() {
-        return dataTracker.get(MOTION_OFFSET);
+        return entityData.get(MOTION_OFFSET);
     }
 
     public void setMotionOffset(int motionOffset) {
-        dataTracker.set(MOTION_OFFSET, motionOffset);
+        entityData.set(MOTION_OFFSET, motionOffset);
     }
 
     public boolean isAttacking() {
@@ -133,23 +133,23 @@ public class TentacleEntity extends AbstractDecorationEntity {
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float amount) {
-        if (source.getAttacker() instanceof PlayerEntity player) {
-            if (player.getStackInHand(Hand.MAIN_HAND).isIn(ItemTags.AXES)) {
+    public boolean hurtServer(ServerLevel world, DamageSource source, float amount) {
+        if (source.getEntity() instanceof Player player) {
+            if (player.getItemInHand(InteractionHand.MAIN_HAND).is(ItemTags.AXES)) {
                 kill(world);
-                ParticleUtils.spawnParticles(ParticleTypes.EFFECT, this, 10);
+                ParticleUtils.spawnParticles(net.minecraft.core.particles.SpellParticleOption.create(ParticleTypes.EFFECT, 0xFFFFFF, 1), this, 10);
             }
-            if (getWorld().random.nextInt(5) == 0 && canTarget(player)) {
+            if (level().getRandom().nextInt(5) == 0 && canTarget(player)) {
                 setTarget(player);
             }
         }
-        addActiveTicks(20 + getWorld().random.nextInt(30));
+        addActiveTicks(20 + level().getRandom().nextInt(30));
         playSound(USounds.ENTITY_TENTACLE_ROAR, 5, 1);
 
         hurtTime = 10;
-        getWorld().sendEntityStatus(this, EntityStatuses.PLAY_ATTACK_SOUND);
+        level().broadcastEntityEvent(this, EntityEvent.START_ATTACKING);
 
-        emitGameEvent(GameEvent.RESONATE_15);
+        gameEvent(GameEvent.RESONATE_15);
         return true;
     }
 
@@ -175,17 +175,17 @@ public class TentacleEntity extends AbstractDecorationEntity {
                     if (!canTarget(target)) {
                         target = null;
                     } else {
-                        if (getWorld() instanceof ServerWorld sw) {
-                            target.damage(sw, getDamageSources().create(DamageTypes.MOB_ATTACK, this), 15);
-                            Vec3d diff = target.getPos().subtract(getPos());
-                            target.takeKnockback(1, diff.x, diff.z);
+                        if (level() instanceof ServerLevel sw) {
+                            target.hurtServer(sw, damageSources().source(DamageTypes.MOB_ATTACK, this), 15);
+                            Vec3 diff = target.position().subtract(position());
+                            target.knockback(1, diff.x, diff.z, damageSources().source(DamageTypes.MOB_ATTACK, this), 1);
 
                             ParticleUtils.spawnParticles(ParticleTypes.CLOUD, target, 10);
 
-                            for (Entity bystander : getWorld().getOtherEntities(target, target.getBoundingBox().expand(3))) {
+                            for (Entity bystander : level().getEntities(target, target.getBoundingBox().inflate(3))) {
                                 if (bystander instanceof LivingEntity l) {
-                                    diff = l.getPos().subtract(getPos());
-                                    l.takeKnockback(1, diff.x, diff.z);
+                                    diff = l.position().subtract(position());
+                                    l.knockback(1, diff.x, diff.z, damageSources().source(DamageTypes.MOB_ATTACK, this), 1);
                                     ParticleUtils.spawnParticles(ParticleTypes.CLOUD, target, 10);
                                 }
                             }
@@ -198,17 +198,17 @@ public class TentacleEntity extends AbstractDecorationEntity {
         }
 
         ParticleUtils.spawnParticles(ParticleTypes.ASH, this, 4);
-        var sphere = new Sphere(false, 10).translate(getPos());
-        ParticleUtils.spawnParticles(getWorld(), sphere, ParticleTypes.ASH, 4);
+        var sphere = new Sphere(false, 10).translate(position());
+        ParticleUtils.spawnParticles(level(), sphere, ParticleTypes.ASH, 4);
 
-        if (!getWorld().isClient) {
+        if (!level().isClientSide()) {
             if (growth >= MAX_GROWTH / 2) {
-                if (age % 50 == 0) {
+                if (tickCount % 50 == 0) {
                     updateTarget();
                 }
 
                 if (target != null && !isAttacking()) {
-                    attack(target.getBlockPos());
+                    attack(target.blockPosition());
                 }
             }
 
@@ -217,11 +217,11 @@ public class TentacleEntity extends AbstractDecorationEntity {
 
                 if (growth == 0) {
                     playSound(USounds.ENTITY_TENTACLE_DIG, 1, 1);
-                    emitGameEvent(GameEvent.RESONATE_1);
+                    gameEvent(GameEvent.RESONATE_1);
                 }
             }
 
-            if (getWorld().random.nextInt(110) == 0) {
+            if (level().getRandom().nextInt(110) == 0) {
                 playSound(USounds.ENTITY_TENTACLE_AMBIENT, 1, 0.3F);
             }
 
@@ -230,8 +230,8 @@ public class TentacleEntity extends AbstractDecorationEntity {
                 setMotionOffset(getMotionOffset() + ticksActive);
             }
         } else {
-            if (growth < MAX_GROWTH && age % 15 == getWorld().random.nextInt(14)) {
-                getWorld().addBlockBreakParticles(getBlockPos().down(), getWorld().getBlockState(getBlockPos().down()));
+            if (growth < MAX_GROWTH && tickCount % 15 == level().getRandom().nextInt(14)) {
+                level().addDestroyBlockEffect(blockPosition().below(), level().getBlockState(blockPosition().below()));
             }
         }
     }
@@ -240,7 +240,7 @@ public class TentacleEntity extends AbstractDecorationEntity {
         this.target = target;
         playSound(USounds.ENTITY_TENTACLE_ROAR, 5, 1);
 
-        if (target instanceof PlayerEntity player) {
+        if (target instanceof Player player) {
             Pony.of(player).getMagicalReserves().getEnergy().add(6);
         }
     }
@@ -255,7 +255,7 @@ public class TentacleEntity extends AbstractDecorationEntity {
         }
 
         if (target == null && !isAttacking()) {
-            getWorld().getEntitiesByClass(HostileEntity.class, getBoundingBox().expand(10, 3, 10), this::canTarget)
+            level().getEntitiesOfClass(Monster.class, getBoundingBox().inflate(10, 3, 10), this::canTarget)
                 .stream()
                 .sorted(targetSorting)
                 .findFirst()
@@ -265,39 +265,39 @@ public class TentacleEntity extends AbstractDecorationEntity {
 
     protected boolean canTarget(LivingEntity target) {
         return target != null
-            && target.isPartOfGame()
-            && target.canTakeDamage()
-            && !target.isSneaky()
+            && target.canBeSeenByAnyone()
+            && target.canBeSeenAsEnemy()
+            && !target.isDiscrete()
             && canSee(target);
     }
 
     private boolean canSee(Entity entity) {
-        return entity.getWorld() == getWorld()
+        return entity.level() == level()
                 && distanceTo(entity) <= 128
-                && getWorld().raycast(new RaycastContext(getPos(), entity.getPos(), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this)).getType() == HitResult.Type.MISS;
+                && level().clip(new ClipContext(position(), entity.position(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)).getType() == HitResult.Type.MISS;
     }
 
     @Override
-    public void handleStatus(byte status) {
+    public void handleEntityEvent(byte status) {
         switch (status) {
             case ATTACK_STATUS:
                 attackingTicks = 30;
                 break;
-            case EntityStatuses.PLAY_ATTACK_SOUND:
+            case EntityEvent.START_ATTACKING:
                 hurtTime = 10;
                 break;
             default:
-                super.handleStatus(status);
+                super.handleEntityEvent(status);
         }
     }
 
     @Override
-    public void onBreak(ServerWorld world, Entity breaker) {
+    public void dropItem(ServerLevel world, Entity breaker) {
 
     }
 
     @Override
-    public void onPlace() {
+    public void playPlacementSound() {
 
     }
 
@@ -305,39 +305,39 @@ public class TentacleEntity extends AbstractDecorationEntity {
     @Override
     public void remove(RemovalReason reason) {
         super.remove(reason);
-        if (getWorld().isAir(getBlockPos()) && getWorld().getBlockState(getBlockPos().down()).isIn(BlockTags.DIRT)) {
-            getWorld().setBlockState(getBlockPos(), UBlocks.CURING_JOKE.getDefaultState());
+        if (level().isEmptyBlock(blockPosition()) && level().getBlockState(blockPosition().below()).is(BlockTags.DIRT)) {
+            level().setBlockAndUpdate(blockPosition(), UBlocks.CURING_JOKE.defaultBlockState());
         }
     }
 
 
     @Override
-    public boolean canStayAttached() {
-        return getWorld().isTopSolid(getBlockPos().down(), this);
+    public boolean survives() {
+        return level().loadedAndEntityCanStandOn(blockPosition().below(), this);
     }
 
     @Override
-    protected Box calculateBoundingBox(BlockPos pos, Direction side) {
-        return Box.of(pos.down().toCenterPos(), 1, 1, 1).stretch(0, 2, 0);
+    protected AABB calculateBoundingBox(BlockPos pos, Direction side) {
+        return AABB.ofSize(Vec3.atCenterOf(pos.below()), 1, 1, 1).expandTowards(0, 2, 0);
     }
 
     @Override
-    public void move(MovementType movementType, Vec3d movement) { }
+    public void move(MoverType movementType, Vec3 movement) { }
 
     @Override
-    public void addVelocity(double deltaX, double deltaY, double deltaZ) { }
+    public void push(double deltaX, double deltaY, double deltaZ) { }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound nbt) {
-        super.writeCustomDataToNbt(nbt);
+    public void addAdditionalSaveData(ValueOutput nbt) {
+        super.addAdditionalSaveData(nbt);
         nbt.putInt("growth", getGrowth());
         nbt.putInt("motion_offset", getMotionOffset());
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound nbt) {
-        super.readCustomDataFromNbt(nbt);
-        setGrowth(nbt.getInt("growth", 0));
-        setMotionOffset(nbt.getInt("motion_offset", 0));
+    public void readAdditionalSaveData(ValueInput nbt) {
+        super.readAdditionalSaveData(nbt);
+        setGrowth(nbt.getIntOr("growth", 0));
+        setMotionOffset(nbt.getIntOr("motion_offset", 0));
     }
 }

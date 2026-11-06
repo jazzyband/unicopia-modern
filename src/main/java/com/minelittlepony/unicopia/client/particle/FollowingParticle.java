@@ -1,13 +1,12 @@
 package com.minelittlepony.unicopia.client.particle;
 
 import com.minelittlepony.unicopia.particle.FollowingParticleEffect;
-
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.NoRenderParticle;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.client.particle.SpriteProvider;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.world.phys.Vec3;
 
 public class FollowingParticle extends NoRenderParticle {
 
@@ -17,14 +16,14 @@ public class FollowingParticle extends NoRenderParticle {
 
     private float scale;
 
-    public FollowingParticle(FollowingParticleEffect parameters, SpriteProvider provider, ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+    public FollowingParticle(FollowingParticleEffect parameters, SpriteSet provider, ClientLevel world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
         super(world, x, y, z, velocityX, velocityY, velocityZ);
         this.scale = 0.1f * (this.random.nextFloat() * 0.5f + 0.5f) * 2.0f;
-        setMaxAge(3);
+        setLifetime(3);
         scale(0.125F);
         this.parameters = parameters;
-        this.collidesWithWorld = false;
-        this.particle = parameters.childEffect().map(child -> MinecraftClient.getInstance().particleManager.addParticle(child, x, y, z, velocityX, velocityY, velocityZ)).orElse(null);
+        this.hasPhysics = false;
+        this.particle = parameters.childEffect().map(child -> Minecraft.getInstance().particleEngine.createParticle(child, x, y, z, velocityX, velocityY, velocityZ)).orElse(null);
     }
 
     @Override
@@ -45,13 +44,13 @@ public class FollowingParticle extends NoRenderParticle {
     @Override
     public void tick() {
         if (this.particle == null || !this.particle.isAlive()) {
-            markDead();
+            remove();
         }
 
         super.tick();
 
-        Vec3d target = parameters.target().getPosition(world);
-        Vec3d pos = new Vec3d(x, y, z);
+        Vec3 target = parameters.target().getPosition(level);
+        Vec3 pos = new Vec3(x, y, z);
 
         if (scale * 1.5F < 0.5F) {
             scale(1.5F);
@@ -62,7 +61,7 @@ public class FollowingParticle extends NoRenderParticle {
             age = 0;
         }
 
-        Vec3d motion = target.subtract(pos).normalize().multiply(Math.min(distance, parameters.followSpeed()));
+        Vec3 motion = target.subtract(pos).normalize().scale(Math.min(distance, parameters.followSpeed()));
         move(motion.x, motion.y, motion.z);
     }
 

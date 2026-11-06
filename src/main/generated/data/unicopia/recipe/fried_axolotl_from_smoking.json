@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 130,
+  "experience": 2.2,
+  "ingredient": "minecraft:axolotl_bucket",
+  "result": {
+    "id": "unicopia:fried_axolotl"
+  }
+}

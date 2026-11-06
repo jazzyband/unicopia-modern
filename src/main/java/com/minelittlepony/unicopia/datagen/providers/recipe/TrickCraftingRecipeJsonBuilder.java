@@ -2,6 +2,23 @@ package com.minelittlepony.unicopia.datagen.providers.recipe;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementRequirements;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.triggers.RecipeUnlockedTrigger;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeBuilder;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.include.com.google.common.base.Preconditions;
 
@@ -9,52 +26,40 @@ import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.item.component.Appearance;
 import com.minelittlepony.unicopia.recipe.ZapAppleRecipe;
 
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementCriterion;
-import net.minecraft.advancement.AdvancementRequirements;
-import net.minecraft.advancement.AdvancementRewards;
-import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
-import net.minecraft.data.recipe.CraftingRecipeJsonBuilder;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.book.RecipeCategory;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.collection.DefaultedList;
-
-public class TrickCraftingRecipeJsonBuilder implements CraftingRecipeJsonBuilder {
-    private final Map<String, AdvancementCriterion<?>> criterions = new LinkedHashMap<>();
+public class TrickCraftingRecipeJsonBuilder implements RecipeBuilder {
+    private final Map<String, Criterion<?>> criterions = new LinkedHashMap<>();
     @Nullable
     private String group;
     private final RecipeCategory category;
     private final Item output;
 
-    private final DefaultedList<Ingredient> inputs = DefaultedList.of();
+    private final NonNullList<Ingredient> inputs = NonNullList.create();
 
-    public TrickCraftingRecipeJsonBuilder(RecipeCategory category, ItemConvertible output) {
+    public TrickCraftingRecipeJsonBuilder(RecipeCategory category, ItemLike output) {
         this.category = category;
         this.output = output.asItem();
     }
 
-    public static TrickCraftingRecipeJsonBuilder create(RecipeCategory category, ItemConvertible output) {
+    public static TrickCraftingRecipeJsonBuilder create(RecipeCategory category, ItemLike output) {
         return new TrickCraftingRecipeJsonBuilder(category, output);
     }
 
-    @Override
-    public Item getOutputItem() {
+    public Item getResult() {
         return output;
     }
 
-    public TrickCraftingRecipeJsonBuilder input(ItemConvertible input) {
-        inputs.add(Ingredient.ofItems(input));
+    @Override
+    public ResourceKey<Recipe<?>> defaultId() {
+        return ResourceKey.create(Registries.RECIPE, BuiltInRegistries.ITEM.getKey(output));
+    }
+
+    public TrickCraftingRecipeJsonBuilder input(ItemLike input) {
+        inputs.add(Ingredient.of(input));
         return this;
     }
 
     @Override
-    public TrickCraftingRecipeJsonBuilder criterion(String name, AdvancementCriterion<?> condition) {
+    public TrickCraftingRecipeJsonBuilder unlockedBy(String name, Criterion<?> condition) {
         criterions.put(name, condition);
         return this;
     }
@@ -66,16 +71,15 @@ public class TrickCraftingRecipeJsonBuilder implements CraftingRecipeJsonBuilder
     }
 
     @Override
-    public void offerTo(RecipeExporter exporter, RegistryKey<Recipe<?>> key) {
-        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.getValue());
-        Advancement.Builder builder = exporter.getAdvancementBuilder()
-            .criterion("has_the_recipe", RecipeUnlockedCriterion.create(key))
+    public void save(RecipeOutput exporter, ResourceKey<Recipe<?>> key) {
+        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.identifier());
+        Advancement.Builder builder = exporter.advancement()
             .rewards(AdvancementRewards.Builder.recipe(key))
-            .criteriaMerger(AdvancementRequirements.CriterionMerger.OR);
-        criterions.forEach(builder::criterion);
+            .requirements(AdvancementRequirements.Strategy.OR);
+        criterions.forEach(builder::addCriterion);
         exporter.accept(key,
-                new ZapAppleRecipe(group == null ? "" : group, CraftingRecipeCategory.MISC, Appearance.set(UItems.ZAP_APPLE.getDefaultStack(), output.getDefaultStack()), inputs),
-                builder.build(key.getValue().withPrefixedPath("recipes/" + category.getName() + "/"))
+                new ZapAppleRecipe(group == null ? "" : group, CraftingBookCategory.MISC, Appearance.set(UItems.ZAP_APPLE.getDefaultInstance(), output.getDefaultInstance()), inputs),
+                builder.build(key.identifier().withPrefix("recipes/" + category.getFolderName() + "/"))
         );
     }
 }

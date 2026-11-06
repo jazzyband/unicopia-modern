@@ -1,0 +1,12 @@
+{
+  "wants": {
+    "id": "unicopia:gemstone",
+    "count": 2
+  },
+  "gives": {
+    "id": "minecraft:emerald"
+  },
+  "max_uses": 2,
+  "xp": 1,
+  "reputation_discount": 0.05
+}

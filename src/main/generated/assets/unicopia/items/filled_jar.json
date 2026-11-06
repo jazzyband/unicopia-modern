@@ -1,0 +1,18 @@
+{
+  "model": {
+    "type": "minecraft:composite",
+    "models": [
+      {
+        "type": "minecraft:model",
+        "model": "unicopia:item/empty_jar"
+      },
+      {
+        "type": "minecraft:special",
+        "base": "unicopia:item/filled_jar",
+        "model": {
+          "type": "unicopia:jar_contents"
+        }
+      }
+    ]
+  }
+}

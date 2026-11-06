@@ -1,0 +1,93 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:inverted",
+        "term": "minecraft:tool/can_silk_touch"
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:all_of",
+            "terms": [
+              {
+                "type": "minecraft:match_tool",
+                "predicate": {
+                  "predicates": {
+                    "minecraft:enchantments": [
+                      {
+                        "enchantments": "unicopia:gem_finder",
+                        "levels": {
+                          "min": 1
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "minecraft:random_chance",
+                "chance": 0.1
+              },
+              {
+                "type": "minecraft:table_bonus",
+                "chances": [
+                  0.1,
+                  0.14285715,
+                  0.25,
+                  1.0
+                ],
+                "enchantment": "minecraft:fortune"
+              }
+            ]
+          },
+          "modifier": [
+            {
+              "type": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 2,
+                "min": 1
+              }
+            },
+            {
+              "type": "minecraft:explosion_decay"
+            }
+          ],
+          "name": "unicopia:gemstone"
+        },
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:table_bonus",
+            "chances": [
+              0.05,
+              0.052222222,
+              0.055,
+              0.06666666,
+              0.1
+            ],
+            "enchantment": "minecraft:fortune"
+          },
+          "modifier": [
+            {
+              "type": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 2,
+                "min": 1
+              }
+            },
+            {
+              "type": "minecraft:explosion_decay"
+            }
+          ],
+          "name": "unicopia:wheat_worms"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

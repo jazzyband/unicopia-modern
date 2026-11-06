@@ -1,0 +1,613 @@
+{
+  "content": {
+    "pages": [
+      {
+        "elements": [
+          {
+            "bounds": {
+              "height": 128,
+              "width": 128,
+              "x": 15,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/container/pages/fire_magic.png"
+          }
+        ],
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p1.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p2.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p2.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p2.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.scorch.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.scorch.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          }
+        ],
+        "title": {
+          "translate": "spell.unicopia.scorch"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:fire": 10.0
+                  },
+                  "unicopia:stored_spell": "unicopia:scorch"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:fire": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "count": 10,
+                "trait": "unicopia:fire"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.flame.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.flame.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          }
+        ],
+        "level": 1,
+        "title": {
+          "translate": "spell.unicopia.flame"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:scorch"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:fire": 15.0
+                  },
+                  "unicopia:stored_spell": "unicopia:flame"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:fire": 15.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:scorch"
+              },
+              {
+                "count": 15,
+                "trait": "unicopia:fire"
+              }
+            ]
+          }
+        ],
+        "level": 1
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p5.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p5.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p5.3.body"
+          }
+        ],
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p5.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p6.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p6.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/focus.png"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p6.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p7.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p7.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p8.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p8.2.body"
+          }
+        ],
+        "level": 21,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p8.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.fire_bolt.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.fire_bolt.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.fire_bolt.3.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/focus.png"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "spell.unicopia.fire_bolt"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:flame"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:chaos": 1.0,
+                    "unicopia:fire": 60.0,
+                    "unicopia:focus": 10.0,
+                    "unicopia:strength": 11.0
+                  },
+                  "unicopia:stored_spell": "unicopia:fire_bolt"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:fire": 30.0,
+                "unicopia:focus": 9.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:flame"
+              },
+              {
+                "count": 9,
+                "trait": "unicopia:focus"
+              },
+              {
+                "count": 30,
+                "trait": "unicopia:fire"
+              }
+            ]
+          }
+        ],
+        "level": 2
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p10.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p10.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p10.3.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/strength.png"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p10.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p11.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p11.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p11.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p12.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p12.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p12.3.body"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p12.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p12.4.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 13
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p12.5.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p12.6.body"
+          }
+        ],
+        "level": 3
+      },
+      {},
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p13.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p13.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 9,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p13.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p14.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p14.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.shield.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.shield.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/strength.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/fire.png"
+          }
+        ],
+        "level": 2,
+        "title": {
+          "translate": "spell.unicopia.shield"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:air": 9.0,
+                    "unicopia:focus": 5.0,
+                    "unicopia:knowledge": 1.0,
+                    "unicopia:strength": 50.0
+                  },
+                  "unicopia:stored_spell": "unicopia:shield"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:focus": 6.0,
+                "unicopia:power": 10.0,
+                "unicopia:strength": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "count": 10,
+                "trait": "unicopia:strength"
+              },
+              {
+                "count": 6,
+                "trait": "unicopia:focus"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:power"
+              }
+            ]
+          }
+        ],
+        "level": 2
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p16.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p16.2.body"
+          }
+        ],
+        "level": 4,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p16.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p17.1.body"
+          }
+        ],
+        "level": 5,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p17.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p18.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.fire.p18.2.body"
+          }
+        ],
+        "level": 3,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.fire.p18.title"
+        }
+      }
+    ]
+  },
+  "side": "right",
+  "y_position": 2
+}

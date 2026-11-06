@@ -1,0 +1,17 @@
+{
+  "drops": [
+    {
+      "item": "minecraft:pink_petals",
+      "weight": 1
+    }
+  ],
+  "leaves": [
+    "minecraft:cherry_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:cherry_log",
+    "minecraft:cherry_wood"
+  ],
+  "rarity": 7
+}

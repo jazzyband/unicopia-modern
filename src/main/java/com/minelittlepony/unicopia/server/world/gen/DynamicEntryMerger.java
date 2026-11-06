@@ -7,7 +7,7 @@ import java.util.function.BiConsumer;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.fabric.api.event.registry.RegistryEntryAddedCallback;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 public class DynamicEntryMerger<T> implements RegistryEntryAddedCallback<T> {
 
@@ -26,7 +26,7 @@ public class DynamicEntryMerger<T> implements RegistryEntryAddedCallback<T> {
     public void onEntryAdded(int rawId, Identifier id, T object) {
         boolean isInjected = id.getNamespace().equals(sourceNamespace);
         if (isInjected || id.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-            Identifier targetId = isInjected ? Identifier.of(id.getPath()) : id;
+            Identifier targetId = isInjected ? Identifier.parse(id.getPath()) : id;
 
             unfilledEntries.compute(targetId, (iid, pair) -> {
                 pair = pair == null ? new SourceTargetPair() : pair;

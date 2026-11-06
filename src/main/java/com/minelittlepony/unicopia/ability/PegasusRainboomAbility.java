@@ -1,7 +1,8 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.data.Hit;
@@ -9,9 +10,6 @@ import com.minelittlepony.unicopia.ability.magic.spell.CastingMethod;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
 
 /**
  * Pegasus ability to perform rainbooms
@@ -35,7 +33,7 @@ public class PegasusRainboomAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -48,7 +46,7 @@ public class PegasusRainboomAbility implements Ability<Hit> {
     public boolean onQuickAction(Pony player, ActivationType type, Optional<Hit> data) {
 
         if (type == ActivationType.TAP && !player.getMotion().isRainbooming() && player.getPhysics().isFlying() && player.getMagicalReserves().getMana().get() > 40) {
-            player.getPhysics().dashForward((float)player.asWorld().random.nextTriangular(2.5F, 0.3F));
+            player.getPhysics().dashForward((float)player.asWorld().getRandom().triangle(2.5F, 0.3F));
             player.subtractEnergyCost(4);
             player.getMagicalReserves().getCharge().add(2);
             return true;

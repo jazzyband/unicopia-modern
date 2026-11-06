@@ -1,0 +1,11 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "unicopia:block/flowering_zap_leaves",
+    "tints": [
+      {
+        "type": "unicopia:block"
+      }
+    ]
+  }
+}

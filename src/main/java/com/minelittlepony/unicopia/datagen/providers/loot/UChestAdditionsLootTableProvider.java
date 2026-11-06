@@ -7,27 +7,36 @@ import com.minelittlepony.unicopia.UConventionalTags;
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.item.UItems;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.SimpleFabricLootTableProvider;
-import net.minecraft.loot.LootTable.Builder;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.LootTables;
-import net.minecraft.loot.context.LootContextTypes;
-import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.entry.TagEntry;
-import net.minecraft.loot.function.SetCountLootFunction;
-import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.loot.provider.number.UniformLootNumberProvider;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.SimpleFabricLootTableSubProvider;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.storage.loot.BuiltInLootTables;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.LootTable.Builder;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.entries.TagEntry;
+import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
 
-public class UChestAdditionsLootTableProvider extends SimpleFabricLootTableProvider {
 
-    public UChestAdditionsLootTableProvider(FabricDataOutput dataOutput, CompletableFuture<RegistryWrapper.WrapperLookup> registryLookup) {
-        super(dataOutput, registryLookup, LootContextTypes.CHEST);
+public class UChestAdditionsLootTableProvider extends SimpleFabricLootTableSubProvider {
+    private final CompletableFuture<HolderLookup.Provider> registryLookup;
+
+    public UChestAdditionsLootTableProvider(FabricPackOutput dataOutput, CompletableFuture<HolderLookup.Provider> registryLookup) {
+        super(dataOutput, registryLookup, LootContextParamSets.CHEST);
+        this.registryLookup = registryLookup;
+    }
+
+    private HolderSet<Item> tag(TagKey<Item> key) {
+        return registryLookup.join().lookupOrThrow(Registries.ITEM).getOrThrow(key);
     }
 
     @Override
@@ -36,114 +45,114 @@ public class UChestAdditionsLootTableProvider extends SimpleFabricLootTableProvi
     }
 
     @Override
-    public void accept(BiConsumer<RegistryKey<LootTable>, LootTable.Builder> exporter) {
-        acceptAdditions((id, builder) -> exporter.accept(RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.of("unicopiamc", id.getValue().getPath())), builder));
+    public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> exporter) {
+        acceptAdditions((id, builder) -> exporter.accept(ResourceKey.create(Registries.LOOT_TABLE, Identifier.fromNamespaceAndPath("unicopiamc", id.identifier().getPath())), builder));
     }
 
-    public void acceptAdditions(BiConsumer<RegistryKey<LootTable>, Builder> exporter) {
-        exporter.accept(LootTables.ABANDONED_MINESHAFT_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(2, 4))
-                .with(ItemEntry.builder(UItems.GRYPHON_FEATHER).weight(2).apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(1, 4))))
+    public void acceptAdditions(BiConsumer<ResourceKey<LootTable>, Builder> exporter) {
+        exporter.accept(BuiltInLootTables.ABANDONED_MINESHAFT, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(2, 4))
+                .add(LootItem.lootTableItem(UItems.GRYPHON_FEATHER).setWeight(2).apply(SetItemCountFunction.setCount(ContextIntProviders.between(1, 4))))
         ));
-        exporter.accept(LootTables.WOODLAND_MANSION_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(2, 4))
-                .with(ItemEntry.builder(UItems.GRYPHON_FEATHER).weight(10).apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(1, 7))))
-                .with(ItemEntry.builder(UItems.GOLDEN_WING).weight(1).apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(1, 2))))
-                .with(TagEntry.expandBuilder(UTags.Items.FRESH_APPLES).weight(1).apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(2, 5))))
+        exporter.accept(BuiltInLootTables.WOODLAND_MANSION, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(2, 4))
+                .add(LootItem.lootTableItem(UItems.GRYPHON_FEATHER).setWeight(10).apply(SetItemCountFunction.setCount(ContextIntProviders.between(1, 7))))
+                .add(LootItem.lootTableItem(UItems.GOLDEN_WING).setWeight(1).apply(SetItemCountFunction.setCount(ContextIntProviders.between(1, 2))))
+                .add(TagEntry.expandTag(tag(UTags.Items.FRESH_APPLES)).setWeight(1).apply(SetItemCountFunction.setCount(ContextIntProviders.between(2, 5))))
         ));
-        exporter.accept(LootTables.VILLAGE_FLETCHER_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(2, 4))
-                .with(ItemEntry.builder(UItems.GRYPHON_FEATHER).weight(10).apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(1, 2))))
-                .with(ItemEntry.builder(UItems.PEGASUS_FEATHER).weight(1).apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(1, 2))))
+        exporter.accept(BuiltInLootTables.VILLAGE_FLETCHER, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(2, 4))
+                .add(LootItem.lootTableItem(UItems.GRYPHON_FEATHER).setWeight(10).apply(SetItemCountFunction.setCount(ContextIntProviders.between(1, 2))))
+                .add(LootItem.lootTableItem(UItems.PEGASUS_FEATHER).setWeight(1).apply(SetItemCountFunction.setCount(ContextIntProviders.between(1, 2))))
         ));
-        exporter.accept(LootTables.VILLAGE_PLAINS_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(3, 4))
-                .with(TagEntry.expandBuilder(UTags.Items.FRESH_APPLES).weight(1))
-                .with(TagEntry.expandBuilder(UTags.Items.APPLE_SEEDS).weight(1))
-        ));
-
-        exporter.accept(LootTables.ANCIENT_CITY_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(0, 1))
-                .with(ItemEntry.builder(UItems.GROGARS_BELL).weight(1))
+        exporter.accept(BuiltInLootTables.VILLAGE_PLAINS_HOUSE, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(3, 4))
+                .add(TagEntry.expandTag(tag(UTags.Items.FRESH_APPLES)).setWeight(1))
+                .add(TagEntry.expandTag(tag(UTags.Items.APPLE_SEEDS)).setWeight(1))
         ));
 
-        exporter.accept(LootTables.BURIED_TREASURE_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 4))
-                .with(ItemEntry.builder(UItems.PEARL_NECKLACE).weight(1))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(3))
-        ));
-        exporter.accept(LootTables.SHIPWRECK_SUPPLY_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 6))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(3))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(1))
-        ));
-        exporter.accept(LootTables.SHIPWRECK_TREASURE_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 4))
-                .with(ItemEntry.builder(UItems.PEARL_NECKLACE).weight(1))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(3))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(1))
-        ));
-        exporter.accept(LootTables.UNDERWATER_RUIN_BIG_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 2))
-                .with(ItemEntry.builder(UItems.PEARL_NECKLACE).weight(1))
-                .with(ItemEntry.builder(UItems.SHELLY).weight(4))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(8))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(1))
-        ));
-        exporter.accept(LootTables.UNDERWATER_RUIN_SMALL_CHEST, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 4))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(1))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(1))
+        exporter.accept(BuiltInLootTables.ANCIENT_CITY, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(0, 1))
+                .add(LootItem.lootTableItem(UItems.GROGARS_BELL).setWeight(1))
         ));
 
-        exporter.accept(LootTables.DESERT_WELL_ARCHAEOLOGY, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 4))
-                .with(ItemEntry.builder(UItems.WEIRD_ROCK).weight(2))
-                .with(ItemEntry.builder(UItems.ROCK).weight(1))
-                .with(ItemEntry.builder(UItems.TOM).weight(1))
-                .with(ItemEntry.builder(UItems.ROCK_STEW).weight(1))
-                .with(ItemEntry.builder(UItems.PEBBLES).weight(1))
-                .with(ItemEntry.builder(UItems.SHELLY).weight(1))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(1))
-                .with(ItemEntry.builder(UItems.PEARL_NECKLACE).weight(1))
+        exporter.accept(BuiltInLootTables.BURIED_TREASURE, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 4))
+                .add(LootItem.lootTableItem(UItems.PEARL_NECKLACE).setWeight(1))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(3))
         ));
-        exporter.accept(LootTables.TRAIL_RUINS_COMMON_ARCHAEOLOGY, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 4))
-                .with(ItemEntry.builder(UItems.MEADOWBROOKS_STAFF).weight(2))
-                .with(ItemEntry.builder(UItems.BOTCHED_GEM).weight(3))
-                .with(ItemEntry.builder(UItems.PEGASUS_FEATHER).weight(1))
+        exporter.accept(BuiltInLootTables.SHIPWRECK_SUPPLY, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 6))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(3))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(1))
         ));
-        exporter.accept(LootTables.TRAIL_RUINS_RARE_ARCHAEOLOGY, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 4))
-                .with(ItemEntry.builder(UItems.BROKEN_SUNGLASSES).weight(2))
-                .with(ItemEntry.builder(UItems.EMPTY_JAR).weight(2))
-                .with(ItemEntry.builder(UItems.MUSIC_DISC_CRUSADE).weight(1))
+        exporter.accept(BuiltInLootTables.SHIPWRECK_TREASURE, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 4))
+                .add(LootItem.lootTableItem(UItems.PEARL_NECKLACE).setWeight(1))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(3))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(1))
         ));
-        exporter.accept(LootTables.OCEAN_RUIN_WARM_ARCHAEOLOGY, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 2))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(2))
-                .with(ItemEntry.builder(UItems.PEARL_NECKLACE).weight(1))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(2))
+        exporter.accept(BuiltInLootTables.UNDERWATER_RUIN_BIG, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 2))
+                .add(LootItem.lootTableItem(UItems.PEARL_NECKLACE).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.SHELLY).setWeight(4))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(8))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(1))
         ));
-
-        exporter.accept(LootTables.FISHING_GAMEPLAY, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 2))
-                .with(TagEntry.expandBuilder(UTags.Items.SHELLS).weight(2))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(1))
+        exporter.accept(BuiltInLootTables.UNDERWATER_RUIN_SMALL, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 4))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(1))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(1))
         ));
 
-        exporter.accept(LootTables.FISHING_JUNK_GAMEPLAY, LootTable.builder().pool(LootPool.builder()
-                .rolls(UniformLootNumberProvider.create(1, 2))
-                .with(ItemEntry.builder(UItems.BROKEN_SUNGLASSES).weight(2))
-                .with(ItemEntry.builder(UItems.WHEAT_WORMS).weight(2))
-                .with(TagEntry.expandBuilder(UConventionalTags.Items.ROTTEN_FISH).weight(1))
-                .with(ItemEntry.builder(UItems.BOTCHED_GEM).weight(4))
+        exporter.accept(BuiltInLootTables.DESERT_WELL_ARCHAEOLOGY, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 4))
+                .add(LootItem.lootTableItem(UItems.WEIRD_ROCK).setWeight(2))
+                .add(LootItem.lootTableItem(UItems.ROCK).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.TOM).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.ROCK_STEW).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.PEBBLES).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.SHELLY).setWeight(1))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.PEARL_NECKLACE).setWeight(1))
+        ));
+        exporter.accept(BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_COMMON, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 4))
+                .add(LootItem.lootTableItem(UItems.MEADOWBROOKS_STAFF).setWeight(2))
+                .add(LootItem.lootTableItem(UItems.BOTCHED_GEM).setWeight(3))
+                .add(LootItem.lootTableItem(UItems.PEGASUS_FEATHER).setWeight(1))
+        ));
+        exporter.accept(BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_RARE, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 4))
+                .add(LootItem.lootTableItem(UItems.BROKEN_SUNGLASSES).setWeight(2))
+                .add(LootItem.lootTableItem(UItems.EMPTY_JAR).setWeight(2))
+                .add(LootItem.lootTableItem(UItems.MUSIC_DISC_CRUSADE).setWeight(1))
+        ));
+        exporter.accept(BuiltInLootTables.OCEAN_RUIN_WARM_ARCHAEOLOGY, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 2))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(2))
+                .add(LootItem.lootTableItem(UItems.PEARL_NECKLACE).setWeight(1))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(2))
         ));
 
-        exporter.accept(LootTables.HERO_OF_THE_VILLAGE_FISHERMAN_GIFT_GAMEPLAY, LootTable.builder().pool(LootPool.builder()
-                .rolls(ConstantLootNumberProvider.create(1))
-                .with(ItemEntry.builder(UItems.PEARL_NECKLACE).weight(1))
-                .with(ItemEntry.builder(UItems.SHELLY).weight(1))
+        exporter.accept(BuiltInLootTables.FISHING, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 2))
+                .add(TagEntry.expandTag(tag(UTags.Items.SHELLS)).setWeight(2))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(1))
+        ));
+
+        exporter.accept(BuiltInLootTables.FISHING_JUNK, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.between(1, 2))
+                .add(LootItem.lootTableItem(UItems.BROKEN_SUNGLASSES).setWeight(2))
+                .add(LootItem.lootTableItem(UItems.WHEAT_WORMS).setWeight(2))
+                .add(TagEntry.expandTag(tag(UConventionalTags.Items.ROTTEN_FISH)).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.BOTCHED_GEM).setWeight(4))
+        ));
+
+        exporter.accept(BuiltInLootTables.FISHERMAN_GIFT, LootTable.lootTable().withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.exactly(1))
+                .add(LootItem.lootTableItem(UItems.PEARL_NECKLACE).setWeight(1))
+                .add(LootItem.lootTableItem(UItems.SHELLY).setWeight(1))
         ));
     }
 

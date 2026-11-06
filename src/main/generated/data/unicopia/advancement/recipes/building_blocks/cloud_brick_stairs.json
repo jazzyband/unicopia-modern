@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_cloud_bricks": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:cloud_bricks"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:cloud_brick_stairs"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_cloud_bricks"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cloud_brick_stairs"
+    ]
+  }
+}

@@ -1,16 +1,15 @@
 package com.minelittlepony.unicopia.datagen.providers;
 
-import net.minecraft.util.math.Direction;
+import static net.minecraft.core.Direction.*;
 
-import static net.minecraft.util.math.Direction.*;
-
-import net.minecraft.util.math.AxisRotation;
+import com.mojang.math.Quadrant;
+import net.minecraft.core.Direction;
 
 public class BlockRotation {
-    private static final AxisRotation[] ROTATIONS = AxisRotation.values();
+    private static final Quadrant[] ROTATIONS = Quadrant.values();
     public static final Direction[] DIRECTIONS = { EAST, SOUTH, WEST, NORTH };
 
-    public static AxisRotation cycle(AxisRotation rotation, int steps) {
+    public static Quadrant cycle(Quadrant rotation, int steps) {
         int index = rotation.ordinal() + steps;
         while (index < 0) {
             index += ROTATIONS.length;
@@ -18,11 +17,11 @@ public class BlockRotation {
         return ROTATIONS[index % ROTATIONS.length];
     }
 
-    public static AxisRotation next(AxisRotation rotation) {
+    public static Quadrant next(Quadrant rotation) {
         return cycle(rotation, 1);
     }
 
-    public static AxisRotation previous(AxisRotation rotation) {
+    public static Quadrant previous(Quadrant rotation) {
         return cycle(rotation, -1);
     }
 }

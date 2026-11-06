@@ -6,17 +6,16 @@ import com.minelittlepony.unicopia.network.track.Trackable;
 import com.minelittlepony.unicopia.network.track.TrackableDataType;
 import com.minelittlepony.unicopia.util.Copyable;
 import com.minelittlepony.unicopia.util.Tickable;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public class EntityPhysics<T extends Entity> implements Physics, Copyable<EntityPhysics<T>>, Tickable {
     protected final T entity;
@@ -34,10 +33,10 @@ public class EntityPhysics<T extends Entity> implements Physics, Copyable<Entity
 
     @Override
     public void tick() {
-        if (entity.getWorld() instanceof ServerWorld sw && isGravityNegative()) {
-            if (entity.getY() > entity.getWorld().getHeight() + 64) {
+        if (entity.level() instanceof ServerLevel sw && isGravityNegative()) {
+            if (entity.getY() > entity.level().getHeight() + 64) {
                 if (entity instanceof LivingEntity) {
-                    entity.damage(sw, entity.getDamageSources().outOfWorld(), 4F);
+                    entity.hurtServer(sw, entity.damageSources().fellOutOfWorld(), 4F);
                 } else {
                     entity.discard();
                 }
@@ -53,21 +52,21 @@ public class EntityPhysics<T extends Entity> implements Physics, Copyable<Entity
     }
 
     @Override
-    public Box getBoxAtPosition(Vec3d pos, boolean inverted) {
-        Box box = entity.getDimensions(entity.getPose()).getBoxAt(pos);
+    public AABB getBoxAtPosition(Vec3 pos, boolean inverted) {
+        AABB box = entity.getDimensions(entity.getPose()).makeBoundingBox(pos);
         if (inverted) {
-            double yOffset = (pos.getY() + 1) + box.maxY;
-            box = box.offset(0, yOffset, 0);
+            double yOffset = (pos.y() + 1) + box.maxY;
+            box = box.move(0, yOffset, 0);
         }
         return box;
     }
 
     protected void onGravitychanged() {
-        entity.calculateDimensions();
+        entity.refreshDimensions();
 
-        if (!entity.getWorld().isClient && entity instanceof MobEntity) {
-            ((MobEntity)entity).getNavigation().stop();
-            ((MobEntity)entity).setTarget(null);
+        if (!entity.level().isClientSide() && entity instanceof Mob) {
+            ((Mob)entity).getNavigation().stop();
+            ((Mob)entity).setTarget(null);
         }
     }
 
@@ -77,8 +76,8 @@ public class EntityPhysics<T extends Entity> implements Physics, Copyable<Entity
     }
 
     @Override
-    public Vec3d getMotionAngle() {
-        return new Vec3d(entity.getPitch(1), entity.getYaw(1), 0);
+    public Vec3 getMotionAngle() {
+        return new Vec3(entity.getViewXRot(1), entity.getViewYRot(1), 0);
     }
 
     @Override
@@ -88,9 +87,9 @@ public class EntityPhysics<T extends Entity> implements Physics, Copyable<Entity
 
     @Override
     public BlockPos getHeadPosition() {
-        BlockPos pos = BlockPos.ofFloored(
+        BlockPos pos = BlockPos.containing(
                 entity.getX(),
-                (int)(entity.getY() + 0.5) + entity.getEyeHeight(EntityPose.STANDING),
+                (int)(entity.getY() + 0.5) + entity.getEyeHeight(Pose.STANDING),
                 entity.getZ()
         );
 
@@ -140,13 +139,21 @@ public class EntityPhysics<T extends Entity> implements Physics, Copyable<Entity
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         compound.putFloat("gravity", getBaseGravityModifier());
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-        setBaseGravityModifier(compound.getFloat("gravity", DEFAULT_GRAVITY_FACTOR));
+    public void fromNBT(CompoundTag compound, Provider lookup) {
+        setBaseGravityModifier(compound.getFloatOr("gravity", DEFAULT_GRAVITY_FACTOR));
+    }
+
+    public void toValue(net.minecraft.world.level.storage.ValueOutput output) {
+        output.putFloat("gravity", getBaseGravityModifier());
+    }
+
+    public void fromValue(net.minecraft.world.level.storage.ValueInput input) {
+        setBaseGravityModifier(input.getFloatOr("gravity", DEFAULT_GRAVITY_FACTOR));
     }
 
 }

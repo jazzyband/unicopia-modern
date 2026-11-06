@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 230,
+  "experience": 2.2,
+  "group": "fried_axolotl",
+  "ingredient": "minecraft:axolotl_bucket",
+  "result": {
+    "id": "unicopia:fried_axolotl"
+  }
+}

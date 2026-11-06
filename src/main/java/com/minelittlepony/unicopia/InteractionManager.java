@@ -3,7 +3,12 @@ package com.minelittlepony.unicopia;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.UUID;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.crafting.SelectableRecipe;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,13 +19,6 @@ import com.minelittlepony.unicopia.entity.player.dummy.DummyPlayerEntity;
 import com.minelittlepony.unicopia.particle.ParticleSpawner;
 import com.minelittlepony.unicopia.recipe.CloudShapingRecipe;
 import com.mojang.authlib.GameProfile;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.recipe.display.CuttingRecipeDisplay;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
 
 public class InteractionManager {
     public static final int SOUND_EARS_RINGING = 0;
@@ -54,11 +52,11 @@ public class InteractionManager {
         return ParticleSpawner.EMPTY;
     }
 
-    public CuttingRecipeDisplay.Grouping<CloudShapingRecipe> getCloudShapingRecipes() {
-        return CuttingRecipeDisplay.Grouping.empty();
+    public SelectableRecipe.SingleInputSet<CloudShapingRecipe> getCloudShapingRecipes() {
+        return SelectableRecipe.SingleInputSet.empty();
     }
 
-    public void setCloudShapingRecipes(CuttingRecipeDisplay.Grouping<CloudShapingRecipe> recipes) {
+    public void setCloudShapingRecipes(SelectableRecipe.SingleInputSet<CloudShapingRecipe> recipes) {
 
     }
 
@@ -73,7 +71,7 @@ public class InteractionManager {
      * Returns true on the client if the passed in player entity is the client's player.
      * Always returns false on the server.
      */
-    public boolean isClientPlayer(@Nullable PlayerEntity player) {
+    public boolean isClientPlayer(@Nullable Player player) {
         return false;
     }
 
@@ -97,8 +95,8 @@ public class InteractionManager {
      * Returns an implementation of PlayerEntity appropriate to the side being called on.
      */
     @NotNull
-    public final PlayerEntity createPlayer(Entity observer, GameProfile profile) {
-        return createPlayer(observer.getWorld(), profile);
+    public final Player createPlayer(Entity observer, GameProfile profile) {
+        return createPlayer(observer.level(), profile);
     }
 
     /**
@@ -107,11 +105,11 @@ public class InteractionManager {
      * Returns an implementation of PlayerEntity appropriate to the side being called on.
      */
     @NotNull
-    public PlayerEntity createPlayer(World world, GameProfile profile) {
+    public Player createPlayer(Level world, GameProfile profile) {
         return new DummyPlayerEntity(world, profile);
     }
 
-    public void sendPlayerLookAngles(PlayerEntity player) {
+    public void sendPlayerLookAngles(Player player) {
 
     }
 
@@ -119,7 +117,7 @@ public class InteractionManager {
 
     }
 
-    public void interactLevitatingItem(LevitatingItemEntity entity, PlayerEntity player) {
+    public void interactLevitatingItem(LevitatingItemEntity entity, Player player) {
         if (player != entity.getMaster()) {
             entity.handleAction(Action.GRAB, player, Optional.empty());
         }

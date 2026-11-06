@@ -1,0 +1,13 @@
+{
+  "textures": {
+    "fall": {
+      "crop": "unicopia:block/seasons/fall/oats_stage4"
+    },
+    "summer": {
+      "crop": "unicopia:block/seasons/summer/oats_stage4"
+    },
+    "winter": {
+      "crop": "unicopia:block/seasons/winter/oats_stage4"
+    }
+  }
+}

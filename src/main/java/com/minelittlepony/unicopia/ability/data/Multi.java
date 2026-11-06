@@ -1,14 +1,14 @@
 package com.minelittlepony.unicopia.ability.data;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.core.Vec3i;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 
 public record Multi (Pos pos, int hitType) implements Hit {
-    public static final PacketCodec<PacketByteBuf, Multi> CODEC = PacketCodec.tuple(
+    public static final StreamCodec<FriendlyByteBuf, Multi> CODEC = StreamCodec.composite(
             Pos.CODEC, Multi::pos,
-            PacketCodecs.INTEGER, Multi::hitType,
+            ByteBufCodecs.INT, Multi::hitType,
             Multi::new
     );
 

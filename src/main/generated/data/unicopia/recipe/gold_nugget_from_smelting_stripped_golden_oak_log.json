@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 200,
+  "experience": 20.0,
+  "group": "gold_nugget",
+  "ingredient": "unicopia:stripped_golden_oak_log",
+  "result": {
+    "id": "minecraft:gold_nugget"
+  }
+}

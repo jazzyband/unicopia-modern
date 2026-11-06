@@ -1,0 +1,196 @@
+{
+  "default_multiplier": 0.7,
+  "effects": [
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 2
+          },
+          "chance": 5,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 100,
+            "min": 100
+          }
+        }
+      },
+      "tags": [
+        "unicopia:fish/rotten",
+        "unicopia:meat/raw",
+        "unicopia:meat/rotten"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 1,
+            "min": 1
+          },
+          "chance": 15,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 50,
+            "min": 50
+          }
+        }
+      },
+      "tags": [
+        "unicopia:insect/rotten"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "tags": [
+        "unicopia:insect/cooked",
+        "unicopia:meat/cooked"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:many",
+          "afflictions": [
+            {
+              "type": "unicopia:apply_status_effect",
+              "amplifier": {
+                "max": 6,
+                "min": 2
+              },
+              "effect": "minecraft:health_boost",
+              "seconds": {
+                "max": 60,
+                "min": 30
+              }
+            },
+            {
+              "type": "unicopia:apply_status_effect",
+              "amplifier": {
+                "max": 6,
+                "min": 1
+              },
+              "effect": "minecraft:jump_boost",
+              "seconds": {
+                "max": 60,
+                "min": 30
+              }
+            },
+            {
+              "type": "unicopia:apply_status_effect",
+              "amplifier": {
+                "max": 6,
+                "min": 3
+              },
+              "effect": "minecraft:regeneration",
+              "seconds": {
+                "max": 30,
+                "min": 3
+              }
+            }
+          ]
+        }
+      },
+      "tags": [
+        "unicopia:bat_ponys_delight"
+      ]
+    }
+  ],
+  "foraging_multiplier": 0.9,
+  "multipliers": [
+    {
+      "hunger": 0.9,
+      "saturation": 0.9,
+      "tags": [
+        "unicopia:pinecone"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:special_shells",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:shells"
+      ]
+    },
+    {
+      "hunger": 0.4,
+      "saturation": 0.2,
+      "tags": [
+        "unicopia:baked_goods"
+      ]
+    },
+    {
+      "hunger": 0.75,
+      "saturation": 0.75,
+      "tags": [
+        "unicopia:fish/cooked"
+      ]
+    },
+    {
+      "hunger": 1.15,
+      "saturation": 1.16,
+      "tags": [
+        "unicopia:meat/cooked"
+      ]
+    },
+    {
+      "hunger": 1.75,
+      "saturation": 1.74,
+      "tags": [
+        "unicopia:insect/cooked"
+      ]
+    },
+    {
+      "hunger": 0.5,
+      "saturation": 0.6,
+      "tags": [
+        "unicopia:fish/raw"
+      ]
+    },
+    {
+      "hunger": 0.25,
+      "saturation": 0.25,
+      "tags": [
+        "unicopia:meat/raw"
+      ]
+    },
+    {
+      "hunger": 1.0,
+      "saturation": 1.0,
+      "tags": [
+        "unicopia:insect/raw"
+      ]
+    },
+    {
+      "hunger": 0.24,
+      "saturation": 0.25,
+      "tags": [
+        "unicopia:fish/rotten"
+      ]
+    },
+    {
+      "hunger": 0.2,
+      "saturation": 0.2,
+      "tags": [
+        "unicopia:meat/rotten"
+      ]
+    },
+    {
+      "hunger": 0.9,
+      "saturation": 0.9,
+      "tags": [
+        "unicopia:insect/rotten"
+      ]
+    }
+  ]
+}

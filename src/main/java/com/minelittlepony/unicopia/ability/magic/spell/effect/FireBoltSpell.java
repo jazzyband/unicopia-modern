@@ -13,13 +13,12 @@ import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.entity.EntityReference;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.EntityHitResult;
 
 public class FireBoltSpell extends AbstractSpell implements HomingSpell,
         ProjectileDelegate.ConfigurationListener, ProjectileDelegate.EntityHitListener {
@@ -56,7 +55,7 @@ public class FireBoltSpell extends AbstractSpell implements HomingSpell,
 
     @Override
     public void onImpact(MagicProjectileEntity projectile, EntityHitResult hit) {
-        hit.getEntity().setOnFireFor(90);
+        hit.getEntity().igniteForSeconds(90);
     }
 
     @Override
@@ -67,7 +66,7 @@ public class FireBoltSpell extends AbstractSpell implements HomingSpell,
             if (caster instanceof MagicProjectileEntity projectile && followTarget) {
                 caster.findAllEntitiesInRange(
                         followRage,
-                    EntityPredicates.VALID_LIVING_ENTITY.and(TargetSelecter.validTarget(this, caster))
+                    EntitySelector.LIVING_ENTITY_STILL_ALIVE.and(TargetSelecter.validTarget(this, caster))
                 ).findFirst().ifPresent(target -> projectile.setHomingTarget(target));
             }
 
@@ -77,7 +76,7 @@ public class FireBoltSpell extends AbstractSpell implements HomingSpell,
         if (followTarget && target.getOrEmpty(caster.asWorld()).isEmpty()) {
             target.set(caster.findAllEntitiesInRange(
                     followRage,
-                EntityPredicates.VALID_LIVING_ENTITY.and(TargetSelecter.validTarget(this, caster))
+                EntitySelector.LIVING_ENTITY_STILL_ALIVE.and(TargetSelecter.validTarget(this, caster))
             ).findFirst().orElse(null));
         }
 
@@ -86,21 +85,21 @@ public class FireBoltSpell extends AbstractSpell implements HomingSpell,
                 target.ifPresent(caster.asWorld(), c::setHomingTarget);
             });
 
-            caster.playSound(USounds.SPELL_FIRE_BOLT_SHOOT, 0.7F, 0.4F / (caster.asWorld().random.nextFloat() * 0.4F + 0.8F));
+            caster.playSound(USounds.SPELL_FIRE_BOLT_SHOOT, 0.7F, 0.4F / (caster.asWorld().getRandom().nextFloat() * 0.4F + 0.8F));
         }
         return false;
     }
 
     @Override
     public void configureProjectile(MagicProjectileEntity projectile, Caster<?> caster) {
-        projectile.setItem(Items.FIRE_CHARGE.getDefaultStack());
+        projectile.setItem(Items.FIRE_CHARGE.getDefaultInstance());
         projectile.addThrowDamage(EXPLOSION_STRENGTH.get(getTraits()));
-        projectile.setFireTicks(900000);
-        projectile.setVelocity(projectile.getVelocity().multiply(VELOCITY.get(getTraits())));
+        projectile.setRemainingFireTicks(900000);
+        projectile.setDeltaMovement(projectile.getDeltaMovement().scale(VELOCITY.get(getTraits())));
     }
 
     protected int getNumberOfBalls(Caster<?> caster) {
-        return PROJECTILE_COUNT.get(getTraits()) + caster.asWorld().random.nextInt(3);
+        return PROJECTILE_COUNT.get(getTraits()) + caster.asWorld().getRandom().nextInt(3);
     }
 
     @Override
@@ -113,13 +112,13 @@ public class FireBoltSpell extends AbstractSpell implements HomingSpell,
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.put("target", target.toNBT(lookup));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         target.fromNBT(compound.getCompoundOrEmpty("target"), lookup);
     }

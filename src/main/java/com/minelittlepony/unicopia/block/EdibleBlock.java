@@ -12,44 +12,44 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.registry.FlammableBlockRegistry;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.HayBlock;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.HayBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class EdibleBlock extends HayBlock {
     private static final List<EdibleBlock> REGISTRY = new ArrayList<>();
 
-    static final BooleanProperty TOP_NORTH_EAST = BooleanProperty.of("top_north_east");
-    static final BooleanProperty TOP_NORTH_WEST = BooleanProperty.of("top_north_west");
-    static final BooleanProperty TOP_SOUTH_EAST = BooleanProperty.of("top_south_east");
-    static final BooleanProperty TOP_SOUTH_WEST = BooleanProperty.of("top_south_west");
+    static final BooleanProperty TOP_NORTH_EAST = BooleanProperty.create("top_north_east");
+    static final BooleanProperty TOP_NORTH_WEST = BooleanProperty.create("top_north_west");
+    static final BooleanProperty TOP_SOUTH_EAST = BooleanProperty.create("top_south_east");
+    static final BooleanProperty TOP_SOUTH_WEST = BooleanProperty.create("top_south_west");
 
-    static final BooleanProperty BOTTOM_NORTH_EAST = BooleanProperty.of("bottom_north_east");
-    static final BooleanProperty BOTTOM_NORTH_WEST = BooleanProperty.of("bottom_north_west");
-    static final BooleanProperty BOTTOM_SOUTH_EAST = BooleanProperty.of("bottom_south_east");
-    static final BooleanProperty BOTTOM_SOUTH_WEST = BooleanProperty.of("bottom_south_west");
+    static final BooleanProperty BOTTOM_NORTH_EAST = BooleanProperty.create("bottom_north_east");
+    static final BooleanProperty BOTTOM_NORTH_WEST = BooleanProperty.create("bottom_north_west");
+    static final BooleanProperty BOTTOM_SOUTH_EAST = BooleanProperty.create("bottom_south_east");
+    static final BooleanProperty BOTTOM_SOUTH_WEST = BooleanProperty.create("bottom_south_west");
 
     // [up/down][north/south][west/east]
     public static final BooleanProperty[] SEGMENTS = {
@@ -61,30 +61,30 @@ public class EdibleBlock extends HayBlock {
     };
 
     private static final VoxelShape[] SHAPES = {
-            Block.createCuboidShape(0, 0, 0, 8, 8, 8),
-            Block.createCuboidShape(8, 0, 0, 16, 8, 8),
-            Block.createCuboidShape(0, 0, 8, 8, 8, 16),
-            Block.createCuboidShape(8, 0, 8, 16, 8, 16),
-            Block.createCuboidShape(0, 8, 0, 8, 16, 8),
-            Block.createCuboidShape(8, 8, 0, 16, 16, 8),
-            Block.createCuboidShape(0, 8, 8, 8, 16, 16),
-            Block.createCuboidShape(8, 8, 8, 16, 16, 16)
+            Block.box(0, 0, 0, 8, 8, 8),
+            Block.box(8, 0, 0, 16, 8, 8),
+            Block.box(0, 0, 8, 8, 8, 16),
+            Block.box(8, 0, 8, 16, 8, 16),
+            Block.box(0, 8, 0, 8, 16, 8),
+            Block.box(8, 8, 0, 16, 16, 8),
+            Block.box(0, 8, 8, 8, 16, 16),
+            Block.box(8, 8, 8, 16, 16, 16)
     };
     private static final Function<BlockState, VoxelShape> SHAPE_CACHE = Util.memoize(state -> {
         @Nullable
         VoxelShape shape = null;
         for (int i = 0; i < SEGMENTS.length; i++) {
-            if (state.get(SEGMENTS[i])) {
-                shape = shape == null ? SHAPES[i] : VoxelShapes.union(shape, SHAPES[i]);
+            if (state.getValue(SEGMENTS[i])) {
+                shape = shape == null ? SHAPES[i] : Shapes.or(shape, SHAPES[i]);
             }
         }
-        return shape == null ? VoxelShapes.fullCube() : shape.simplify();
+        return shape == null ? Shapes.block() : shape.optimize();
     });
 
     public static int rotate(Direction.Axis axis, int index) {
-        Direction x = ((index & 1) == 0 ? Direction.EAST : Direction.WEST).rotateClockwise(axis);
-        Direction y = ((index & 4) == 0 ? Direction.DOWN : Direction.UP).rotateClockwise(axis);
-        Direction z = ((index & 2) == 0 ? Direction.NORTH : Direction.SOUTH).rotateClockwise(axis);
+        Direction x = ((index & 1) == 0 ? Direction.EAST : Direction.WEST).getClockWise(axis);
+        Direction y = ((index & 4) == 0 ? Direction.DOWN : Direction.UP).getClockWise(axis);
+        Direction z = ((index & 2) == 0 ? Direction.NORTH : Direction.SOUTH).getClockWise(axis);
         return toIndex(x) | toIndex(y) | toIndex(z);
     }
 
@@ -92,7 +92,7 @@ public class EdibleBlock extends HayBlock {
         if (direction.getAxis() == Direction.Axis.X) {
             direction = direction.getOpposite();
         }
-        return direction.getDirection() == Direction.AxisDirection.POSITIVE ? getOffset(direction.getAxis()) : 0;
+        return direction.getAxisDirection() == Direction.AxisDirection.POSITIVE ? getOffset(direction.getAxis()) : 0;
     }
 
     private static int getOffset(Direction.Axis axis) {
@@ -104,10 +104,10 @@ public class EdibleBlock extends HayBlock {
     }
 
     static void bootstrap() {
-        UseBlockCallback.EVENT.register((PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) -> {
+        UseBlockCallback.EVENT.register((Player player, Level world, InteractionHand hand, BlockHitResult hitResult) -> {
             if (!Pony.of(player).getSpecies().isEquine()
-                    || (player.shouldCancelInteraction() && (!player.getMainHandStack().isEmpty() || !player.getOffHandStack().isEmpty()))) {
-                return ActionResult.PASS;
+                    || (player.isSecondaryUseActive() && (!player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty()))) {
+                return InteractionResult.PASS;
             }
 
             BlockPos pos = hitResult.getBlockPos();
@@ -115,34 +115,34 @@ public class EdibleBlock extends HayBlock {
 
             for (EdibleBlock edibleBlock : REGISTRY) {
                 Block match = edibleBlock.getBaseBlock();
-                if (match != Blocks.AIR && state.isOf(match)) {
-                    BlockState copiedState = StateUtil.copyState(state, edibleBlock.getDefaultState());
-                    ActionResult result = copiedState.onUseWithItem(player.getStackInHand(hand), world, player, hand, hitResult);
+                if (match != Blocks.AIR && state.is(match)) {
+                    BlockState copiedState = StateUtil.copyState(state, edibleBlock.defaultBlockState());
+                    InteractionResult result = copiedState.useItemOn(player.getItemInHand(hand), world, player, hand, hitResult);
 
-                    if (result.isAccepted()) {
+                    if (result.consumesAction()) {
                         return result;
                     }
 
-                    if (result == ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION && hand == Hand.MAIN_HAND) {
-                        ActionResult actionResult = copiedState.onUse(world, player, hitResult);
-                        if (actionResult.isAccepted()) {
+                    if (result == InteractionResult.TRY_WITH_EMPTY_HAND && hand == InteractionHand.MAIN_HAND) {
+                        InteractionResult actionResult = copiedState.useWithoutItem(world, player, hitResult);
+                        if (actionResult.consumesAction()) {
                             return actionResult;
                         }
                     }
                 }
             }
 
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
     }
 
     private final Identifier baseBlock;
     private final Identifier material;
 
-    public EdibleBlock(Identifier baseBlock, Identifier material, boolean register, Settings settings) {
-        super(settings.overrideTranslationKey(Util.createTranslationKey("block", baseBlock)));
+    public EdibleBlock(Identifier baseBlock, Identifier material, boolean register, Properties settings) {
+        super(settings.overrideDescription(Util.makeDescriptionId("block", baseBlock)));
         for (BooleanProperty segment : SEGMENTS) {
-            setDefaultState(getDefaultState().with(segment, true));
+            registerDefaultState(defaultBlockState().setValue(segment, true));
         }
         this.baseBlock = baseBlock;
         this.material = material;
@@ -153,88 +153,88 @@ public class EdibleBlock extends HayBlock {
     }
 
     public Block getBaseBlock() {
-        return Registries.BLOCK.get(baseBlock);
+        return BuiltInRegistries.BLOCK.getValue(baseBlock);
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(SEGMENTS);
     }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+    protected VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
         return SHAPE_CACHE.apply(state);
     }
 
     @Override
     @Deprecated
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (player.isSpectator()) {
-            return ActionResult.FAIL;
+            return InteractionResult.FAIL;
         }
 
-        if (!stack.isEmpty() && stack.isOf(Registries.ITEM.get(material))) {
+        if (!stack.isEmpty() && stack.is(BuiltInRegistries.ITEM.getValue(material))) {
             BooleanProperty segment = getHitCorner(hit, 1);
 
-            if (!state.get(segment)) {
+            if (!state.getValue(segment)) {
                 if (!player.isCreative()) {
-                    stack.decrement(1);
+                    stack.shrink(1);
                 }
-                if (!world.isClient) {
-                    state = state.with(segment, true);
-                    if (SHAPE_CACHE.apply(state) == VoxelShapes.fullCube()) {
-                        state = StateUtil.copyState(state, getBaseBlock().getDefaultState());
+                if (!world.isClientSide()) {
+                    state = state.setValue(segment, true);
+                    if (SHAPE_CACHE.apply(state) == Shapes.block()) {
+                        state = StateUtil.copyState(state, getBaseBlock().defaultBlockState());
                     }
-                    world.setBlockState(pos, state);
+                    world.setBlockAndUpdate(pos, state);
                 }
-                world.playSound(player, pos, getSoundGroup(state).getPlaceSound(), SoundCategory.BLOCKS);
+                world.playSound(player, pos, getSoundType(state).getPlaceSound(), SoundSource.BLOCKS);
 
-                return ActionResult.SUCCESS;
+                return InteractionResult.SUCCESS;
             }
 
-            return ActionResult.FAIL;
+            return InteractionResult.FAIL;
         }
 
         BooleanProperty corner = getHitCorner(hit, -1);
 
-        if (!state.get(corner)) {
-            return ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION;
+        if (!state.getValue(corner)) {
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
-        boolean usingHoe = stack.isIn(ItemTags.HOES);
+        boolean usingHoe = stack.is(ItemTags.HOES);
 
         if (!usingHoe) {
-            if (!(player.isCreative() || player.getHungerManager().isNotFull()) || !player.isSneaking()) {
-                return ActionResult.FAIL;
+            if (!(player.isCreative() || player.getFoodData().needsFood()) || !player.isShiftKeyDown()) {
+                return InteractionResult.FAIL;
             }
         }
 
-        if (!world.isClient) {
-            state = state.with(corner, false);
-            if (SHAPE_CACHE.apply(state) == VoxelShapes.fullCube()) {
+        if (!world.isClientSide()) {
+            state = state.setValue(corner, false);
+            if (SHAPE_CACHE.apply(state) == Shapes.block()) {
                 world.removeBlock(pos, false);
             } else {
-                world.setBlockState(pos, state);
+                world.setBlockAndUpdate(pos, state);
             }
         }
 
         if (usingHoe) {
-            stack.damage(1, player, LivingEntity.getSlotForHand(hand));
-            dropStack(world, pos, Registries.ITEM.get(material).getDefaultStack());
-            player.playSound(USounds.Vanilla.ITEM_HOE_TILL, 1, 1);
+            stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
+            popResource(world, pos, BuiltInRegistries.ITEM.getValue(material).getDefaultInstance());
+            player.playSound(USounds.Vanilla.HOE_TILL.value(), 1, 1);
         } else {
-            player.playSound(USounds.Vanilla.ENTITY_GENERIC_EAT.value(), 1, 1);
-            if (world.random.nextInt(10) == 0) {
-                player.playSound(USounds.Vanilla.ENTITY_PLAYER_BURP, 1, player.getSoundPitch());
+            player.playSound(USounds.Vanilla.GENERIC_EAT.value(), 1, 1);
+            if (world.getRandom().nextInt(10) == 0) {
+                player.playSound(USounds.Vanilla.PLAYER_BURP, 1, player.getVoicePitch());
             }
-            player.getHungerManager().add(2, 1.3F);
+            player.getFoodData().eat(2, 1.3F);
         }
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
     static BooleanProperty getHitCorner(BlockHitResult hit, int direction) {
-        Vec3d pos = hit.getPos().add(Vec3d.of(hit.getSide().getVector()).multiply(direction * 0.001F));
+        Vec3 pos = hit.getLocation().add(Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i()).scale(direction * 0.001F));
 
         BlockPos bPos = hit.getBlockPos();
 

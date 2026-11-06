@@ -5,58 +5,49 @@ import com.minelittlepony.unicopia.entity.mob.IgnominiousBulbEntity;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FlowerBlock;
-import net.minecraft.component.type.SuspiciousStewEffectsComponent;
-import net.minecraft.particle.ParticleUtil;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.entity.Dismounting;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.util.ParticleUtils;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.vehicle.DismountHelper;
+import net.minecraft.world.item.component.SuspiciousStewEffects;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.FlowerBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class CuringJokeBlock extends FlowerBlock implements Growable {
-    private static final MapCodec<CuringJokeBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            STEW_EFFECT_CODEC.forGetter(FlowerBlock::getStewEffects),
-            FlowerBlock.createSettingsCodec()
-    ).apply(instance, CuringJokeBlock::new));
 
-    public CuringJokeBlock(RegistryEntry<StatusEffect> suspiciousStewEffect, int effectDuration, Settings settings) {
+    public CuringJokeBlock(Holder<MobEffect> suspiciousStewEffect, int effectDuration, Properties settings) {
         super(suspiciousStewEffect, effectDuration, settings);
     }
 
-    protected CuringJokeBlock(SuspiciousStewEffectsComponent effects, Settings settings) {
+    protected CuringJokeBlock(SuspiciousStewEffects effects, Properties settings) {
         super(effects, settings);
     }
 
-    @Override
-    public MapCodec<? extends FlowerBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void animateTick(BlockState state, Level world, BlockPos pos, RandomSource random) {
         for (int i = 0; i < 3; i++) {
-            ParticleUtil.spawnParticle(world, pos, random, new MagicParticleEffect(0x3388EE));
+            ParticleUtils.spawnParticleBelow(world, pos, random, new MagicParticleEffect(0x3388EE));
         }
     }
 
     @Override
-    public boolean grow(World world, BlockState state, BlockPos pos) {
-        var otherFlowers = BlockPos.streamOutwards(pos, 16, 16, 16)
-                .filter(p -> world.getBlockState(p).isOf(this))
-                .map(BlockPos::toImmutable)
+    public boolean grow(Level world, BlockState state, BlockPos pos) {
+        var otherFlowers = com.minelittlepony.unicopia.util.PosHelper.withinManhattanStream(pos, 16, 16, 16)
+                .filter(p -> world.getBlockState(p).is(this))
+                .map(BlockPos::immutable)
                 .toList();
 
         IgnominiousBulbEntity bulb = new IgnominiousBulbEntity(world);
         bulb.setBaby(true);
-        bulb.updatePositionAndAngles(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0, 0);
+        bulb.absSnapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0, 0);
 
-        if (Dismounting.canPlaceEntityAt(world, bulb, bulb.getBoundingBox())) {
-            otherFlowers.forEach(p -> world.breakBlock(p, false));
-            world.spawnEntity(bulb);
+        if (DismountHelper.canDismountTo(world, bulb, bulb.getBoundingBox())) {
+            otherFlowers.forEach(p -> world.destroyBlock(p, false));
+            world.addFreshEntity(bulb);
             return true;
         }
 

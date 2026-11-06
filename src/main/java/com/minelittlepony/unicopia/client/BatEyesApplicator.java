@@ -1,11 +1,10 @@
 package com.minelittlepony.unicopia.client;
 
 import com.minelittlepony.unicopia.EquinePredicates;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 
 public class BatEyesApplicator {
 
@@ -13,7 +12,7 @@ public class BatEyesApplicator {
 
     private boolean batEyesApplied;
 
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
 
     public static float getWorldBrightness(float initial, LivingEntity entity, float tickDelta) {
         if (EquinePredicates.PLAYER_BAT.test(entity)) {
@@ -27,9 +26,9 @@ public class BatEyesApplicator {
     }
 
     public void enable() {
-        if (client.world != null && client.player != null) {
-            if (!client.player.hasStatusEffect(StatusEffects.NIGHT_VISION) && EquinePredicates.PLAYER_BAT.test(client.player)) {
-                client.player.addStatusEffect(new StatusEffectInstance(StatusEffects.NIGHT_VISION, -1, 1, false, false));
+        if (client.level != null && client.player != null) {
+            if (!client.player.hasEffect(MobEffects.NIGHT_VISION) && EquinePredicates.PLAYER_BAT.test(client.player)) {
+                client.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 1, false, false));
                 batEyesApplied = true;
             }
         }
@@ -37,7 +36,7 @@ public class BatEyesApplicator {
 
     public void disable() {
         if (batEyesApplied) {
-            client.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+            client.player.removeEffect(MobEffects.NIGHT_VISION);
             batEyesApplied = false;
         }
     }

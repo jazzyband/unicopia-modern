@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "group": "waxed_zap_slab",
+  "ingredients": [
+    "minecraft:honeycomb",
+    "unicopia:zap_slab"
+  ],
+  "result": {
+    "id": "unicopia:waxed_zap_slab"
+  }
+}

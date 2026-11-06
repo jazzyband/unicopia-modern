@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:lunar",
+  "author": {
+    "translate": "painting.unicopia.lunar.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.lunar.title"
+  },
+  "width": 2
+}

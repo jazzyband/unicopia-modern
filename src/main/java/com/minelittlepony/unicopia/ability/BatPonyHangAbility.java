@@ -1,14 +1,12 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import com.minelittlepony.unicopia.ability.data.Multi;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.TraceHelper;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.util.math.BlockPos;
 
 /**
  * A magic casting ability for unicorns.
@@ -39,13 +37,13 @@ public class BatPonyHangAbility implements Ability<Multi> {
         }
 
         return TraceHelper.findBlock(player.asEntity(), 5, 1)
-                .map(pos -> pos.down(player.getPhysics().getGravitySignum()))
+                .map(pos -> pos.below(player.getPhysics().getGravitySignum()))
                 .filter(player.getAcrobatics()::canHangAt)
                 .map(pos -> new Multi(pos, 1));
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Multi> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Multi> getSerializer() {
         return Multi.CODEC;
     }
 

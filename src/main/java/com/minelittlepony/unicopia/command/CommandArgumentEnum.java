@@ -1,8 +1,8 @@
 package com.minelittlepony.unicopia.command;
 
-import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.StringRepresentable;
 
-public interface CommandArgumentEnum<T extends Enum<T> & CommandArgumentEnum<T>> extends StringIdentifiable {
+public interface CommandArgumentEnum<T extends Enum<T> & CommandArgumentEnum<T>> extends StringRepresentable {
 
     @SuppressWarnings("unchecked")
     default T asSelf() {
@@ -10,7 +10,7 @@ public interface CommandArgumentEnum<T extends Enum<T> & CommandArgumentEnum<T>>
     }
 
     @Override
-    default String asString() {
+    default String getSerializedName() {
         return asSelf().name();
     }
 }

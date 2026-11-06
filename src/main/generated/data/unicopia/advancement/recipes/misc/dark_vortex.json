@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_traits": {
+      "conditions": {
+        "traits": [
+          "unicopia:darkness",
+          "unicopia:chaos",
+          "unicopia:strength",
+          "unicopia:knowledge"
+        ]
+      },
+      "trigger": "unicopia:trait_discovered"
+    }
+  },
+  "requirements": [
+    [
+      "has_traits"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:dark_vortex"
+    ]
+  }
+}

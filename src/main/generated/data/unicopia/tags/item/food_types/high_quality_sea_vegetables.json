@@ -1,0 +1,11 @@
+{
+  "values": [
+    "minecraft:dried_kelp_block",
+    "minecraft:glow_lichen",
+    "#c:coral_blocks",
+    {
+      "id": "farmersdelight:kelp_roll",
+      "required": false
+    }
+  ]
+}

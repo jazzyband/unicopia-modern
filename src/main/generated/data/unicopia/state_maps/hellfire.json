@@ -1,0 +1,369 @@
+{
+  "entries": [
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:cracked_stone_bricks"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:stone_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:cracked_deepslate_bricks"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:deepslate_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:cracked_nether_bricks"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:nether_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:cracked_polished_blackstone_bricks"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:polished_blackstone_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:infested_cracked_stone_bricks"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:infested_stone_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:cracked_deepslate_tiles"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:deepslate_tiles"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.05,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:iron_block"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:raw_iron_block"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.05,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:copper_block"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:raw_copper_block"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:gold_block"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:raw_gold_block"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_nylium"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:grass_block"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:netherrack"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:soul_sand"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:sand"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:soul_soil"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:dirt"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:soul_torch"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:torch"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:soul_wall_torch"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:wall_torch"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_stem"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:oak_log"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stripped_warped_stem"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:stripped_oak_log"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_hyphae"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:oak_wood"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stripped_warped_hyphae"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:stripped_oak_wood"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_planks"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:planks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_door"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_doors"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_stairs"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_stairs"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_trapdoor"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_trapdoors"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_pressure_plate"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_pressure_plates"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_fence"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_fences"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_slab"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_slabs"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_button"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:wooden_buttons"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_fence_gate"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:fence_gates"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:warped_hyphae"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:leaves"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:obsidian"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:water"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:nether_wart"
+      },
+      "inverse": {
+        "apply": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:short_grass"
+        },
+        "match": {
+          "type": "unicopia:block_state",
+          "state": "minecraft:nether_wart"
+        }
+      },
+      "match": {
+        "type": "unicopia:is_plant"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:nether_quartz_ore"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#c:ores"
+      }
+    }
+  ]
+}

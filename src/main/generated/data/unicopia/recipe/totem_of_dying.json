@@ -1,0 +1,10 @@
+{
+  "type": "unicopia:altar",
+  "group": "",
+  "ingredients": [
+    "minecraft:totem_of_undying"
+  ],
+  "result": {
+    "id": "unicopia:totem_of_dying"
+  }
+}

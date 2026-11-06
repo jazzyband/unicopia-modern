@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
@@ -19,44 +21,46 @@ import com.minelittlepony.unicopia.network.MsgSpellbookStateChanged;
 import com.minelittlepony.unicopia.recipe.URecipes;
 import com.minelittlepony.unicopia.server.world.Altar;
 import com.minelittlepony.unicopia.util.MeteorlogicalUtil;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
+import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.fabricmc.fabric.api.util.TriState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.screen.*;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
-import net.minecraft.world.explosion.Explosion;
-import net.minecraft.world.World.ExplosionSourceType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.Level.ExplosionInteraction;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.damagesource.DamageTypes;
 
-public class SpellbookEntity extends MobEntity implements MagicImmune {
-    private static final TrackedData<Byte> LOCKED = DataTracker.registerData(SpellbookEntity.class, TrackedDataHandlerRegistry.BYTE);
-    private static final TrackedData<Boolean> ALTERED = DataTracker.registerData(SpellbookEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+public class SpellbookEntity extends Mob implements MagicImmune {
+    private static final EntityDataAccessor<Byte> LOCKED = SynchedEntityData.defineId(SpellbookEntity.class, EntityDataSerializers.BYTE);
+    private static final EntityDataAccessor<Boolean> ALTERED = SynchedEntityData.defineId(SpellbookEntity.class, EntityDataSerializers.BOOLEAN);
     private static final byte ALTAR_BEAMS_START = 61;
     private static final byte ALTAR_BEAMS_END = 62;
 
@@ -75,17 +79,17 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     @Nullable
     private AltarRecipeMatch activeRecipe;
 
-    public SpellbookEntity(EntityType<SpellbookEntity> type, World world) {
+    public SpellbookEntity(EntityType<SpellbookEntity> type, Level world) {
         super(type, world);
-        setPersistent();
-        setAltered(world.random.nextInt(3) == 0);
+        setPersistenceRequired();
+        setAltered(world.getRandom().nextInt(3) == 0);
         state.setCurrentPageId(SpellbookState.CRAFTING_ID);
-        if (!world.isClient) {
+        if (!world.isClientSide()) {
             state.setSynchronizer(state -> {
-                getWorld().getPlayers().forEach(player -> {
-                    if (player instanceof ServerPlayerEntity recipient
-                            && player.currentScreenHandler instanceof SpellbookScreenHandler book
-                            && getUuid().equals(book.entityId)) {
+                level().players().forEach(player -> {
+                    if (player instanceof ServerPlayer recipient
+                            && player.containerMenu instanceof SpellbookScreenHandler book
+                            && getUUID().equals(book.entityId)) {
                         Channel.SERVER_SPELLBOOK_UPDATE.sendToPlayer(MsgSpellbookStateChanged.create(book, state), recipient);
                     }
                 });
@@ -94,10 +98,10 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(LOCKED, (byte)1);
-        builder.add(ALTERED, false);
+    protected void defineSynchedData(Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(LOCKED, (byte)1);
+        builder.define(ALTERED, false);
     }
 
     public SpellbookState getSpellbookState() {
@@ -110,8 +114,8 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     }
 
     @Override
-    public ItemStack getPickBlockStack() {
-        ItemStack stack = UItems.SPELLBOOK.getDefaultStack();
+    public ItemStack getPickResult() {
+        ItemStack stack = UItems.SPELLBOOK.getDefaultInstance();
         stack.set(UDataComponentTypes.SPELLBOOK_STATE, state.createCopy());
         return stack;
     }
@@ -122,7 +126,7 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     }
 
     @Override
-    public boolean doesRenderOnFire() {
+    public boolean displayFireAnimation() {
         return false;
     }
 
@@ -139,15 +143,15 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     }
 
     public boolean isAltered() {
-        return dataTracker.get(ALTERED);
+        return entityData.get(ALTERED);
     }
 
     public void setAltered(boolean altered) {
-        dataTracker.set(ALTERED, altered);
+        entityData.set(ALTERED, altered);
     }
 
     protected void setForcedState(TriState state) {
-        dataTracker.set(LOCKED, (byte)state.ordinal());
+        entityData.set(LOCKED, (byte)state.ordinal());
     }
 
     public void clearForcedState() {
@@ -159,7 +163,7 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
         if (activeTicks <= 0) {
             setForcedState(TriState.DEFAULT);
         }
-        return TriState.values()[Math.abs(dataTracker.get(LOCKED)) % 3];
+        return TriState.values()[Math.abs(entityData.get(LOCKED)) % 3];
     }
 
     public boolean isOpen() {
@@ -175,8 +179,8 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
         boolean open = isOpen();
         super.tick();
 
-        if (open && isTouchingWater()) {
-            addVelocity(0, 0.01, 0);
+        if (open && isInWater()) {
+            push(0, 0.01, 0);
             keepAwake();
         }
 
@@ -184,7 +188,7 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
             activeTicks--;
         }
 
-        if (getWorld().isClient && open) {
+        if (level().isClientSide() && open) {
             for (int offX = -2; offX <= 1; ++offX) {
                 for (int offZ = -2; offZ <= 1; ++offZ) {
                     if (offX > -1 && offX < 1 && offZ == -1) {
@@ -193,7 +197,7 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
 
                     if (random.nextInt(320) == 0) {
                         for (int offY = 0; offY <= 1; ++offY) {
-                            getWorld().addParticleClient(ParticleTypes.ENCHANT,
+                            level().addParticle(ParticleTypes.ENCHANT,
                                     getX(), getY(), getZ(),
                                     offX/2F + random.nextFloat(),
                                     offY/2F - random.nextFloat() + 0.5f,
@@ -205,18 +209,18 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
             }
         }
 
-        getWorld().getOtherEntities(this, getBoundingBox().expand(2), EquinePredicates.PLAYER_UNICORN.and(e -> e instanceof PlayerEntity)).stream().findFirst().ifPresent(player -> {
+        level().getEntities(this, getBoundingBox().inflate(2), EquinePredicates.PLAYER_UNICORN.and(e -> e instanceof Player)).stream().findFirst().ifPresent(player -> {
             keepAwake();
             if (open) {
-                Vec3d diff = player.getPos().subtract(getPos());
+                Vec3 diff = player.position().subtract(position());
                 double yaw = Math.atan2(diff.z, diff.x) * 180D / Math.PI - 90;
 
-                setHeadYaw((float)yaw);
-                setBodyYaw((float)yaw);
+                setYHeadRot((float)yaw);
+                setYBodyRot((float)yaw);
             }
         });
 
-        boolean daytime = MeteorlogicalUtil.getSkyAngle(getWorld()) < 1;
+        boolean daytime = MeteorlogicalUtil.getSkyAngle(level()) < 1;
         if (daytime != prevDaytime) {
             prevDaytime = daytime;
             if (daytime != getForcedState().orElse(daytime)) {
@@ -224,24 +228,24 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
             }
         }
 
-        if (!getWorld().isClient && age % 15 == 0) {
+        if (!level().isClientSide() && tickCount % 15 == 0) {
 
             if (altar.isEmpty()) {
-                altar = Altar.locateAltar(getWorld(), getBlockPos()).map(altar -> {
-                    altar.generateDecorations(getWorld());
+                altar = Altar.locateAltar(level(), blockPosition()).map(altar -> {
+                    altar.generateDecorations(level());
                     return altar;
                 });
             }
 
             altar = altar.filter(altar -> {
-                if (!altar.isValid(getWorld())) {
-                    altar.tearDown(null, getWorld());
+                if (!altar.isValid(level())) {
+                    altar.tearDown(null, level());
                     return false;
                 }
 
-                tickAltarCrafting((ServerWorld)getWorld(), altar);
+                tickAltarCrafting((ServerLevel)level(), altar);
 
-                Vec3d origin = altar.origin().toCenterPos();
+                Vec3 origin = Vec3.atCenterOf(altar.origin());
                 altar.pillars().forEach(pillar -> tickAltarPillar(origin, pillar));
 
                 return true;
@@ -250,17 +254,17 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     }
 
     public void setBeamTicks(int ticks) {
-        getWorld().sendEntityStatus(this, ticks > 0 ? ALTAR_BEAMS_START : ALTAR_BEAMS_END);
+        level().broadcastEntityEvent(this, ticks > 0 ? ALTAR_BEAMS_START : ALTAR_BEAMS_END);
         beamsActive = ticks;
     }
 
-    private void tickAltarCrafting(ServerWorld world, Altar altar) {
+    private void tickAltarCrafting(ServerLevel world, Altar altar) {
         if (activeRecipe == null || activeRecipe.isRemoved()) {
-            AltarRecipe.Input entities = new AltarRecipe.Input(getWorld().getEntitiesByClass(ItemEntity.class, Box.of(altar.origin().toCenterPos(), 2, 2, 2), EntityPredicates.VALID_ENTITY));
+            AltarRecipe.Input entities = new AltarRecipe.Input(level().getEntitiesOfClass(ItemEntity.class, AABB.ofSize(Vec3.atCenterOf(altar.origin()), 2, 2, 2), EntitySelector.ENTITY_STILL_ALIVE));
 
-            activeRecipe = world.getRecipeManager()
-                    .getFirstMatch(URecipes.ALTAR, entities, getWorld())
-                    .map(recipe -> recipe.value().toMatch(entities, getWorld().getRegistryManager()))
+            activeRecipe = world.recipeAccess()
+                    .getRecipeFor(URecipes.ALTAR, entities, level())
+                    .map(recipe -> recipe.value().toMatch(entities, level().registryAccess()))
                     .orElse(null);
 
             if (activeRecipe != null) {
@@ -273,7 +277,7 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
         }
 
         if (--beamsActive > 0) {
-            playSound(USounds.Vanilla.ENTITY_GUARDIAN_ATTACK, 1.5F, 0.5F);
+            playSound(USounds.Vanilla.GUARDIAN_ATTACK, 1.5F, 0.5F);
             return;
         }
 
@@ -283,19 +287,19 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
             return;
         }
 
-        activeRecipe.craft(getWorld());
+        activeRecipe.craft(level());
         activeRecipe = null;
-        getWorld().createExplosion(this, altar.origin().getX(), altar.origin().getY(), altar.origin().getZ(), 0, ExplosionSourceType.NONE);
+        level().explode(this, altar.origin().getX(), altar.origin().getY(), altar.origin().getZ(), 0, ExplosionInteraction.NONE);
     }
 
-    private void tickAltarPillar(Vec3d origin, BlockPos pillar) {
-        Vec3d center = pillar.toCenterPos().add(
-                random.nextTriangular(0.5, 0.2),
-                random.nextTriangular(0.5, 0.2),
-                random.nextTriangular(0.5, 0.2)
+    private void tickAltarPillar(Vec3 origin, BlockPos pillar) {
+        Vec3 center = Vec3.atCenterOf(pillar).add(
+                random.triangle(0.5, 0.2),
+                random.triangle(0.5, 0.2),
+                random.triangle(0.5, 0.2)
         );
 
-        ((ServerWorld)getWorld()).spawnParticles(
+        ((ServerLevel)level()).sendParticles(
                 ParticleTypes.SOUL_FIRE_FLAME,
                 center.x - 0.5, center.y + 0.5, center.z - 0.5,
                 0,
@@ -305,36 +309,36 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
             return;
         }
 
-        Vec3d vel = center.subtract(origin).normalize();
+        Vec3 vel = center.subtract(origin).normalize();
 
-        ((ServerWorld)getWorld()).spawnParticles(
+        ((ServerLevel)level()).sendParticles(
                 ParticleTypes.SOUL_FIRE_FLAME,
                 center.x - 0.5, center.y + 0.5, center.z - 0.5,
                 0,
                 vel.x, vel.y, vel.z, -0.2);
 
         if (random.nextInt(2000) == 0) {
-            if (getWorld().getBlockState(pillar).isOf(Blocks.CRYING_OBSIDIAN)) {
-                pillar = pillar.down();
+            if (level().getBlockState(pillar).is(Blocks.CRYING_OBSIDIAN)) {
+                pillar = pillar.below();
             }
-            getWorld().setBlockState(pillar, Blocks.CRYING_OBSIDIAN.getDefaultState());
+            level().setBlockAndUpdate(pillar, Blocks.CRYING_OBSIDIAN.defaultBlockState());
         }
     }
 
     private boolean shouldBeSleeping() {
-        return MeteorlogicalUtil.getSkyAngle(getWorld()) > 1 && activeTicks <= 0;
+        return MeteorlogicalUtil.getSkyAngle(level()) > 1 && activeTicks <= 0;
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel world, DamageSource source, float amount) {
         remove(Entity.RemovalReason.KILLED);
 
-        BlockSoundGroup sound = BlockSoundGroup.WOOD;
+        SoundType sound = SoundType.WOOD;
 
-        getWorld().playSoundClient(getX(), getY(), getZ(), sound.getBreakSound(), SoundCategory.BLOCKS, sound.getVolume(), sound.getPitch(), true);
+        level().playLocalSound(getX(), getY(), getZ(), sound.getBreakSound(), SoundSource.BLOCKS, sound.getVolume(), sound.getPitch(), true);
 
-        if (world.getGameRules().getBoolean(GameRules.DO_TILE_DROPS)) {
-            dropStack(world, getPickBlockStack(), 1);
+        if (world.getGameRules().get(GameRules.BLOCK_DROPS)) {
+            spawnAtLocation(world, getPickResult(), 1);
         }
         return false;
     }
@@ -342,90 +346,90 @@ public class SpellbookEntity extends MobEntity implements MagicImmune {
     @Override
     public void remove(RemovalReason reason) {
         super.remove(reason);
-        altar.ifPresent(altar -> altar.tearDown(this, getWorld()));
+        altar.ifPresent(altar -> altar.tearDown(this, level()));
     }
 
     @Override
-    public ActionResult interactAt(PlayerEntity player, Vec3d vec, Hand hand) {
-        if (player.isSneaking()) {
+    public InteractionResult interact(Player player, InteractionHand hand, Vec3 vec) {
+        if (player.isShiftKeyDown()) {
             setForcedState(TriState.of(!isOpen()));
             keepAwake();
-            player.playSound(USounds.Vanilla.ITEM_BOOK_PAGE_TURN, 2, 1);
-            return ActionResult.SUCCESS;
+            player.playSound(USounds.Vanilla.BOOK_PAGE_TURN, 2, 1);
+            return InteractionResult.SUCCESS;
         }
 
         if (isOpen()) {
             keepAwake();
-            player.openHandledScreen(new ExtendedScreenHandlerFactory<SpellbookState>() {
+            player.openMenu(new ExtendedMenuProvider<SpellbookState>() {
                 @Override
-                public Text getDisplayName() {
+                public Component getDisplayName() {
                     return SpellbookEntity.this.getDisplayName();
                 }
 
                 @Override
-                public ScreenHandler createMenu(int syncId, PlayerInventory inv, PlayerEntity player) {
-                    return new SpellbookScreenHandler(syncId, inv, ScreenHandlerContext.create(getWorld(), getBlockPos()), state, getUuid());
+                public AbstractContainerMenu createMenu(int syncId, Inventory inv, Player player) {
+                    return new SpellbookScreenHandler(syncId, inv, ContainerLevelAccess.create(level(), blockPosition()), state, getUUID());
                 }
 
                 @Override
-                public SpellbookState getScreenOpeningData(ServerPlayerEntity player) {
+                public SpellbookState getScreenOpeningData(ServerPlayer player) {
                     return state;
                 }
             });
-            player.playSound(USounds.Vanilla.ITEM_BOOK_PAGE_TURN, 2, 1);
-            return ActionResult.SUCCESS;
+            player.playSound(USounds.Vanilla.BOOK_PAGE_TURN, 2, 1);
+            return InteractionResult.SUCCESS;
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     @Override
-    public boolean isImmuneToExplosion(Explosion explosion) {
+    public boolean ignoreExplosion(Explosion explosion) {
         return true;
     }
 
     @Override
-    public boolean isInvulnerableTo(ServerWorld world, DamageSource damageSource) {
-        return super.isInvulnerableTo(world, damageSource) || damageSource.isIn(UTags.DamageTypes.SPELLBOOK_IMMUNE_TO);
+    public boolean isInvulnerableTo(ServerLevel world, DamageSource damageSource) {
+        return super.isInvulnerableTo(world, damageSource) || damageSource.is(UTags.DamageTypes.SPELLBOOK_IMMUNE_TO);
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound compound) {
-        super.readCustomDataFromNbt(compound);
-        prevDaytime = compound.getBoolean("prevDaytime", false);
-        activeTicks = compound.getInt("activeTicks", 0);
-        setAltered(compound.getBoolean("altered", false));
-        setForcedState(compound.getBoolean("locked").map(TriState::of).orElse(TriState.DEFAULT));
-        setSpellbookState(compound.get("spellbookState", SpellbookState.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE)).orElse(new SpellbookState()));
-        altar = compound.get("altar", Altar.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE));
+    public void readAdditionalSaveData(ValueInput compound) {
+        super.readAdditionalSaveData(compound);
+        prevDaytime = compound.getBooleanOr("prevDaytime", false);
+        activeTicks = compound.getIntOr("activeTicks", 0);
+        setAltered(compound.getBooleanOr("altered", false));
+        setForcedState(compound.read("locked", com.mojang.serialization.Codec.BOOL).map(TriState::of).orElse(TriState.DEFAULT));
+        setSpellbookState(compound.read("spellbookState", SpellbookState.CODEC).orElse(new SpellbookState()));
+        altar = compound.read("altar", Altar.CODEC);
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound compound) {
-        super.writeCustomDataToNbt(compound);
+    public void addAdditionalSaveData(ValueOutput compound) {
+        super.addAdditionalSaveData(compound);
         compound.putInt("activeTicks", activeTicks);
         compound.putBoolean("prevDaytime", prevDaytime);
         compound.putBoolean("altered", isAltered());
-        compound.put("spellbookState", SpellbookState.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), state);
+        compound.store("spellbookState", SpellbookState.CODEC, state);
         getForcedState().map(t -> {
             compound.putBoolean("locked", t);
             return null;
         });
-        compound.putNullable("altar", Altar.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), altar.orElse(null));
+        compound.storeNullable("altar", Altar.CODEC, altar.orElse(null));
     }
 
     @Override
-    public void handleStatus(byte status) {
+    public void handleEntityEvent(byte status) {
         switch (status) {
             case ALTAR_BEAMS_START:
-                altar = Altar.locateAltar(getWorld(), getBlockPos());
+                altar = Altar.locateAltar(level(), blockPosition());
                 hasBeams = altar.isPresent();
                 break;
             case ALTAR_BEAMS_END:
                 altar = Optional.empty();
                 hasBeams = false;
             default:
-                super.handleStatus(status);
+                super.handleEntityEvent(status);
         }
     }
 }

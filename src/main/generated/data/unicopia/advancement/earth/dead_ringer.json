@@ -1,0 +1,37 @@
+{
+  "parent": "unicopia:earth/blacksmith",
+  "criteria": {
+    "killed_entity_with_horseshoe": {
+      "conditions": {
+        "killing_blow": {
+          "tags": [
+            {
+              "expected": true,
+              "id": "#unicopia:from_horseshoes"
+            }
+          ]
+        }
+      },
+      "trigger": "minecraft:player_killed_entity"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.dead_ringer.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:iron_horse_shoe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.dead_ringer.title"
+    }
+  },
+  "requirements": [
+    [
+      "killed_entity_with_horseshoe"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

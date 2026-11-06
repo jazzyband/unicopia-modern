@@ -1,0 +1,46 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:inverted",
+            "term": "minecraft:tool/can_silk_touch"
+          },
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": 2
+          },
+          "name": "unicopia:chiselled_chitin_hull"
+        },
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:inverted",
+            "term": "minecraft:tool/can_silk_touch"
+          },
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": 2
+          },
+          "name": "unicopia:chitin"
+        },
+        {
+          "type": "minecraft:item",
+          "condition": "minecraft:tool/can_silk_touch",
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": 2
+          },
+          "name": "unicopia:chiselled_chitin"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

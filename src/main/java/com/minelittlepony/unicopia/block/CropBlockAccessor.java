@@ -1,9 +1,9 @@
 package com.minelittlepony.unicopia.block;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.BlockState;
 
 public interface CropBlockAccessor {
-    float unicopia_getAvailableMoisture(BlockState state, BlockView world, BlockPos pos);
+    float unicopia_getAvailableMoisture(BlockState state, BlockGetter world, BlockPos pos);
 }

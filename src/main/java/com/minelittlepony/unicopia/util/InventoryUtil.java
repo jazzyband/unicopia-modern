@@ -2,56 +2,55 @@ package com.minelittlepony.unicopia.util;
 
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.input.RecipeInput;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeInput;
 
 public interface InventoryUtil {
-    static Stream<ItemStack> stream(Inventory inventory) {
-        return slots(inventory).map(inventory::getStack);
+    static Stream<ItemStack> stream(Container inventory) {
+        return slots(inventory).map(inventory::getItem);
     }
 
     static Stream<ItemStack> stream(RecipeInput inventory) {
-        return slots(inventory).map(inventory::getStackInSlot);
+        return slots(inventory).map(inventory::getItem);
     }
 
-    static Stream<Integer> slots(Inventory inventory) {
-        return Stream.iterate(0, i -> i < inventory.size(), i -> i + 1);
+    static Stream<Integer> slots(Container inventory) {
+        return Stream.iterate(0, i -> i < inventory.getContainerSize(), i -> i + 1);
     }
 
     static Stream<Integer> slots(RecipeInput inventory) {
         return Stream.iterate(0, i -> i < inventory.size(), i -> i + 1);
     }
 
-    static int getOpenSlot(Inventory inventory) {
-        for (int i = 0; i < inventory.size(); i++) {
-            if (inventory.getStack(i).isEmpty()) {
+    static int getOpenSlot(Container inventory) {
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (inventory.getItem(i).isEmpty()) {
                 return i;
             }
         }
         return -1;
     }
 
-    static boolean contentEquals(Inventory a, Inventory b) {
-        if (a.size() != b.size()) {
+    static boolean contentEquals(Container a, Container b) {
+        if (a.getContainerSize() != b.getContainerSize()) {
             return false;
         }
-        for (int i = 0; i < a.size(); i++) {
-            if (!ItemStack.areEqual(a.getStack(i), b.getStack(i))) {
+        for (int i = 0; i < a.getContainerSize(); i++) {
+            if (!ItemStack.matches(a.getItem(i), b.getItem(i))) {
                 return false;
             }
         }
         return true;
     }
 
-    static <I extends Inventory> I copy(Inventory from, Function<Integer, I> factory) {
-        return copyInto(from, factory.apply(from.size()));
+    static <I extends Container> I copy(Container from, Function<Integer, I> factory) {
+        return copyInto(from, factory.apply(from.getContainerSize()));
     }
 
-    static <I extends Inventory> I copyInto(Inventory from, I into) {
-        for (int i = 0; i < from.size(); i++) {
-            into.setStack(i, from.getStack(i).copy());
+    static <I extends Container> I copyInto(Container from, I into) {
+        for (int i = 0; i < from.getContainerSize(); i++) {
+            into.setItem(i, from.getItem(i).copy());
         }
         return into;
     }

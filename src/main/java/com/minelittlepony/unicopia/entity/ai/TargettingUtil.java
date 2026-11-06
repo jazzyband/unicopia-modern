@@ -2,39 +2,37 @@ package com.minelittlepony.unicopia.entity.ai;
 
 import java.util.Comparator;
 import java.util.stream.Stream;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.entity.player.Pony;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.TargetPredicate;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
 public interface TargettingUtil {
-    Comparator<PlayerEntity> FLYING_PREFERRED = Comparator.comparing(e -> Pony.of(e).getPhysics().isFlying() ? 0 : 1);
+    Comparator<Player> FLYING_PREFERRED = Comparator.comparing(e -> Pony.of(e).getPhysics().isFlying() ? 0 : 1);
 
     @SuppressWarnings("unchecked")
-    static <T extends LivingEntity> Stream<T> getTargets(Class<T> type, TargetPredicate predicate, LivingEntity subject, Box searchArea) {
-        if (type == PlayerEntity.class || type == ServerPlayerEntity.class) {
-            return (Stream<T>)((ServerWorld)subject.getWorld()).getPlayers(predicate, subject, searchArea).stream();
+    static <T extends LivingEntity> Stream<T> getTargets(Class<T> type, TargetingConditions predicate, LivingEntity subject, AABB searchArea) {
+        if (type == Player.class || type == ServerPlayer.class) {
+            return (Stream<T>)((ServerLevel)subject.level()).getNearbyPlayers(predicate, subject, searchArea).stream();
         }
-        return ((ServerWorld)subject.getWorld()).getTargets(type, predicate, subject, searchArea).stream();
+        return ((ServerLevel)subject.level()).getNearbyEntities(type, predicate, subject, searchArea).stream();
     }
 
     static <T extends Entity> Comparator<T> nearestTo(LivingEntity subject) {
-        Vec3d fromPos = subject.getEyePos();
-        return Comparator.comparing(e -> fromPos.distanceTo(e.getPos()));
+        Vec3 fromPos = subject.getEyePosition();
+        return Comparator.comparing(e -> fromPos.distanceTo(e.position()));
     }
 
-    static Vec3d getProjectedPos(LivingEntity entity) {
-        if (entity instanceof PlayerEntity player) {
-            Vec3d velocity = Pony.of(player).getPhysics().getTrackedVelocity();
-            return entity.getEyePos().add(velocity.multiply(1.5)).add(0, -1, 0);
+    static Vec3 getProjectedPos(LivingEntity entity) {
+        if (entity instanceof Player player) {
+            Vec3 velocity = Pony.of(player).getPhysics().getTrackedVelocity();
+            return entity.getEyePosition().add(velocity.scale(1.5)).add(0, -1, 0);
         }
-        return entity.getEyePos().add(entity.getVelocity());
+        return entity.getEyePosition().add(entity.getDeltaMovement());
     }
 }

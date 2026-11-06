@@ -2,26 +2,25 @@ package com.minelittlepony.unicopia.client.render.entity;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.entity.mob.TentacleEntity;
-
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
 
 public class TentacleEntityRenderer extends EntityRenderer<TentacleEntity, TentacleEntityRenderer.State> {
     private static final Identifier TEXTURE = Unicopia.id("textures/entity/poison_joke/tentacle.png");
 
     private final TentacleEntityModel model;
 
-    public TentacleEntityRenderer(EntityRendererFactory.Context context) {
+    public TentacleEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
-        model = new TentacleEntityModel(TentacleEntityModel.getTexturedModelData().createModel());
+        model = new TentacleEntityModel(TentacleEntityModel.getTexturedModelData().bakeRoot());
     }
 
     @Override
@@ -30,39 +29,43 @@ public class TentacleEntityRenderer extends EntityRenderer<TentacleEntity, Tenta
     }
 
     @Override
-    public void updateRenderState(TentacleEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+    public void extractRenderState(TentacleEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
         state.growth = entity.getGrowth(tickDelta);
-        state.yaw = entity.getYaw(tickDelta);
-        state.pitch = entity.getPitch(tickDelta);
+        state.yaw = entity.getViewYRot(tickDelta);
+        state.pitch = entity.getViewXRot(tickDelta);
         state.growing = state.growth < 1;
-        state.animationFrame = state.age + (entity.getUuid().getMostSignificantBits() % 100);
+        state.animationFrame = state.ageInTicks + (entity.getUUID().getMostSignificantBits() % 100);
         state.animationTime = entity.getAnimationTimer(tickDelta);
-        state.attackProgress = entity.isAttacking() ? Math.abs(MathHelper.sin(entity.getAttackProgress(tickDelta) * MathHelper.PI)) : 0;
+        state.attackProgress = entity.isAttacking() ? Math.abs(Mth.sin(entity.getAttackProgress(tickDelta) * Mth.PI)) : 0;
         state.bendIntensity = 1 + entity.getAttackProgress(tickDelta) / 2F;
         state.hurting = entity.hurtTime > 0;
     }
 
     @Override
-    public void render(State state, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        matrices.push();
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertices, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+        matrices.pushPose();
         matrices.scale(-1, -1, 1);
         float scale = state.growth;
 
         matrices.translate(0, -0.75F + 3F * (1 - scale), 0);
-        scale = MathHelper.clamp(scale, 0.5F, 1);
+        scale = Mth.clamp(scale, 0.5F, 1);
         matrices.scale(scale, scale, scale);
 
-        model.setAngles(state);
-        model.render(matrices, vertices.getBuffer(model.getLayer(TEXTURE)), light, OverlayTexture.getUv(0, state.hurting), Colors.WHITE);
-        matrices.pop();
-        super.render(state, matrices, vertices, light);
+        model.setupAnim(state);
+        vertices.submitCustomGeometry(matrices, model.renderType(TEXTURE), (pose, buffer) -> {
+            PoseStack stack = new PoseStack();
+            stack.mulPose(pose.pose());
+            model.renderToBuffer(stack, buffer, state.lightCoords, OverlayTexture.pack(0, state.hurting), CommonColors.WHITE);
+        });
+        matrices.popPose();
+        super.submit(state, matrices, vertices, camera);
     }
 
 
     @Override
-    protected Box getBoundingBox(TentacleEntity entity) {
-        return super.getBoundingBox(entity).expand(10, 0, 10).stretch(0, 10, 0);
+    protected AABB getBoundingBoxForCulling(TentacleEntity entity, float tickDelta) {
+        return super.getBoundingBoxForCulling(entity, tickDelta).inflate(10, 0, 10).expandTowards(0, 10, 0);
     }
 
     public static class State extends EntityRenderState {

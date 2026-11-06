@@ -1,26 +1,24 @@
 package com.minelittlepony.unicopia;
 
 import java.util.Locale;
-
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.player.Player;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.StringIdentifiable;
-
-public enum FlightType implements StringIdentifiable {
+public enum FlightType implements StringRepresentable {
     UNSET,
     NONE,
     AVIAN,
     INSECTOID,
     ARTIFICIAL;
 
-    public static final Codec<FlightType> CODEC = StringIdentifiable.createCodec(FlightType::values);
+    public static final Codec<FlightType> CODEC = StringRepresentable.fromEnum(FlightType::values);
 
     private final String name = name().toLowerCase(Locale.ROOT);
 
     @Override
-    public String asString() {
+    public String getSerializedName() {
         return name;
     }
 
@@ -40,11 +38,11 @@ public enum FlightType implements StringIdentifiable {
         return this != UNSET;
     }
 
-    public boolean canFly(PlayerEntity player) {
-        return !isGrounded() || player.getAbilities().allowFlying;
+    public boolean canFly(Player player) {
+        return !isGrounded() || player.getAbilities().mayfly;
     }
 
-    public static boolean canFlyCreative(PlayerEntity player) {
+    public static boolean canFlyCreative(Player player) {
         return player.isCreative() || player.isSpectator();
     }
 

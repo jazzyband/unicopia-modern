@@ -2,14 +2,12 @@ package com.minelittlepony.unicopia.block;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.BlockRenderView;
 
 public interface TintedBlock {
     List<Block> REGISTRY = new ArrayList<>();
@@ -17,13 +15,13 @@ public interface TintedBlock {
     int MAX_BIT_SHIFT = 8 * 3;
     int WHITE = 0xFFFFFF;
 
-    int getTint(BlockState state, @Nullable BlockRenderView world, @Nullable BlockPos pos, int foliageColor);
+    int getTint(BlockState state, @Nullable BlockAndTintGetter world, @Nullable BlockPos pos, int foliageColor);
 
     /**
      * Rotates a color's components by a given number of bytes.
      */
     static int rotate(int color, int bitShift) {
-        bitShift = MathHelper.clamp(bitShift, -MAX_BIT_SHIFT, MAX_BIT_SHIFT);
+        bitShift = Mth.clamp(bitShift, -MAX_BIT_SHIFT, MAX_BIT_SHIFT);
         return WHITE & (
                 (color << bitShift)
              | ((color >> (MAX_BIT_SHIFT - bitShift)) & ~(WHITE << bitShift))

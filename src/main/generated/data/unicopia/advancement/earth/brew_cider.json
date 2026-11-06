@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:earth/burn_juice",
+  "criteria": {
+    "has_cider": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:cider"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.brew_cider.description"
+    },
+    "icon": {
+      "id": "unicopia:cider"
+    },
+    "title": {
+      "translate": "advancements.unicopia.brew_cider.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_cider"
+    ]
+  ],
+  "rewards": {
+    "experience": 12
+  },
+  "sends_telemetry_event": true
+}

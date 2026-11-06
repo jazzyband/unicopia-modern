@@ -3,20 +3,20 @@ package com.minelittlepony.unicopia.datagen.providers;
 import java.util.concurrent.CompletableFuture;
 
 import com.minelittlepony.unicopia.block.state.ReversableBlockStateConverter;
-import com.minelittlepony.unicopia.block.state.StateMapLoader;
 import com.minelittlepony.unicopia.datagen.DataCollector;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.DataWriter;
+import net.minecraft.data.PackOutput;
 
 public class StateMapProvider implements DataProvider {
     private final DataCollector<Entry> collector;
 
-    public StateMapProvider(FabricDataOutput output) {
-        collector = new DataCollector<>(output.getResolver(StateMapLoader.REGISTRY_KEY), Entry.CODEC);
+    public StateMapProvider(FabricPackOutput output) {
+        collector = new DataCollector<>(output.createPathProvider(PackOutput.Target.DATA_PACK, "state_maps"), Entry.CODEC);
     }
 
     @Override
@@ -25,7 +25,7 @@ public class StateMapProvider implements DataProvider {
     }
 
     @Override
-    public CompletableFuture<?> run(DataWriter writer) {
+    public CompletableFuture<?> run(CachedOutput writer) {
         var exporter = collector.prime();
         new StateMapGenerator().generate((id, builder) -> exporter.accept(id.getId(), new Entry(builder.build(), false)));
         return collector.upload(writer);

@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:campfire_cooking",
+  "category": "food",
+  "cookingtime": 600,
+  "experience": 0.6,
+  "ingredient": "unicopia:zap_apple",
+  "result": {
+    "id": "unicopia:cooked_zap_apple"
+  }
+}

@@ -2,22 +2,20 @@ package com.minelittlepony.unicopia.datagen.providers;
 
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-
+import net.minecraft.client.data.models.BlockModelGenerators;
+import net.minecraft.resources.Identifier;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.minelittlepony.unicopia.block.UBlocks;
 import com.minelittlepony.unicopia.item.UItems;
 
-import net.minecraft.client.data.BlockStateModelGenerator;
-import net.minecraft.util.Identifier;
-
 public class SeasonsModelGenerator extends UBlockStateModelGenerator {
 
     private static final String[] SEASONS = { "fall", "summer", "winter" };
 
-    public SeasonsModelGenerator(BlockStateModelGenerator modelGenerator, BiConsumer<Identifier, Supplier<JsonElement>> seasonsModelConsumer) {
-        super(modelGenerator.blockStateCollector, modelGenerator.itemModelOutput, (id, modelSupplier) -> {
-            modelGenerator.modelCollector.accept(id, modelSupplier);
+    public SeasonsModelGenerator(BlockModelGenerators modelGenerator, BiConsumer<Identifier, Supplier<JsonElement>> seasonsModelConsumer) {
+        super(modelGenerator.blockStateOutput, modelGenerator.itemModelOutput, (id, modelSupplier) -> {
+            modelGenerator.modelOutput.accept(id, modelSupplier);
             seasonsModelConsumer.accept(id, () -> {
                 JsonObject textures = modelSupplier.get().getAsJsonObject().getAsJsonObject("textures");
                 JsonObject seasonTextures = new JsonObject();
@@ -34,18 +32,18 @@ public class SeasonsModelGenerator extends UBlockStateModelGenerator {
     private static JsonObject createTextures(String season, JsonObject input) {
         JsonObject textures = new JsonObject();
         input.entrySet().forEach(entry -> {
-            textures.addProperty(entry.getKey(), Identifier.of(entry.getValue().getAsString()).withPath(path -> path.replace("/", "/seasons/" + season + "/")).toString());
+            textures.addProperty(entry.getKey(), Identifier.parse(entry.getValue().getAsString()).withPath(path -> path.replace("/", "/seasons/" + season + "/")).toString());
         });
         return textures;
     }
 
     @Override
-    public void register() {
+    public void run() {
         registerWithStages(UBlocks.OATS, UBlocks.OATS.getAgeProperty(), BlockModels.CROP, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
         registerWithStages(UBlocks.OATS_STEM, UBlocks.OATS_STEM.getAgeProperty(), BlockModels.CROP, 0, 1, 2, 3, 4, 5, 6);
         registerWithStages(UBlocks.OATS_CROWN, UBlocks.OATS_CROWN.getAgeProperty(), BlockModels.CROP, 0, 1);
 
-        registerItemModel(UItems.OATS);
-        registerItemModel(UItems.OAT_SEEDS);
+        registerSimpleFlatItemModel(UItems.OATS);
+        registerSimpleFlatItemModel(UItems.OAT_SEEDS);
     }
 }

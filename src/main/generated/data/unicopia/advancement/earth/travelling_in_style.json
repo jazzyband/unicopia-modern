@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:earth/aeronaut",
+  "criteria": {
+    "ride_balloon": {
+      "conditions": {
+        "event": "ride_balloon",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.travelling_in_style.description"
+    },
+    "frame": "challenge",
+    "icon": {
+      "id": "unicopia:giant_balloon"
+    },
+    "title": {
+      "translate": "advancements.unicopia.travelling_in_style.title"
+    }
+  },
+  "requirements": [
+    [
+      "ride_balloon"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

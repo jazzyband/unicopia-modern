@@ -1,0 +1,33 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_zap_fence_gate": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:zap_fence_gate"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_zap_fence_gate"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cutting/zap_fence_gate"
+    ]
+  }
+}

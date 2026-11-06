@@ -6,27 +6,28 @@ import com.minelittlepony.unicopia.FlightType;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
-import net.minecraft.client.model.Dilation;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.Model;
-import net.minecraft.client.model.ModelData;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.model.ModelPartBuilder;
-import net.minecraft.client.model.ModelPartData;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.model.TexturedModelData;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.state.BipedEntityRenderState;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
 
-public class WingsFeatureRenderer<S extends BipedEntityRenderState> implements AccessoryFeatureRenderer.Feature<S> {
+public class WingsFeatureRenderer<S extends HumanoidRenderState> implements AccessoryFeatureRenderer.Feature<S> {
 
     protected static final int FEATHER_COUNT = 8;
 
@@ -35,32 +36,32 @@ public class WingsFeatureRenderer<S extends BipedEntityRenderState> implements A
 
     private final WingsModel model;
 
-    private final FeatureRendererContext<S, ? extends BipedEntityModel<S>> context;
+    private final RenderLayerParent<S, ? extends HumanoidModel<S>> context;
 
-    public WingsFeatureRenderer(FeatureRendererContext<S, ? extends BipedEntityModel<S>> context) {
+    public WingsFeatureRenderer(RenderLayerParent<S, ? extends HumanoidModel<S>> context) {
         this.context = context;
-        this.model = new WingsModel(createModel(Dilation.NONE).createModel());
+        this.model = new WingsModel(createModel(CubeDeformation.NONE).bakeRoot());
     }
 
     @Override
-    public void render(MatrixStack matrices, VertexConsumerProvider renderContext, int lightUv, S entity, float limbDistance, float limbAngle) {
+    public void render(PoseStack matrices, SubmitNodeCollector renderContext, int lightUv, S entity, float limbDistance, float limbAngle) {
         if (canRender(entity)) {
             model.setAngles(CasterState.of(entity), context.getModel());
-            model.render(matrices, getBuffer(renderContext, getTexture(entity)), lightUv, OverlayTexture.DEFAULT_UV, Colors.WHITE);
+            RenderGeometry.submitModel(matrices, renderContext, model, getLayer(getTexture(entity)), lightUv, OverlayTexture.NO_OVERLAY, CommonColors.WHITE);
 
             Identifier overlayTexture = getOverlayTexture(entity);
             if (overlayTexture != null) {
-                model.render(matrices, getBuffer(renderContext, overlayTexture), lightUv, OverlayTexture.DEFAULT_UV, Colors.WHITE);
+                RenderGeometry.submitModel(matrices, renderContext, model, getLayer(overlayTexture), lightUv, OverlayTexture.NO_OVERLAY, CommonColors.WHITE);
             }
         }
     }
 
-    protected VertexConsumer getBuffer(VertexConsumerProvider vertices, Identifier texture) {
-        return vertices.getBuffer(RenderLayer.getEntityTranslucent(texture));
+    protected RenderType getLayer(Identifier texture) {
+        return RenderTypes.entityTranslucent(texture);
     }
 
     protected boolean canRender(S state) {
-        return state instanceof PlayerEntityRenderState
+        return state instanceof AvatarRenderState
                 && CasterState.of(state).species.physical().flightType() == FlightType.AVIAN
                 && CasterState.of(state).species.physical() != Race.BAT
                 && CasterState.of(state).skinFeatures.showWings()
@@ -76,26 +77,26 @@ public class WingsFeatureRenderer<S extends BipedEntityRenderState> implements A
         return PEGASUS_WINGS_OVERLAY;
     }
 
-    private TexturedModelData createModel(Dilation dilation) {
-        ModelData data = new ModelData();
+    private LayerDefinition createModel(CubeDeformation dilation) {
+        MeshDefinition data = new MeshDefinition();
         createWing("left_wing", data.getRoot(), dilation, -1);
         createWing("right_wing", data.getRoot(), dilation, 1);
-        return TexturedModelData.of(data, 24, 23);
+        return LayerDefinition.create(data, 24, 23);
     }
 
-    protected void createWing(String name, ModelPartData parent, Dilation dilation, int k) {
-        ModelPartData base = parent.addChild(name,
-                ModelPartBuilder.create().cuboid(0, 0, 0, 2, 10, 2, dilation),
-                ModelTransform.origin(k * 2, 2, 2 + k * 0.5F));
+    protected void createWing(String name, PartDefinition parent, CubeDeformation dilation, int k) {
+        PartDefinition base = parent.addOrReplaceChild(name,
+                CubeListBuilder.create().addBox(0, 0, 0, 2, 10, 2, dilation),
+                PartPose.offset(k * 2, 2, 2 + k * 0.5F));
 
         for (int i = 0; i < FEATHER_COUNT; i++) {
             int texX = (i % 2) * 8;
             int featherLength = 21 - i * 2;
-            base.addChild("feather_" + i,
-                    ModelPartBuilder.create()
-                        .uv(8 + texX, 0)
-                        .cuboid(-k * (i % 2) / 90F, 0, 0, 2, featherLength, 2, dilation),
-                    ModelTransform.origin(0, 9, 0));
+            base.addOrReplaceChild("feather_" + i,
+                    CubeListBuilder.create()
+                        .texOffs(8 + texX, 0)
+                        .addBox(-k * (i % 2) / 90F, 0, 0, 2, featherLength, 2, dilation),
+                    PartPose.offset(0, 9, 0));
         }
     }
 
@@ -104,13 +105,13 @@ public class WingsFeatureRenderer<S extends BipedEntityRenderState> implements A
         private final Wing rightWing;
 
         public WingsModel(ModelPart tree) {
-            super(tree, RenderLayer::getEntityTranslucent);
+            super(tree, texture -> RenderTypes.entityTranslucent((Identifier)texture));
             leftWing = new Wing(tree.getChild("left_wing"), -1);
             rightWing = new Wing(tree.getChild("right_wing"), 1);
         }
 
-        public void setAngles(CasterState entity, BipedEntityModel<?> biped) {
-            root.copyTransform(biped.body);
+        public void setAngles(CasterState entity, HumanoidModel<?> biped) {
+            root.loadPose(biped.body.storePose());
             leftWing.setAngles(entity);
             rightWing.setAngles(entity);
         }
@@ -133,8 +134,8 @@ public class WingsFeatureRenderer<S extends BipedEntityRenderState> implements A
             void setAngles(CasterState entity) {
                 float spreadAmount = entity.wingsAngle;
 
-                base.pitch = 1.5F + 0.8F - spreadAmount / 9F;
-                base.yaw = k * (0.8F + spreadAmount / 3F);
+                base.xRot = 1.5F + 0.8F - spreadAmount / 9F;
+                base.yRot = k * (0.8F + spreadAmount / 3F);
 
                 spreadAmount /= 7F;
 
@@ -146,8 +147,8 @@ public class WingsFeatureRenderer<S extends BipedEntityRenderState> implements A
                     spread -= spreadAmount * ratio;
                     spread += spreadAmount * i / ratio;
 
-                    feathers[i].pitch = -spread;
-                    feathers[i].yaw = k * 0.3F;
+                    feathers[i].xRot = -spread;
+                    feathers[i].yRot = k * 0.3F;
                 }
             }
         }

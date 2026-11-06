@@ -4,13 +4,11 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.spongepowered.include.com.google.common.base.Preconditions;
-
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTexture;
-
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 public class RenderUtil {
     public static final Vector4f TEMP_VECTOR = new Vector4f();
@@ -29,28 +27,28 @@ public class RenderUtil {
             new Vertex(0, 0, 0, 0, 1)
     };
 
-    public static void renderFace(MatrixStack matrices, VertexConsumer buffer, float r, float g, float b, float a, int light) {
+    public static void renderFace(PoseStack matrices, VertexConsumer buffer, float r, float g, float b, float a, int light) {
         renderFace(matrices, buffer, r, g, b, a, light, 1, 1);
     }
 
-    public static void renderFace(MatrixStack matrices, VertexConsumer buffer, float r, float g, float b, float a, int light, float uScale, float vScale) {
-        Matrix4f positionmatrix = matrices.peek().getPositionMatrix();
+    public static void renderFace(PoseStack matrices, VertexConsumer buffer, float r, float g, float b, float a, int light, float uScale, float vScale) {
+        Matrix4f positionmatrix = matrices.last().pose();
         for (Vertex vertex : UNIT_FACE) {
             Vector4f position = vertex.position(positionmatrix);
-            buffer.vertex(position.x, position.y, position.z).texture(vertex.texture().x * uScale, vertex.texture().y * vScale).color(r, g, b, a).light(light);
+            buffer.addVertex(position.x, position.y, position.z).setUv(vertex.texture().x * uScale, vertex.texture().y * vScale).setColor(r, g, b, a).setLight(light);
         }
     }
 
-    public static void copyBufferToBuffer(Framebuffer from, Framebuffer to) {
+    public static void copyBufferToBuffer(RenderTarget from, RenderTarget to) {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        Preconditions.checkArgument(from.textureWidth == to.textureWidth && from.textureHeight == to.textureHeight, "Buffers must be the same size");
+        Preconditions.checkArgument(from.width == to.width && from.height == to.height, "Buffers must be the same size");
 
-        commandEncoder.copyTextureToTexture(to.getDepthAttachment(), from.getDepthAttachment(), 0, 0, 0, 0, 0, from.textureWidth, from.textureHeight);
-        commandEncoder.copyTextureToTexture(to.getColorAttachment(), from.getColorAttachment(), 0, 0, 0, 0, 0, from.textureWidth, from.textureHeight);
+        commandEncoder.copyTextureToTexture(from.getDepthTexture(), to.getDepthTexture(), 0, 0, 0, 0, 0, from.width, from.height);
+        commandEncoder.copyTextureToTexture(from.getColorTexture(), to.getColorTexture(), 0, 0, 0, 0, 0, from.width, from.height);
     }
 
-    public static void copyBufferToTexture(Framebuffer from, GpuTexture to) {
-        RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(to, from.getColorAttachment(), 0, 0, 0, 0, 0, from.textureWidth, from.textureHeight);
+    public static void copyBufferToTexture(RenderTarget from, GpuTexture to) {
+        RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(from.getColorTexture(), to, 0, 0, 0, 0, 0, from.width, from.height);
     }
 
     public record Vertex(Vector3f position, Vector3f texture) {

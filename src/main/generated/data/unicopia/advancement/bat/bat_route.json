@@ -1,0 +1,28 @@
+{
+  "parent": "unicopia:root",
+  "criteria": {
+    "be_bat": {
+      "conditions": {
+        "race": "unicopia:bat"
+      },
+      "trigger": "unicopia:player_change_race"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.bat_route.description"
+    },
+    "icon": {
+      "id": "unicopia:bat_badge"
+    },
+    "title": {
+      "translate": "advancements.unicopia.bat_route.title"
+    }
+  },
+  "requirements": [
+    [
+      "be_bat"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

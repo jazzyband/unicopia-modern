@@ -1,0 +1,12 @@
+{
+  "drops": [],
+  "leaves": [
+    "unicopia:mango_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:jungle_log",
+    "minecraft:jungle_wood"
+  ],
+  "rarity": 5
+}

@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 100,
+  "group": "juice",
+  "ingredient": "unicopia:juice",
+  "result": {
+    "id": "unicopia:burned_juice"
+  }
+}

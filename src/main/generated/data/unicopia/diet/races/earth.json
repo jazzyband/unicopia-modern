@@ -1,0 +1,140 @@
+{
+  "default_multiplier": 0.7,
+  "effects": [
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "can_always_eat": true,
+          "nutrition": 5,
+          "saturation": 120.0
+        }
+      },
+      "tags": [
+        "unicopia:candy",
+        "unicopia:rocks"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "consumable": {
+          "consume_seconds": 0.8
+        },
+        "food": {
+          "can_always_eat": true,
+          "nutrition": 2,
+          "saturation": 6.0
+        }
+      },
+      "tags": [
+        "unicopia:gems"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "consumable": {
+          "consume_seconds": 0.8
+        },
+        "food": {
+          "can_always_eat": true,
+          "nutrition": 12,
+          "saturation": 768.0
+        }
+      },
+      "tags": [
+        "unicopia:desserts"
+      ]
+    }
+  ],
+  "foraging_multiplier": 1.2,
+  "multipliers": [
+    {
+      "hunger": 1.2,
+      "saturation": 2.0,
+      "tags": [
+        "unicopia:baked_goods"
+      ]
+    },
+    {
+      "hunger": 0.9,
+      "saturation": 0.9,
+      "tags": [
+        "unicopia:pinecone"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:meat/raw",
+        "unicopia:insect/raw",
+        "unicopia:meat/rotten",
+        "unicopia:fish/rotten",
+        "unicopia:love",
+        "unicopia:fish/raw",
+        "unicopia:insect/rotten"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:special_shells",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:shells"
+      ]
+    },
+    {
+      "hunger": 2.5,
+      "saturation": 1.7,
+      "tags": [
+        "unicopia:desserts",
+        "unicopia:rocks",
+        "unicopia:candy"
+      ]
+    },
+    {
+      "hunger": 0.5,
+      "saturation": 0.7,
+      "tags": [
+        "unicopia:gems"
+      ]
+    },
+    {
+      "hunger": 0.2,
+      "saturation": 0.3,
+      "tags": [
+        "unicopia:fish/cooked"
+      ]
+    },
+    {
+      "hunger": 0.1,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:insect/cooked"
+      ]
+    },
+    {
+      "hunger": 0.1,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:meat/cooked"
+      ]
+    }
+  ]
+}

@@ -4,14 +4,14 @@ import com.minelittlepony.common.client.gui.IViewRoot;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
 import com.minelittlepony.unicopia.container.spellbook.ChapterPageElement;
 import com.minelittlepony.unicopia.container.spellbook.Flow;
-
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderType;
 
 record Image(ChapterPageElement.Image image) implements PageElement {
     @Override
-    public void draw(DynamicContent.GuiPage page, DrawContext context, int mouseX, int mouseY, IViewRoot container) {
-        context.drawTexture(RenderLayer::getGuiTextured, image().texture(), 0, 0, 0, 0, bounds().width, bounds().height, bounds().width, bounds().height);
+    public void draw(DynamicContent.GuiPage page, GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
+        context.blit(RenderPipelines.GUI_TEXTURED, image().texture(), 0, 0, 0, 0, 0, bounds().width, bounds().height, bounds().width, bounds().height);
     }
 
     @Override

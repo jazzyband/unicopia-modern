@@ -2,63 +2,61 @@ package com.minelittlepony.unicopia.entity.player.dummy;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.Owned;
 import com.mojang.authlib.GameProfile;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.GameMode;
-import net.minecraft.world.World;
+public class DummyPlayerEntity extends Player implements Owned<Player>, Owned.Mutable<Player> {
 
-public class DummyPlayerEntity extends PlayerEntity implements Owned<PlayerEntity>, Owned.Mutable<PlayerEntity> {
+    private Player owner;
 
-    private PlayerEntity owner;
-
-    public DummyPlayerEntity(World world, GameProfile profile) {
-        super(world, BlockPos.ORIGIN, 0, profile);
+    public DummyPlayerEntity(Level world, GameProfile profile) {
+        super(world, profile);
     }
 
     @Override
-    public GameMode getGameMode() {
-        return GameMode.DEFAULT;
+    public GameType gameMode() {
+        return GameType.DEFAULT_MODE;
     }
 
     @Override
-    public void onEquipStack(EquipmentSlot slot, ItemStack oldStack, ItemStack newStack) {
+    public void onEquipItem(EquipmentSlot slot, ItemStack oldStack, ItemStack newStack) {
         /*noop*/
     }
 
     @Override
-    protected void onBlockCollision(BlockState state) {
+    protected void onInsideBlock(BlockState state) {
         /*noop*/
     }
 
     @Override
     @Nullable
-    public PlayerEntity getMaster() {
+    public Player getMaster() {
         return owner;
     }
 
     @Override
-    public void setMaster(PlayerEntity owner) {
+    public void setMaster(Player owner) {
         this.owner = owner;
     }
 
     @Override
     public Optional<UUID> getMasterId() {
-        return Optional.ofNullable(owner).map(Entity::getUuid);
+        return Optional.ofNullable(owner).map(Entity::getUUID);
     }
 
     @Override
-    public boolean shouldRenderName() {
+    public boolean shouldShowName() {
         return !InteractionManager.getInstance().isClientPlayer(getMaster());
     }
 

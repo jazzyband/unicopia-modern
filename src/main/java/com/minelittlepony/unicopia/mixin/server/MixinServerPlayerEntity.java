@@ -15,66 +15,66 @@ import com.minelittlepony.unicopia.entity.duck.ServerPlayerEntityDuck;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.entity.player.SpawnLocator;
 import com.mojang.datafixers.util.Either;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.screen.ScreenHandlerListener;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Unit;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerListener;
+import net.minecraft.world.phys.AABB;
 
-@Mixin(ServerPlayerEntity.class)
-abstract class MixinServerPlayerEntity extends PlayerEntity implements ScreenHandlerListener, Equine.Container<Pony>, ServerPlayerEntityDuck {
-    MixinServerPlayerEntity() {super(null, null, 0, null);}
+@Mixin(ServerPlayer.class)
+abstract class MixinServerPlayerEntity extends Player implements ContainerListener, Equine.Container<Pony>, ServerPlayerEntityDuck {
+    MixinServerPlayerEntity() {super(null, null);}
 
     @Override
-    @Accessor("inTeleportationState")
+    @Accessor("isChangingDimension")
     public abstract void setPreventMotionChecks(boolean enabled);
 
     @SuppressWarnings("unchecked")
-    @Inject(method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V", at = @At("HEAD"))
-    private void onCopyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo info) {
+    @Inject(method = "restoreFrom(Lnet/minecraft/server/level/ServerPlayer;Z)V", at = @At("HEAD"))
+    private void onCopyFrom(ServerPlayer oldPlayer, boolean alive, CallbackInfo info) {
         get().copyFrom(((Equine.Container<Pony>)oldPlayer).get(), alive);
     }
 
     @Inject(method = {
-            "trySleep(Lnet/minecraft/util/math/BlockPos;)Lcom/mojang/datafixers/util/Either;",
-            // NEO: https://github.com/neoforged/NeoForge/blob/62eb61a8e0c726faa30eaa3f4998ba1101368ee4/patches/net/minecraft/server/level/ServerPlayer.java.patch#L77
+            "startSleepInBed(Lnet/minecraft/core/BlockPos;)Lcom/mojang/datafixers/util/Either;",
             "lambda$0()Lcom/mojang/datafixers/util/Either;"
     }, at = @At(
             value = "FIELD",
             target = "net/minecraft/entity/player/PlayerEntity$SleepFailureReason.NOT_POSSIBLE_NOW:Lnet/minecraft/entity/player/PlayerEntity$SleepFailureReason;"
     ), cancellable = true, require = 0)
-    private void onTrySleep(BlockPos pos, CallbackInfoReturnable<Either<PlayerEntity.SleepFailureReason, Unit>> info) {
+    private void onTrySleep(BlockPos pos, CallbackInfoReturnable<Either<Player.BedSleepingProblem, Unit>> info) {
         // Day/Night check is overriden using EntitySleepEvents.ALLOW_SLEEP_TIME in NocturnalSleepManager
-        if (get().canSleepNow(getWorld().isDay()) == ActionResult.FAIL) {
-            this.sendMessage(Text.translatable("block.unicopia.bed.no_sleep.nocturnal"), true);
+        if (get().canSleepNow(level().isBrightOutside()) == InteractionResult.FAIL) {
+            this.sendOverlayMessage(Component.translatable("block.unicopia.bed.no_sleep.nocturnal"));
 
-            info.setReturnValue(Either.left(PlayerEntity.SleepFailureReason.OTHER_PROBLEM));
+            info.setReturnValue(Either.left(Player.BedSleepingProblem.OTHER_PROBLEM));
         }
     }
 
-    @Inject(method = "updateKilledAdvancementCriterion(Lnet/minecraft/entity/Entity;Lnet/minecraft/entity/damage/DamageSource;)V",
+    @Inject(method = "awardKillScore(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/damagesource/DamageSource;)V",
             at = @At("TAIL"))
     private void onUpdateKilledAdvancementCriterion(Entity entityKilled, DamageSource damageSource, CallbackInfo info) {
         get().onKill(entityKilled, damageSource);
     }
 
-    @Inject(method = "startRiding(Lnet/minecraft/entity/Entity;Z)Z", at = @At("HEAD"))
-    private void onStartRiding(Entity entity, boolean force, CallbackInfoReturnable<Boolean> info) {
+    @Inject(method = "startRiding(Lnet/minecraft/world/entity/Entity;ZZ)Z", at = @At("HEAD"))
+    private void onStartRiding(Entity entity, boolean force, boolean preserveMotion, CallbackInfoReturnable<Boolean> info) {
         get().getPhysics().cancelFlight(true);
     }
 
-    @WrapOperation(method = "getWorldSpawnPos", at = @At(
-            value = "INVOKE",
-            target = "net/minecraft/server/network/SpawnLocating.findOverworldSpawn(Lnet/minecraft/server/world/ServerWorld;II)Lnet/minecraft/util/math/BlockPos;"
-    ))
-    private BlockPos adjustSpawnPosition(ServerWorld world, int x, int z, Operation<BlockPos> operation, ServerWorld unused, BlockPos basePos, @Local Box box) {
-        return SpawnLocator.findAdjustedOverworldSpawn(world, this, box, basePos, x, z, operation);
+    @com.llamalad7.mixinextras.injector.ModifyReturnValue(method = "adjustSpawnLocation", at = @At("RETURN"))
+    private BlockPos unicopia_adjustSpawnPosition(BlockPos result, ServerLevel world, BlockPos basePos) {
+        if (result == null) {
+            return null;
+        }
+        return SpawnLocator.findAdjustedOverworldSpawn(world, (Player)(Object)this,
+                getBoundingBox(), basePos, result.getX(), result.getZ(),
+                args -> result);
     }
 }

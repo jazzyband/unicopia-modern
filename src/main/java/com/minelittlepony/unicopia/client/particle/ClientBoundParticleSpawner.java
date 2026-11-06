@@ -7,12 +7,11 @@ import java.util.UUID;
 import java.util.function.BooleanSupplier;
 
 import com.minelittlepony.unicopia.particle.ParticleSpawner;
-
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * A connection class for updating and persisting an attached particle effect.
@@ -23,30 +22,30 @@ public class ClientBoundParticleSpawner implements ParticleSpawner {
     private final UUID id;
     private WeakReference<BooleanSupplier> attachment = new WeakReference<>(null);
 
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
 
     public ClientBoundParticleSpawner(UUID id) {
         this.id = id;
     }
 
     @Override
-    public void addParticle(ParticleEffect effect, Vec3d pos, Vec3d vel) {
+    public void addParticle(ParticleOptions effect, Vec3 pos, Vec3 vel) {
         BooleanSupplier a = attachment.get();
         if ((a == null || !a.getAsBoolean())) {
             SPAWNED_PARTICLES.values().removeIf(set -> !set.getAsBoolean());
             attachment = new WeakReference<>(SPAWNED_PARTICLES.computeIfAbsent(id, i -> {
                 return new Entry(
-                        new WeakReference<>(client.world),
-                        new WeakReference<>(client.particleManager.addParticle(effect, pos.x, pos.y, pos.z, vel.x, vel.y, vel.z))
+                        new WeakReference<>(client.level),
+                        new WeakReference<>(client.particleEngine.createParticle(effect, pos.x, pos.y, pos.z, vel.x, vel.y, vel.z))
                 );
             }));
         }
     }
 
-    private record Entry (WeakReference<World> world, WeakReference<Particle> particle) implements BooleanSupplier {
+    private record Entry (WeakReference<Level> world, WeakReference<Particle> particle) implements BooleanSupplier {
         @Override
         public boolean getAsBoolean() {
-            if (world.get() == null || world.get() != MinecraftClient.getInstance().world) {
+            if (world.get() == null || world.get() != Minecraft.getInstance().level) {
                 return false;
             }
 

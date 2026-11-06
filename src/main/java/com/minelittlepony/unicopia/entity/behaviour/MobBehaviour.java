@@ -2,21 +2,20 @@ package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.TraceHelper;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.golem.IronGolem;
+import net.minecraft.world.item.Items;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.IronGolemEntity;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-
-public class MobBehaviour<T extends MobEntity> extends EntityBehaviour<T> {
+public class MobBehaviour<T extends Mob> extends EntityBehaviour<T> {
 
     private T dummy;
 
     @Override
     public void onDestroy(T entity) {
-        entity.setAiDisabled(false);
+        entity.setNoAi(false);
         super.onDestroy(entity);
     }
 
@@ -24,14 +23,14 @@ public class MobBehaviour<T extends MobEntity> extends EntityBehaviour<T> {
     public void update(Pony player, T entity, Disguise spell) {
         if (player.sneakingChanged() && isSneakingOnGround(player)) {
             LivingEntity target = findTarget(player, entity);
-            entity.tryAttack(player.asServerWorld(), target);
-            target.setAttacker(player.asEntity());
+            entity.doHurtTarget(player.asServerWorld(), target);
+            target.setLastHurtByMob(player.asEntity());
         }
 
-        if (entity instanceof IronGolemEntity i) {
-            boolean hasPoppy = player.asEntity().getStackInHand(Hand.MAIN_HAND).isOf(Items.POPPY);
-            if (hasPoppy != i.getLookingAtVillagerTicks() > 0) {
-                i.setLookingAtVillager(hasPoppy);
+        if (entity instanceof IronGolem i) {
+            boolean hasPoppy = player.asEntity().getItemInHand(InteractionHand.MAIN_HAND).is(Items.POPPY);
+            if (hasPoppy != i.getOfferFlowerTick() > 0) {
+                i.offerFlower(hasPoppy);
             }
         }
     }
@@ -45,7 +44,7 @@ public class MobBehaviour<T extends MobEntity> extends EntityBehaviour<T> {
     @SuppressWarnings("unchecked")
     protected T getDummy(T entity) {
         if (dummy == null) {
-            dummy = (T)entity.getType().create(entity.getWorld(), SpawnReason.CONVERSION);
+            dummy = (T)entity.getType().create(entity.level(), EntitySpawnReason.CONVERSION);
         }
 
         return dummy;

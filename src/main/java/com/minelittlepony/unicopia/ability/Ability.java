@@ -1,16 +1,14 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.util.Util;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 
 public interface Ability<T extends Hit> {
     /**
@@ -42,16 +40,16 @@ public interface Ability<T extends Hit> {
     /**
      * The display name for this ability.
      */
-    default Text getName(Pony player) {
-        return Text.translatable(getTranslationKey());
+    default Component getName(Pony player) {
+        return Component.translatable(getTranslationKey());
     }
 
     default String getTranslationKey() {
-        return Util.createTranslationKey("ability", getId());
+        return Util.makeDescriptionId("ability", getId());
     }
 
     default Identifier getId() {
-        return Abilities.REGISTRY.getId(this);
+        return Abilities.REGISTRY.getKey(this);
     }
 
     default boolean activateOnEarlyRelease() {
@@ -71,7 +69,7 @@ public interface Ability<T extends Hit> {
      * @param playerSpecies The player's species
      */
     default boolean canUse(Race race) {
-        return race.canUse(Abilities.REGISTRY.getEntry(this));
+        return race.canUse(this);
     }
 
     /**
@@ -108,7 +106,7 @@ public interface Ability<T extends Hit> {
     /**
      * Gets the serializer to use for reading data over the network.
      */
-    PacketCodec<? super RegistryByteBuf, T> getSerializer();
+    StreamCodec<? super RegistryFriendlyByteBuf, T> getSerializer();
 
     /**
      * Called on the client to get any data required to activate the ability.

@@ -1,0 +1,16 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:empty"
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 3,
+      "saturation": 3.0
+    }
+  },
+  "tags": [
+    "c:rocks"
+  ]
+}

@@ -4,6 +4,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementRequirements;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.triggers.RecipeUnlockedTrigger;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.include.com.google.common.base.Preconditions;
 
@@ -17,49 +29,37 @@ import com.minelittlepony.unicopia.container.spellbook.ChapterPageElement;
 import com.minelittlepony.unicopia.datagen.providers.SpellbookChapterProvider.MagicRecipeExporter;
 import com.minelittlepony.unicopia.item.EnchantableItem;
 import com.minelittlepony.unicopia.item.UItems;
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementCriterion;
-import net.minecraft.advancement.AdvancementRequirements;
-import net.minecraft.advancement.AdvancementRewards;
-import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.book.RecipeCategory;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.util.Identifier;
 
 public class SpellcraftingRecipeJsonBuilder {
-    private final Map<String, AdvancementCriterion<?>> criterions = new LinkedHashMap<>();
+    private final Map<String, Criterion<?>> criterions = new LinkedHashMap<>();
     @Nullable
     private String group;
     private final RecipeCategory category;
 
     private IngredientWithSpell base = IngredientWithSpell.mundane(UItems.GEMSTONE);
     private final SpellType<?> spell;
-    private final ItemConvertible gem;
+    private final ItemLike gem;
     private final List<IngredientWithSpell> ingredients = new ArrayList<>();
     private SpellTraits traits = SpellTraits.EMPTY;
 
     private final ChapterPageElement.Ingredients.Builder chapterIngredients = ChapterPageElement.Ingredients.builder();
 
-    public static SpellcraftingRecipeJsonBuilder create(RecipeCategory category, ItemConvertible gem, SpellType<?> spell) {
+    public static SpellcraftingRecipeJsonBuilder create(RecipeCategory category, ItemLike gem, SpellType<?> spell) {
         return new SpellcraftingRecipeJsonBuilder(category, gem, spell);
     }
 
-    private SpellcraftingRecipeJsonBuilder(RecipeCategory category, ItemConvertible gem, SpellType<?> spell) {
+    private SpellcraftingRecipeJsonBuilder(RecipeCategory category, ItemLike gem, SpellType<?> spell) {
         this.category = category;
         this.gem = gem;
         this.spell = spell;
     }
 
-    public SpellcraftingRecipeJsonBuilder base(ItemConvertible gem, SpellType<?> spell) {
+    public SpellcraftingRecipeJsonBuilder base(ItemLike gem, SpellType<?> spell) {
         base = IngredientWithSpell.of(gem, spell);
         return this;
     }
 
-    public SpellcraftingRecipeJsonBuilder input(ItemConvertible gem, SpellType<?> spell) {
+    public SpellcraftingRecipeJsonBuilder input(ItemLike gem, SpellType<?> spell) {
         ingredients.add(IngredientWithSpell.of(gem, spell));
         chapterIngredients.spell(1, spell);
         return this;
@@ -73,7 +73,7 @@ public class SpellcraftingRecipeJsonBuilder {
         return this;
     }
 
-    public SpellcraftingRecipeJsonBuilder criterion(String name, AdvancementCriterion<?> condition) {
+    public SpellcraftingRecipeJsonBuilder criterion(String name, Criterion<?> condition) {
         criterions.put(name, condition);
         return this;
     }
@@ -83,33 +83,32 @@ public class SpellcraftingRecipeJsonBuilder {
         return this;
     }
 
-    public void offerTo(RecipeExporter exporter, RegistryKey<Recipe<?>> key) {
+    public void offerTo(RecipeOutput exporter, ResourceKey<Recipe<?>> key) {
         if (!traits.isEmpty()) {
             criterions.put("has_traits", TraitDiscoveredCriterion.create(traits.keys()));
         }
-        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.getValue());
-        Advancement.Builder advancementBuilder = exporter.getAdvancementBuilder()
-            .criterion("has_the_recipe", RecipeUnlockedCriterion.create(key))
+        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.identifier());
+        Advancement.Builder advancementBuilder = exporter.advancement()
             .rewards(AdvancementRewards.Builder.recipe(key))
-            .criteriaMerger(AdvancementRequirements.CriterionMerger.OR);
-        criterions.forEach(advancementBuilder::criterion);
+            .requirements(AdvancementRequirements.Strategy.OR);
+        criterions.forEach(advancementBuilder::addCriterion);
         exporter.accept(key, new SpellCraftingRecipe(base,
-                TraitIngredient.of(traits), ingredients, EnchantableItem.enchant(gem.asItem().getDefaultStack(), spell)),
-                advancementBuilder.build(key.getValue().withPrefixedPath("recipes/" + category.getName() + "/")));
+                TraitIngredient.of(traits), ingredients, EnchantableItem.enchant(gem.asItem().getDefaultInstance(), spell)),
+                advancementBuilder.build(key.identifier().withPrefix("recipes/" + category.getFolderName() + "/")));
         if (exporter instanceof MagicRecipeExporter magicExporter) {
             magicExporter.acceptChapterIngredients(key, chapterIngredients.build());
         }
     }
 
-    public void offerTo(RecipeExporter exporter) {
-        offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, spell.getId()));
+    public void offerTo(RecipeOutput exporter) {
+        offerTo(exporter, ResourceKey.create(Registries.RECIPE, spell.getId()));
     }
 
-    public void offerTo(RecipeExporter exporter, String recipePath) {
-        Identifier recipeId = Identifier.of(recipePath);
+    public void offerTo(RecipeOutput exporter, String recipePath) {
+        Identifier recipeId = Identifier.parse(recipePath);
         if (recipeId.equals(spell.getId())) {
             throw new IllegalStateException("Recipe " + recipePath + " should remove its 'save' argument as it is equal to default one");
         }
-        offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, recipeId));
+        offerTo(exporter, ResourceKey.create(Registries.RECIPE, recipeId));
     }
 }

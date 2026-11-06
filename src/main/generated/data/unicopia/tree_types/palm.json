@@ -1,0 +1,11 @@
+{
+  "drops": [],
+  "leaves": [
+    "unicopia:palm_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "unicopia:palm_wood",
+    "unicopia:palm_log"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_stripped_zap_log": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:stripped_zap_log"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:waxed_stripped_zap_log_from_honeycomb"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_stripped_zap_log"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:waxed_stripped_zap_log_from_honeycomb"
+    ]
+  }
+}

@@ -4,48 +4,47 @@ import com.minelittlepony.unicopia.server.world.ZapAppleStageStore;
 import com.minelittlepony.unicopia.server.world.ZapAppleStageStore.Stage;
 import com.mojang.serialization.MapCodec;
 
-import net.minecraft.block.*;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.IntProperty;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldAccess;
-import net.minecraft.world.WorldView;
-import net.minecraft.world.tick.ScheduledTickView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 public class ZapAppleLeavesPlaceholderBlock extends AirBlock implements ZapStagedBlock {
-    public static final IntProperty DISTANCE = Properties.DISTANCE_1_7;
+    public static final IntegerProperty DISTANCE = BlockStateProperties.DISTANCE;
 
-    private static final MapCodec<ZapAppleLeavesPlaceholderBlock> CODEC = createCodec(ZapAppleLeavesPlaceholderBlock::new);
 
-    public ZapAppleLeavesPlaceholderBlock(Settings settings) {
+    public ZapAppleLeavesPlaceholderBlock(Properties settings) {
         super(settings);
-        setDefaultState(stateManager.getDefaultState().with(DISTANCE, Properties.DISTANCE_0_7_MAX));
+        registerDefaultState(stateDefinition.any().setValue(DISTANCE, BlockStateProperties.STABILITY_MAX_DISTANCE));
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    @Override
-    public MapCodec<AirBlock> getCodec() {
-        return (MapCodec)CODEC;
-    }
 
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(DISTANCE);
     }
 
     @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return updateDistanceFromLogs(getDefaultState(), ctx.getWorld(), ctx.getBlockPos());
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        return updateDistanceFromLogs(defaultBlockState(), ctx.getLevel(), ctx.getClickedPos());
     }
 
     @Override
-    protected boolean hasRandomTicks(BlockState state) {
+    protected boolean isRandomlyTicking(BlockState state) {
         return shouldDecay(state);
     }
 
@@ -55,57 +54,57 @@ public class ZapAppleLeavesPlaceholderBlock extends AirBlock implements ZapStage
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+    public void onPlace(BlockState state, Level world, BlockPos pos, BlockState oldState, boolean notify) {
         updateStage(state, world, pos);
     }
 
     protected boolean shouldDecay(BlockState state) {
-        return state.get(DISTANCE) == 7;
+        return state.getValue(DISTANCE) == 7;
     }
 
     @Override
-    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+    protected void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
         if (shouldDecay(state)) {
-            dropStacks(state, world, pos);
+            dropResources(state, world, pos);
             world.removeBlock(pos, false);
         }
     }
 
     @Deprecated
     @Override
-    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        super.scheduledTick(state, world, pos, random);
-        world.setBlockState(pos, updateDistanceFromLogs(state, world, pos), Block.NOTIFY_ALL);
+    public void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        super.tick(state, world, pos, random);
+        world.setBlock(pos, updateDistanceFromLogs(state, world, pos), Block.UPDATE_ALL);
         tryAdvanceStage(state, world, pos, random);
     }
 
     @Override
-    protected BlockState getStateForNeighborUpdate(BlockState state, WorldView world, ScheduledTickView tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, Random random) {
+    protected BlockState updateShape(BlockState state, LevelReader world, ScheduledTickAccess tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
         int i = getDistanceFromLog(neighborState) + 1;
-        if (i != 1 || state.get(DISTANCE) != i) {
-            tickView.scheduleBlockTick(pos, this, 1);
+        if (i != 1 || state.getValue(DISTANCE) != i) {
+            tickView.scheduleTick(pos, this, 1);
         }
 
         return state;
     }
 
-    private static BlockState updateDistanceFromLogs(BlockState state, WorldAccess world, BlockPos pos) {
-        int i = Properties.DISTANCE_0_7_MAX;
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
+    private static BlockState updateDistanceFromLogs(BlockState state, LevelAccessor world, BlockPos pos) {
+        int i = BlockStateProperties.STABILITY_MAX_DISTANCE;
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
 
         for (Direction direction : Direction.values()) {
-            mutable.set(pos, direction);
+            mutable.setWithOffset(pos, direction);
             i = Math.min(i, getDistanceFromLog(world.getBlockState(mutable)) + 1);
             if (i == 1) {
                 break;
             }
         }
 
-        return state.with(DISTANCE, i);
+        return state.setValue(DISTANCE, i);
     }
 
     private static int getDistanceFromLog(BlockState state) {
-        return LeavesBlock.getOptionalDistanceFromLog(state).orElse(7);
+        return LeavesBlock.getOptionalDistanceAt(state).orElse(7);
     }
 
 }

@@ -1,0 +1,182 @@
+{
+  "default_multiplier": 0.6,
+  "effects": [
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "nutrition": 8,
+          "saturation": 12.8
+        }
+      },
+      "tags": [
+        "unicopia:insect/cooked",
+        "unicopia:meat/cooked"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "nutrition": 4,
+          "saturation": 1.6
+        }
+      },
+      "tags": [
+        "unicopia:foraging/blinding"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "nutrition": 0,
+          "saturation": 0.0
+        }
+      },
+      "tags": [
+        "unicopia:foraging/prickly"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "nutrition": 2,
+          "saturation": 3.6
+        }
+      },
+      "tags": [
+        "unicopia:foraging/severely_prickly"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 0,
+            "min": 0
+          },
+          "effect": "minecraft:strength",
+          "seconds": {
+            "max": 1300,
+            "min": 1300
+          }
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "nutrition": 4,
+          "saturation": 1.6
+        }
+      },
+      "tags": [
+        "unicopia:foraging/strengthening"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 0,
+            "min": 0
+          },
+          "chance": 30,
+          "effect": "minecraft:glowing",
+          "seconds": {
+            "max": 30,
+            "min": 30
+          }
+        }
+      },
+      "food_attributes": {
+        "food": {
+          "nutrition": 1,
+          "saturation": 3.2
+        }
+      },
+      "tags": [
+        "unicopia:foraging/glowing"
+      ]
+    }
+  ],
+  "foraging_multiplier": 0.9,
+  "multipliers": [
+    {
+      "hunger": 1.0,
+      "saturation": 1.0,
+      "tags": [
+        "unicopia:baked_goods"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:meat/raw",
+        "unicopia:insect/raw",
+        "unicopia:meat/rotten",
+        "unicopia:fish/rotten",
+        "unicopia:love",
+        "unicopia:fish/raw",
+        "unicopia:insect/rotten"
+      ]
+    },
+    {
+      "hunger": 0.9,
+      "saturation": 0.9,
+      "tags": [
+        "unicopia:pinecone"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:special_shells",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:shells"
+      ]
+    },
+    {
+      "hunger": 0.75,
+      "saturation": 0.35,
+      "tags": [
+        "unicopia:fish/cooked"
+      ]
+    },
+    {
+      "hunger": 1.5,
+      "saturation": 1.6,
+      "tags": [
+        "unicopia:meat/cooked"
+      ]
+    },
+    {
+      "hunger": 0.25,
+      "saturation": 0.74,
+      "tags": [
+        "unicopia:insect/cooked"
+      ]
+    }
+  ]
+}

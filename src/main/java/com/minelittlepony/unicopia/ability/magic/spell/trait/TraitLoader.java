@@ -13,9 +13,10 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.spongepowered.include.com.google.common.base.Preconditions;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
@@ -24,63 +25,54 @@ import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SinglePreparationResourceReloader;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.profiler.Profiler;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.TagKey;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ItemLike;
 
-public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Identifier, TraitLoader.TraitStream>> implements IdentifiableResourceReloadListener {
-    public static final RegistryKey<Registry<TraitLoader.TraitStream>> REGISTRY_KEY = Unicopia.key("traits");
-
-    private final DynamicOps<JsonElement> ops;
-
-    public TraitLoader(RegistryWrapper.WrapperLookup registries) {
-        ops = registries.getOps(JsonOps.INSTANCE);
-    }
+public class TraitLoader extends SimplePreparableReloadListener<Multimap<Identifier, TraitLoader.TraitStream>> implements IdentifiableResourceReloadListener {
+    private static final Identifier ID = Unicopia.id("data/traits");
 
     @Override
     public Identifier getFabricId() {
-        return REGISTRY_KEY.getValue();
+        return ID;
     }
 
     @Override
-    protected Multimap<Identifier, TraitStream> prepare(ResourceManager manager, Profiler profiler) {
+    protected Multimap<Identifier, TraitStream> prepare(ResourceManager manager, ProfilerFiller profiler) {
         profiler.startTick();
 
         Multimap<Identifier, TraitStream> prepared = HashMultimap.create();
 
-        for (var path : manager.findResources(RegistryKeys.getPath(REGISTRY_KEY), p -> p.getPath().endsWith(".json")).keySet()) {
+        for (var path : manager.listResources("traits", p -> p.getPath().endsWith(".json")).keySet()) {
             profiler.push(path.toString());
             try {
-                for (Resource resource : manager.getAllResources(path)) {
-                    profiler.push(resource.getPackId());
+                for (Resource resource : manager.getResourceStack(path)) {
+                    profiler.push(resource.sourcePackId());
 
-                    try (InputStreamReader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+                    try (InputStreamReader reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
                         JsonObject data = JsonParser.parseReader(reader).getAsJsonObject();
 
-                        TraitStream set = TraitStream.CODEC.decode(ops, data).getOrThrow(error -> new JsonParseException(error)).getFirst();
+                        TraitStream set = TraitStream.CODEC.decode(JsonOps.INSTANCE, data).getOrThrow(error -> new JsonParseException(error)).getFirst();
 
                         if (set.replace()) {
                             prepared.removeAll(path);
                         }
                         prepared.put(path, set);
                     } catch (JsonParseException e) {
-                        Unicopia.LOGGER.error("Error reading traits file " + resource.getPackId() + ":" + path, e);
+                        Unicopia.LOGGER.error("Error reading traits file " + resource.sourcePackId() + ":" + path, e);
                     } finally {
                         profiler.pop();
                     }
@@ -97,7 +89,7 @@ public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Iden
     }
 
     @Override
-    protected void apply(Multimap<Identifier, TraitStream> prepared, ResourceManager manager, Profiler profiler) {
+    protected void apply(Multimap<Identifier, TraitStream> prepared, ResourceManager manager, ProfilerFiller profiler) {
         profiler.startTick();
 
         Set<Map.Entry<TraitStream.Key, SpellTraits>> newRegistry = prepared.values().stream()
@@ -105,9 +97,9 @@ public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Iden
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, SpellTraits::union))
                 .entrySet();
 
-        SpellTraits.load(Registries.ITEM.streamEntries()
+        SpellTraits.load(BuiltInRegistries.ITEM.listElements()
                 .map(reference -> Map.entry(
-                        reference.registryKey(),
+                        reference.key(),
                         newRegistry.stream()
                             .filter(p -> p.getKey().test(reference))
                             .map(Map.Entry::getValue)
@@ -120,7 +112,7 @@ public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Iden
         profiler.endTick();
     }
 
-    public sealed interface TraitStream permits TraitStream.TraitMap, TraitStream.TraitSet {
+    public interface TraitStream {
         TypeToken<Map<String, String>> TYPE = new TypeToken<>() {};
         Codec<TraitStream> CODEC = Codec.xor(TraitMap.CODEC, TraitSet.CODEC).xmap(
             Either::unwrap,
@@ -161,13 +153,13 @@ public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Iden
                     return this;
                 }
 
-                public Builder item(ItemConvertible item, SpellTraits.Builder traits) {
+                public Builder item(ItemLike item, SpellTraits.Builder traits) {
                     return item(item, traits.build());
                 }
 
                 @SuppressWarnings("deprecation")
-                public Builder item(ItemConvertible item, SpellTraits traits) {
-                    items.put(new Key.Id(item.asItem().getRegistryEntry().registryKey()), traits);
+                public Builder item(ItemLike item, SpellTraits traits) {
+                    items.put(new Key.Id(item.asItem().builtInRegistryHolder().key()), traits);
                     return this;
                 }
 
@@ -204,20 +196,25 @@ public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Iden
                 private final SpellTraits traits;
                 private final Set<Key> keys = new HashSet<>();
 
+                private final Set<TagKey<Item>> tags = new HashSet<>();
+                private final Set<Holder<Item>> items = new HashSet<>();
+
                 private Builder(SpellTraits traits) {
                     this.traits = traits;
                 }
 
                 public Builder tag(TagKey<Item> tag) {
                     keys.add(new Key.Tag(tag));
+                    tags.add(tag);
                     return this;
                 }
 
                 @SuppressWarnings("deprecation")
-                public Builder item(ItemConvertible item) {
-                    if (!keys.add(new Key.Id(item.asItem().getRegistryEntry().registryKey()))) {
+                public Builder item(ItemLike item) {
+                    if (!keys.add(new Key.Id(item.asItem().builtInRegistryHolder().key()))) {
                         throw new IllegalArgumentException("Item specified multiple times: " + item);
                     }
+                    items.add(item.asItem().builtInRegistryHolder());
                     return this;
                 }
 
@@ -226,32 +223,36 @@ public class TraitLoader extends SinglePreparationResourceReloader<Multimap<Iden
                 }
 
                 public TraitSet build() {
+                    String result = items.stream().map(item -> {
+                        return Map.entry(item, tags.stream().filter(tag -> item.is(tag)).map(tag -> tag.location().toString()).collect(Collectors.joining(",")));
+                    }).filter(i -> !i.getValue().isEmpty()).map(entry -> entry.getKey() + "[" + entry.getValue() + "]").collect(Collectors.joining(","));
+                    Preconditions.checkState(result.isEmpty(), "Item explicitly added will be matched by tags: " + result);
                     return new TraitSet(false, traits, Set.copyOf(keys));
                 }
             }
         }
 
-        sealed interface Key extends Predicate<RegistryEntry<Item>> permits Key.Tag, Key.Id {
+        interface Key extends Predicate<Holder<Item>> {
             Codec<Key> CODEC = Codec.xor(Tag.CODEC, Id.CODEC).xmap(
                     Either::unwrap,
                     key -> key instanceof Tag l ? Either.left(l) : Either.right((Id)key)
             );
 
             record Tag(TagKey<Item> tag) implements Key {
-                static final Codec<Tag> CODEC = TagKey.codec(RegistryKeys.ITEM).xmap(Tag::new, Tag::tag);
+                static final Codec<Tag> CODEC = TagKey.hashedCodec(Registries.ITEM).xmap(Tag::new, Tag::tag);
 
                 @Override
-                public boolean test(RegistryEntry<Item> item) {
-                    return item.isIn(tag);
+                public boolean test(Holder<Item> item) {
+                    return item.is(tag);
                 }
             }
 
-            record Id(RegistryKey<Item> key) implements Key {
-                static final Codec<Id> CODEC = RegistryKey.createCodec(RegistryKeys.ITEM).xmap(Id::new, Id::key);
+            record Id(ResourceKey<Item> key) implements Key {
+                static final Codec<Id> CODEC = ResourceKey.codec(Registries.ITEM).xmap(Id::new, Id::key);
 
                 @Override
-                public boolean test(RegistryEntry<Item> item) {
-                    return item.matchesKey(key);
+                public boolean test(Holder<Item> item) {
+                    return item.is(key);
                 }
             }
         }

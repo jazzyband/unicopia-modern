@@ -4,19 +4,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import com.minelittlepony.unicopia.network.Channel;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.server.network.ServerPlayerEntity;
 
 public class DataTrackerManager {
     private final Entity entity;
-    private final DynamicRegistryManager lookup;
+    private final RegistryAccess lookup;
     final boolean isClient;
     private final List<DataTracker> trackers = new ObjectArrayList<>();
     private final List<ObjectTracker<?>> objectTrackers = new ObjectArrayList<>();
@@ -26,8 +25,8 @@ public class DataTrackerManager {
 
     public DataTrackerManager(Entity entity) {
         this.entity = entity;
-        this.lookup = entity.getWorld().getRegistryManager();
-        this.isClient = entity.getWorld().isClient;
+        this.lookup = entity.level().registryAccess();
+        this.isClient = entity.level().isClientSide();
         this.primaryTracker = checkoutTracker();
     }
 
@@ -90,7 +89,7 @@ public class DataTrackerManager {
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public synchronized void sendInitial(ServerPlayerEntity player, Consumer<Packet<ClientPlayPacketListener>> sender) {
+    public synchronized void sendInitial(ServerPlayer player, Consumer<Packet<ClientGamePacketListener>> sender) {
         synchronized (this) {
             for (var emitter : packetEmitters) {
                 emitter.sendPackets((Consumer)sender, true);

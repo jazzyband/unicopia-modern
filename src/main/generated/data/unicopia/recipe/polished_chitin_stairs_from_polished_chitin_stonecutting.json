@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "unicopia:polished_chitin",
+  "result": {
+    "id": "unicopia:polished_chitin_stairs"
+  }
+}

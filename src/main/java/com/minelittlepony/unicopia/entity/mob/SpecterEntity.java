@@ -5,43 +5,42 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.particle.FootprintParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
-
-import net.minecraft.entity.EntityData;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.ActiveTargetGoal;
-import net.minecraft.entity.ai.goal.LookAroundGoal;
-import net.minecraft.entity.ai.goal.LookAtEntityGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.RevengeGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.LocalDifficulty;
-import net.minecraft.world.ServerWorldAccess;
-import net.minecraft.world.World;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.Vec3;
 
-public class SpecterEntity extends HostileEntity {
-    public static DefaultAttributeContainer.Builder createAttributes() {
-        return HostileEntity.createHostileAttributes()
-                .add(EntityAttributes.MAX_HEALTH, 16F)
-                .add(EntityAttributes.MOVEMENT_SPEED, 0.5F);
+public class SpecterEntity extends Monster {
+    public static AttributeSupplier.Builder createAttributes() {
+        return Monster.createMonsterAttributes()
+                .add(Attributes.MAX_HEALTH, 16F)
+                .add(Attributes.MOVEMENT_SPEED, 0.5F);
     }
 
     private double stepDistance;
@@ -52,71 +51,71 @@ public class SpecterEntity extends HostileEntity {
     public long lastInViewportTime = -1;
     public long hideInViewportTime = -1;
 
-    public SpecterEntity(EntityType<? extends HostileEntity> entityType, World world) {
+    public SpecterEntity(EntityType<? extends Monster> entityType, Level world) {
         super(entityType, world);
     }
 
     @Override
-    protected void initGoals() {
-        goalSelector.add(1, new SwimGoal(this));
-        goalSelector.add(4, new MeleeAttackGoal(this, 1.0, true));
-        goalSelector.add(5, new WanderAroundFarGoal(this, 0.8));
-        goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
-        goalSelector.add(6, new LookAroundGoal(this));
-        targetSelector.add(1, new RevengeGoal(this));
+    protected void registerGoals() {
+        goalSelector.addGoal(1, new FloatGoal(this));
+        goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.0, true));
+        goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.8));
+        goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        targetSelector.addGoal(1, new HurtByTargetGoal(this));
         //this.targetSelector.add(2, new TargetGoal<>(this, PlayerEntity.class));
     }
 
     @Override
     public void tick() {
-        Vec3d prevPosition = getPos();
+        Vec3 prevPosition = position();
         super.tick();
 
         if (getTarget() != null) {
-            ParticleUtils.spawnParticles(ParticleTypes.EFFECT, this, 6);
+            ParticleUtils.spawnParticles(net.minecraft.core.particles.SpellParticleOption.create(ParticleTypes.EFFECT, 0xFFFFFF, 1), this, 6);
 
-            if (getWorld() instanceof ServerWorld sw && sw.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-                if (sw.getBlockState(getBlockPos()).isIn(BlockTags.REPLACEABLE_BY_TREES)) {
-                    sw.breakBlock(getBlockPos(), true);
+            if (level() instanceof ServerLevel sw && sw.getGameRules().get(GameRules.MOB_GRIEFING)) {
+                if (sw.getBlockState(blockPosition()).is(BlockTags.REPLACEABLE_BY_TREES)) {
+                    sw.destroyBlock(blockPosition(), true);
                 }
             }
         }
 
-        if (!hasVehicle() && isOnGround()) {
-            stepDistance += getPos().subtract(prevPosition).horizontalLength() * 0.6F;
+        if (!isPassenger() && onGround()) {
+            stepDistance += position().subtract(prevPosition).horizontalDistance() * 0.6F;
             if (stepDistance >= nextStepDistance) {
                 nextStepDistance = stepDistance + 1;
                 wasLeft = !wasLeft;
                 float offset = 0.4F;
-                float yaw = getHeadYaw();
-                Vec3d offsetVec = new Vec3d((wasLeft ? offset : -offset), 0, 0).rotateY(yaw);
-                getWorld().addParticleClient(new FootprintParticleEffect(yaw), true, true, getX() + offsetVec.getX(), getY(), getZ() + offsetVec.getZ(), 0, 0, 0);
-                ParticleUtils.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, getSteppingBlockState()), getWorld(), getPos(), 6);
-                playSound(getSteppingBlockState().getSoundGroup().getStepSound(), 0.5F, 1);
+                float yaw = getYHeadRot();
+                Vec3 offsetVec = new Vec3((wasLeft ? offset : -offset), 0, 0).yRot(yaw);
+                level().addParticle(new FootprintParticleEffect(yaw), true, true, getX() + offsetVec.x(), getY(), getZ() + offsetVec.z(), 0, 0, 0);
+                ParticleUtils.spawnParticles(new BlockParticleOption(ParticleTypes.BLOCK, getBlockStateOn()), level(), position(), 6);
+                playSound(getBlockStateOn().getSoundType().getStepSound(), 0.5F, 1);
             }
         }
     }
 
     @Override
-    public void setAttacker(@Nullable LivingEntity attacker) {
-        if (!getWorld().isClient && attacker != null) {
-            getWorld().getEntitiesByClass(SpecterEntity.class, this.getBoundingBox().expand(5), e -> e != this && e.getTarget() == null).forEach(specter -> {
+    public void setLastHurtByMob(@Nullable LivingEntity attacker) {
+        if (!level().isClientSide() && attacker != null) {
+            level().getEntitiesOfClass(SpecterEntity.class, this.getBoundingBox().inflate(5), e -> e != this && e.getTarget() == null).forEach(specter -> {
                 specter.notifyPartyAttacker(this, attacker);
             });
         }
-        super.setAttacker(attacker);
+        super.setLastHurtByMob(attacker);
     }
 
     private void notifyPartyAttacker(SpecterEntity sender, @Nullable LivingEntity attacker) {
-        super.setAttacker(attacker);
+        super.setLastHurtByMob(attacker);
         getNavigation().stop();
-        getNavigation().startMovingTo(sender, 3);
-        playSound(USounds.Vanilla.ENTITY_VEX_HURT, 1, 0.5F);
+        getNavigation().moveTo(sender, 3);
+        playSound(USounds.Vanilla.VEX_HURT, 1, 0.5F);
     }
 
     @Override
-    public float getSoundPitch() {
-        return super.getSoundPitch() * 0.3F;
+    public float getVoicePitch() {
+        return super.getVoicePitch() * 0.3F;
     }
 
     @Override
@@ -131,40 +130,40 @@ public class SpecterEntity extends HostileEntity {
     }
 
     @Override
-    protected void onSwimmingStart() {
+    protected void doWaterSplashEffect() {
 
     }
 
     @Nullable
     @Override
-    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData data) {
-        data = super.initialize(world, difficulty, spawnReason, data);
-        Random random = world.getRandom();
-        float diff = difficulty.getClampedLocalDifficulty();
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor world, DifficultyInstance difficulty, EntitySpawnReason spawnReason, @Nullable SpawnGroupData data) {
+        data = super.finalizeSpawn(world, difficulty, spawnReason, data);
+        RandomSource random = world.getRandom();
+        float diff = difficulty.getSpecialMultiplier();
         setCanPickUpLoot(random.nextFloat() < 0.55F * diff);
-        initEquipment(random, difficulty);
+        populateDefaultEquipmentSlots(random, difficulty);
         return data;
     }
 
     @Override
-    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
-        if (random.nextFloat() < (getWorld().getDifficulty() == Difficulty.HARD ? 0.05F : 0.01F)) {
-            if (random.nextFloat() < (getWorld().getDifficulty() == Difficulty.HARD ? 0.5F : 0.1F)) {
-                super.initEquipment(random, localDifficulty);
+    protected void populateDefaultEquipmentSlots(RandomSource random, DifficultyInstance localDifficulty) {
+        if (random.nextFloat() < (level().getDifficulty() == Difficulty.HARD ? 0.05F : 0.01F)) {
+            if (random.nextFloat() < (level().getDifficulty() == Difficulty.HARD ? 0.5F : 0.1F)) {
+                super.populateDefaultEquipmentSlots(random, localDifficulty);
             }
-            equipStack(EquipmentSlot.MAINHAND, (random.nextInt(3) == 0 ? Items.STONE_SWORD : Items.WOODEN_SWORD).getDefaultStack());
+            setItemSlot(EquipmentSlot.MAINHAND, (random.nextInt(3) == 0 ? Items.STONE_SWORD : Items.WOODEN_SWORD).getDefaultInstance());
         }
     }
 
-    static class TargetGoal<T extends LivingEntity> extends ActiveTargetGoal<T> {
+    static class TargetGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
         public TargetGoal(SpecterEntity specter, Class<T> targetEntityClass) {
             super(specter, targetEntityClass, true);
         }
 
         @SuppressWarnings("deprecation")
         @Override
-        public boolean canStart() {
-            return mob.getBrightnessAtEyes() < 0.5F && super.canStart();
+        public boolean canUse() {
+            return mob.getLightLevelDependentMagicValue() < 0.5F && super.canUse();
         }
     }
 }

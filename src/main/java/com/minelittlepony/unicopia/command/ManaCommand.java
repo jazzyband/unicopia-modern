@@ -1,7 +1,12 @@
 package com.minelittlepony.unicopia.command;
 
 import java.util.function.Function;
-
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.StringRepresentableArgument;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.StringRepresentable;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.magic.Levelled;
 import com.minelittlepony.unicopia.entity.player.MagicReserves;
@@ -11,27 +16,20 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.command.argument.EnumArgumentType;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.StringIdentifiable;
-
 public class ManaCommand {
-    static LiteralArgumentBuilder<ServerCommandSource> create() {
-        return CommandManager.literal("mana").requires(s -> s.hasPermissionLevel(2))
-            .then(CommandManager.argument("type", ManaType.argument()).executes(source -> {
+    static LiteralArgumentBuilder<CommandSourceStack> create() {
+        return Commands.literal("mana").requires(s -> s.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
+            .then(Commands.argument("type", ManaType.argument()).executes(source -> {
                 var type = source.getArgument("type", ManaType.class);
                 var pony = Pony.of(source.getSource().getPlayer());
                 var bar = type.getBar(pony);
 
-                source.getSource().sendFeedback(() -> Text.literal(type.name() + " is " + Either.unwrap(bar.mapBoth(
+                source.getSource().sendSuccess(() -> Component.literal(type.name() + " is " + Either.unwrap(bar.mapBoth(
                         left -> left.get() + "/" + left.getMax(),
                         right -> right.get() + "/" + right.getMax()))), true);
                 return 0;
             })
-            .then(CommandManager.argument("value", FloatArgumentType.floatArg()).executes(source -> {
+            .then(Commands.argument("value", FloatArgumentType.floatArg()).executes(source -> {
                 var type = source.getArgument("type", ManaType.class);
                 var pony = Pony.of(source.getSource().getPlayer());
                 float value = source.getArgument("value", Float.class);
@@ -43,9 +41,9 @@ public class ManaCommand {
                     right.set(value);
                     return right.get() + "/" + right.getMax();
                 });
-                pony.asWorld().playSound(null, pony.getOrigin(), USounds.Vanilla.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1, 2);
+                pony.asWorld().playSound(null, pony.getOrigin(), USounds.Vanilla.PLAYER_LEVELUP, SoundSource.PLAYERS, 1, 2);
 
-                source.getSource().sendFeedback(() -> Text.literal("Set " + type.name() + " to " + Either.unwrap(answer)), true);
+                source.getSource().sendSuccess(() -> Component.literal("Set " + type.name() + " to " + Either.unwrap(answer)), true);
                 return 0;
             })));
     }
@@ -69,12 +67,12 @@ public class ManaCommand {
             return getter.apply(pony);
         }
 
-        public static EnumArgumentType<ManaType> argument() {
+        public static StringRepresentableArgument<ManaType> argument() {
             return new ArgumentType();
         }
 
-        public static final class ArgumentType extends EnumArgumentType<ManaType> {
-            static final Codec<ManaType> CODEC = StringIdentifiable.createCodec(ManaType::values);
+        public static final class ArgumentType extends StringRepresentableArgument<ManaType> {
+            static final Codec<ManaType> CODEC = StringRepresentable.fromEnum(ManaType::values);
 
             protected ArgumentType() {
                 super(CODEC, ManaType::values);

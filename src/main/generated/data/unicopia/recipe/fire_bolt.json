@@ -1,0 +1,28 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:flame"
+    }
+  ],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:spell_traits": {
+        "unicopia:chaos": 1.0,
+        "unicopia:fire": 60.0,
+        "unicopia:focus": 10.0,
+        "unicopia:strength": 11.0
+      },
+      "unicopia:stored_spell": "unicopia:fire_bolt"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:fire": 30.0,
+    "unicopia:focus": 9.0
+  }
+}

@@ -2,7 +2,12 @@ package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import java.util.List;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.TimedSpell;
@@ -16,13 +21,6 @@ import com.minelittlepony.unicopia.item.FriendshipBraceletItem;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-
 public class FeatherFallSpell extends AbstractSpell implements TimedSpell {
     private static final int MIN_RANGE = 1;
     private static final int MAX_RANGE = 20;
@@ -33,17 +31,17 @@ public class FeatherFallSpell extends AbstractSpell implements TimedSpell {
     private static final float POWERS_RANGE_WEIGHT = 0.3F;
     private static final float MAX_GENEROSITY_FACTOR = 19F;
 
-    private static final SpellAttribute<Integer> DURATION = SpellAttribute.create(SpellAttributeType.DURATION, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.FOCUS, focus -> 10 + (int)(MathHelper.clamp(focus, 0, 160)));
-    private static final SpellAttribute<Float> STRENGTH = SpellAttribute.create(SpellAttributeType.STRENGTH, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.STRENGTH, strength -> MathHelper.clamp(strength, 2, 9));
-    private static final SpellAttribute<Float> RANGE = SpellAttribute.create(SpellAttributeType.RANGE, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.POWER, power -> MathHelper.clamp((power - 10) * POWERS_RANGE_WEIGHT, MIN_RANGE, MAX_RANGE));
+    private static final SpellAttribute<Integer> DURATION = SpellAttribute.create(SpellAttributeType.DURATION, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.FOCUS, focus -> 10 + (int)(Mth.clamp(focus, 0, 160)));
+    private static final SpellAttribute<Float> STRENGTH = SpellAttribute.create(SpellAttributeType.STRENGTH, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.STRENGTH, strength -> Mth.clamp(strength, 2, 9));
+    private static final SpellAttribute<Float> RANGE = SpellAttribute.create(SpellAttributeType.RANGE, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.POWER, power -> Mth.clamp((power - 10) * POWERS_RANGE_WEIGHT, MIN_RANGE, MAX_RANGE));
     private static final SpellAttribute<Long> SIMULTANIOUS_TARGETS = SpellAttribute.create(SpellAttributeType.SIMULTANIOUS_TARGETS, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.GENEROSITY, (traits, generosity) -> {
         return (long)(generosity + traits.get(Trait.FOCUS, MIN_TARGETS, MAX_TARGETS) * 2);
     });
     private static final SpellAttribute<Float> COST_PER_INDIVIDUAL = SpellAttribute.create(SpellAttributeType.COST_PER_INDIVIDUAL, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.POWER, (traits, power) -> {
-        return MathHelper.clamp(((Math.max(power, 10) - 10) * POWERS_RANGE_WEIGHT) - ((Math.max(traits.get(Trait.FOCUS), 80) - 80) * FOCUS_RANGE_WEIGHT), 1, 7);
+        return Mth.clamp(((Math.max(power, 10) - 10) * POWERS_RANGE_WEIGHT) - ((Math.max(traits.get(Trait.FOCUS), 80) - 80) * FOCUS_RANGE_WEIGHT), 1, 7);
     });
     private static final SpellAttribute<Float> TARGET_PREFERENCE = SpellAttribute.create(SpellAttributeType.TARGET_PREFERENCE, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.GENEROSITY, generosity -> {
-        return MathHelper.clamp(generosity, 1, MAX_GENEROSITY_FACTOR) / MAX_GENEROSITY_FACTOR;
+        return Mth.clamp(generosity, 1, MAX_GENEROSITY_FACTOR) / MAX_GENEROSITY_FACTOR;
     });
     private static final SpellAttribute<Float> CASTER_PREFERENCE = SpellAttribute.create(SpellAttributeType.CASTER_PREFERENCE, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.GENEROSITY, (traits, generosity) -> {
         return 1 - TARGET_PREFERENCE.get(traits);
@@ -91,22 +89,22 @@ public class FeatherFallSpell extends AbstractSpell implements TimedSpell {
         final boolean negateFallDamage = NEGATES_FALL_DAMAGE.get(getTraits());
 
         Entity entity = caster.asEntity();
-        Vec3d masterVelocity = entity.getVelocity().multiply(0.1);
+        Vec3 masterVelocity = entity.getDeltaMovement().scale(0.1);
         targets.forEach(target -> {
-            if (target.getVelocity().y < 0) {
+            if (target.getDeltaMovement().y < 0) {
                 if (negateFallDamage) {
                     target.verticalCollision = true;
                     target.setOnGround(true);
                     target.fallDistance = 0;
                 }
-                if (target instanceof PlayerEntity) {
-                    ((PlayerEntity)target).getAbilities().flying = false;
+                if (target instanceof Player) {
+                    ((Player)target).getAbilities().flying = false;
                 }
 
                 float delta = strength * ((caster.isOwnedBy(target) || target == entity) ? casterPreference : targetPreference);
-                target.setVelocity(target.getVelocity().multiply(1, delta, 1));
+                target.setDeltaMovement(target.getDeltaMovement().multiply(1, delta, 1));
                 if (situation == Situation.PROJECTILE && target != entity) {
-                    target.addVelocity(masterVelocity.x, 0, masterVelocity.z);
+                    target.push(masterVelocity.x, 0, masterVelocity.z);
                 }
             }
             ParticleUtils.spawnParticles(new MagicParticleEffect(getType().getColor()), target, 7);
@@ -125,13 +123,13 @@ public class FeatherFallSpell extends AbstractSpell implements TimedSpell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         timer.toNBT(compound, lookup);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         timer.fromNBT(compound, lookup);
     }

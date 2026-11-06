@@ -1,0 +1,13 @@
+{
+  "wants": {
+    "id": "unicopia:gryphon_feather",
+    "count": 4
+  },
+  "gives": {
+    "id": "minecraft:emerald",
+    "count": 3
+  },
+  "max_uses": 50,
+  "xp": 2,
+  "reputation_discount": 0.12
+}

@@ -7,41 +7,39 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Streams;
 
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
-public final class MultiBox extends Box {
-    private final Box first;
+public final class MultiBox extends AABB {
+    private final AABB first;
     private final BoxChildren children;
 
-    public static MultiBox of(Box first, List<Box> children, List<Box> nonCollidingChildren) {
+    public static MultiBox of(AABB first, List<AABB> children, List<AABB> nonCollidingChildren) {
         return new MultiBox(first, new BoxChildren(children, nonCollidingChildren));
     }
 
-    public static Box unbox(Box box) {
+    public static AABB unbox(AABB box) {
         return box instanceof MultiBox m ? m.first : box;
     }
 
-    public static void forEach(Box box, Consumer<Box> consumer) {
+    public static void forEach(AABB box, Consumer<AABB> consumer) {
         if (box instanceof MultiBox m) {
             m.children.forEach(consumer);
         }
     }
 
-    private MultiBox(Box first, BoxChildren children) {
+    private MultiBox(AABB first, BoxChildren children) {
         super(first.minX, first.minY, first.minZ, first.maxX, first.maxY, first.maxZ);
         this.first = unbox(first);
         this.children = children;
     }
 
     @Override
-    public Optional<Vec3d> raycast(Vec3d min, Vec3d max) {
-        return super.raycast(min, max).or(() -> children.raycast(min, max));
+    public Optional<Vec3> clip(Vec3 min, Vec3 max) {
+        return super.clip(min, max).or(() -> children.raycast(min, max));
     }
 
     @Override
@@ -55,68 +53,68 @@ public final class MultiBox extends Box {
     }
 
     @Override
-    public Box withMinX(double minX) {
-        return new MultiBox(super.withMinX(minX), children);
+    public AABB setMinX(double minX) {
+        return new MultiBox(super.setMinX(minX), children);
     }
 
     @Override
-    public Box withMinY(double minY) {
-        return new MultiBox(super.withMinY(minY), children);
+    public AABB setMinY(double minY) {
+        return new MultiBox(super.setMinY(minY), children);
     }
 
     @Override
-    public Box withMinZ(double minZ) {
-        return new MultiBox(super.withMinZ(minZ), children);
+    public AABB setMinZ(double minZ) {
+        return new MultiBox(super.setMinZ(minZ), children);
     }
 
     @Override
-    public Box withMaxX(double maxX) {
-        return new MultiBox(super.withMaxX(maxX), children);
+    public AABB setMaxX(double maxX) {
+        return new MultiBox(super.setMaxX(maxX), children);
     }
 
     @Override
-    public Box withMaxY(double maxY) {
-        return new MultiBox(super.withMaxY(maxY), children);
+    public AABB setMaxY(double maxY) {
+        return new MultiBox(super.setMaxY(maxY), children);
     }
 
     @Override
-    public Box withMaxZ(double maxZ) {
-        return new MultiBox(super.withMaxZ(maxZ), children);
+    public AABB setMaxZ(double maxZ) {
+        return new MultiBox(super.setMaxZ(maxZ), children);
     }
 
     @Override
-    public Box shrink(double x, double y, double z) {
-        return new MultiBox(super.shrink(x, y, z), children.altered(b -> b.shrink(x, y, z)));
+    public AABB contract(double x, double y, double z) {
+        return new MultiBox(super.contract(x, y, z), children.altered(b -> b.contract(x, y, z)));
     }
 
     @Override
-    public Box stretch(double x, double y, double z) {
-        return new MultiBox(super.stretch(x, y, z), children.altered(b -> b.stretch(x, y, z)));
+    public AABB expandTowards(double x, double y, double z) {
+        return new MultiBox(super.expandTowards(x, y, z), children.altered(b -> b.expandTowards(x, y, z)));
     }
 
     @Override
-    public Box expand(double x, double y, double z) {
-        return new MultiBox(super.expand(x, y, z), children.altered(b -> b.expand(x, y, z)));
+    public AABB inflate(double x, double y, double z) {
+        return new MultiBox(super.inflate(x, y, z), children.altered(b -> b.inflate(x, y, z)));
     }
 
     @Override
-    public Box intersection(Box box) {
-        return new MultiBox(super.intersection(box), children);
+    public AABB intersect(AABB box) {
+        return new MultiBox(super.intersect(box), children);
     }
 
     @Override
-    public Box union(Box box) {
-        return new MultiBox(super.union(box), children);
+    public AABB minmax(AABB box) {
+        return new MultiBox(super.minmax(box), children);
     }
 
     @Override
-    public Box offset(double x, double y, double z) {
-        return new MultiBox(super.offset(x, y, z), children.altered(b -> b.offset(x, y, z)));
+    public AABB move(double x, double y, double z) {
+        return new MultiBox(super.move(x, y, z), children.altered(b -> b.move(x, y, z)));
     }
 
     @Override
-    public Box offset(BlockPos blockPos) {
-        return new MultiBox(super.offset(blockPos), children.altered(b -> b.offset(blockPos)));
+    public AABB move(BlockPos blockPos) {
+        return new MultiBox(super.move(blockPos), children.altered(b -> b.move(blockPos)));
     }
 
     @Override
@@ -125,22 +123,22 @@ public final class MultiBox extends Box {
     }
 
     static final class BoxChildren {
-        private final Box[] children;
-        private final Box[] nonCollidingChildren;
+        private final AABB[] children;
+        private final AABB[] nonCollidingChildren;
         private final Supplier<String> toString;
 
-        private BoxChildren(Box[] children, Box[] nonCollidingChildren) {
+        private BoxChildren(AABB[] children, AABB[] nonCollidingChildren) {
             this.children = children;
             this.nonCollidingChildren = nonCollidingChildren;
-            toString = Suppliers.memoize(() -> Streams.concat(Arrays.stream(this.nonCollidingChildren), Arrays.stream(this.children)).map(Box::toString).collect(Collectors.joining(",")));
+            toString = Suppliers.memoize(() -> Streams.concat(Arrays.stream(this.nonCollidingChildren), Arrays.stream(this.children)).map(AABB::toString).collect(Collectors.joining(",")));
         }
 
-        public BoxChildren(List<Box> children, List<Box> nonCollidingChildren) {
-            this(children.stream().map(MultiBox::unbox).toArray(Box[]::new), nonCollidingChildren.stream().map(MultiBox::unbox).toArray(Box[]::new));
+        public BoxChildren(List<AABB> children, List<AABB> nonCollidingChildren) {
+            this(children.stream().map(MultiBox::unbox).toArray(AABB[]::new), nonCollidingChildren.stream().map(MultiBox::unbox).toArray(AABB[]::new));
         }
 
-        public BoxChildren altered(Function<Box, Box> alteration) {
-            BoxChildren copy = new BoxChildren(new Box[children.length], new Box[nonCollidingChildren.length]);
+        public BoxChildren altered(Function<AABB, AABB> alteration) {
+            BoxChildren copy = new BoxChildren(new AABB[children.length], new AABB[nonCollidingChildren.length]);
             for (int i = 0; i < children.length; i++) {
                 copy.children[i] = alteration.apply(children[i]);
             }
@@ -150,13 +148,13 @@ public final class MultiBox extends Box {
             return copy;
         }
 
-        public Optional<Vec3d> raycast(Vec3d min, Vec3d max) {
-            Optional<Vec3d> trace = Optional.empty();
+        public Optional<Vec3> raycast(Vec3 min, Vec3 max) {
+            Optional<Vec3> trace = Optional.empty();
             for (int i = 0; trace.isEmpty() && i < children.length; i++) {
-                trace = children[i].raycast(min, max);
+                trace = children[i].clip(min, max);
             }
             for (int i = 0; trace.isEmpty() && i < nonCollidingChildren.length; i++) {
-                trace = nonCollidingChildren[i].raycast(min, max);
+                trace = nonCollidingChildren[i].clip(min, max);
             }
             return trace;
         }
@@ -179,7 +177,7 @@ public final class MultiBox extends Box {
             return false;
         }
 
-        public void forEach(Consumer<Box> consumer) {
+        public void forEach(Consumer<AABB> consumer) {
             for (int i = 0; i < children.length; i++) {
                 consumer.accept(children[i]);
             }

@@ -1,7 +1,7 @@
 package com.minelittlepony.unicopia.projectile;
 
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.world.entity.projectile.Projectile;
 
 public interface ProjectileImpactListener {
-    boolean onProjectileImpact(ProjectileEntity projectile);
+    boolean onProjectileImpact(Projectile projectile);
 }

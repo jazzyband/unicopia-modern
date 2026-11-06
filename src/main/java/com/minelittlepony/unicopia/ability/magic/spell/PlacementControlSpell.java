@@ -2,7 +2,13 @@ package com.minelittlepony.unicopia.ability.magic.spell;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.AbstractSpell;
@@ -15,23 +21,14 @@ import com.minelittlepony.unicopia.server.world.Ether;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-
 public class PlacementControlSpell extends AbstractSpell implements OrientedSpell {
-    private static final Codec<RegistryKey<World>> DIMENSION_CODEC = RegistryKey.createCodec(RegistryKeys.WORLD);
-    private static final Codec<Optional<RegistryKey<World>>> OPTIONAL_DIMENSION_CODEC = Codecs.optional(DIMENSION_CODEC);
+    private static final Codec<ResourceKey<Level>> DIMENSION_CODEC = ResourceKey.codec(Registries.DIMENSION);
+    private static final Codec<Optional<ResourceKey<Level>>> OPTIONAL_DIMENSION_CODEC = ExtraCodecs.optionalEmptyMap(DIMENSION_CODEC);
 
     private final DataTracker.Entry<Optional<UUID>> placedEntityId = dataTracker.startTracking(TrackableDataType.UUID, Optional.empty());
-    private final DataTracker.Entry<Optional<RegistryKey<World>>> dimension = dataTracker.startTracking(TrackableDataType.ofRegistryKey(), Optional.empty());
-    private final DataTracker.Entry<Optional<Vec3d>> position = dataTracker.startTracking(TrackableDataType.OPTIONAL_VECTOR, Optional.empty());
-    private final DataTracker.Entry<Optional<Vec3d>> orientation = dataTracker.startTracking(TrackableDataType.OPTIONAL_VECTOR, Optional.empty());
+    private final DataTracker.Entry<Optional<ResourceKey<Level>>> dimension = dataTracker.startTracking(TrackableDataType.ofRegistryKey(), Optional.empty());
+    private final DataTracker.Entry<Optional<Vec3>> position = dataTracker.startTracking(TrackableDataType.OPTIONAL_VECTOR, Optional.empty());
+    private final DataTracker.Entry<Optional<Vec3>> orientation = dataTracker.startTracking(TrackableDataType.OPTIONAL_VECTOR, Optional.empty());
 
     @Nullable
     private Spell delegate;
@@ -50,21 +47,21 @@ public class PlacementControlSpell extends AbstractSpell implements OrientedSpel
         return delegate;
     }
 
-    public Optional<Vec3d> getPosition() {
+    public Optional<Vec3> getPosition() {
         return position.get();
     }
 
-    public void setDimension(RegistryKey<World> dimension) {
+    public void setDimension(ResourceKey<Level> dimension) {
         this.dimension.set(Optional.of(dimension));
     }
 
-    public void setPosition(Vec3d position) {
+    public void setPosition(Vec3 position) {
         this.position.set(Optional.of(position));
     }
 
     @Override
     public void setOrientation(Caster<?> caster, float pitch, float yaw) {
-        this.orientation.set(Optional.of(new Vec3d(pitch, yaw, 0)));
+        this.orientation.set(Optional.of(new Vec3(pitch, yaw, 0)));
         if (delegate instanceof OrientedSpell o) {
             o.setOrientation(caster, pitch, yaw);
         }
@@ -88,21 +85,21 @@ public class PlacementControlSpell extends AbstractSpell implements OrientedSpel
 
             if (placedEntityId.get().isEmpty()) {
                 if (dimension.get().isEmpty()) {
-                    setDimension(source.asWorld().getRegistryKey());
+                    setDimension(source.asWorld().dimension());
                 }
                 if (getPosition().isEmpty()) {
-                    setPosition(source.asEntity().getPos());
+                    setPosition(source.asEntity().position());
                 }
 
                 CastSpellEntity entity = new CastSpellEntity(source.asWorld(), source, this);
 
-                Vec3d pos = getPosition().get();
-                Vec3d rot = orientation.get().orElse(Vec3d.ZERO);
+                Vec3 pos = getPosition().get();
+                Vec3 rot = orientation.get().orElse(Vec3.ZERO);
 
-                entity.updatePositionAndAngles(pos.x, pos.y, pos.z, (float)rot.y, (float)rot.x);
-                entity.getWorld().spawnEntity(entity);
+                entity.absSnapTo(pos.x, pos.y, pos.z, (float)rot.y, (float)rot.x);
+                entity.level().addFreshEntity(entity);
 
-                placedEntityId.set(Optional.of(entity.getUuid()));
+                placedEntityId.set(Optional.of(entity.getUUID()));
             } else {
                 if (getConnection(source) == null) {
                     setDead();
@@ -120,28 +117,28 @@ public class PlacementControlSpell extends AbstractSpell implements OrientedSpel
                 .orElse(null);
     }
 
-    private Optional<World> getWorld(Caster<?> source) {
-        return dimension.get().map(source.asWorld().getServer()::getWorld);
+    private Optional<Level> getWorld(Caster<?> source) {
+        return dimension.get().map(source.asWorld().getServer()::getLevel);
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
-        Spell.writeNbt(delegate, lookup).ifPresent(spell -> compound.put("spell", spell));
-        compound.put("position", CodecUtils.OPTIONAL_VECTOR, position.get());
-        compound.put("orientation", CodecUtils.OPTIONAL_VECTOR, orientation.get());
-        compound.put("dimension", OPTIONAL_DIMENSION_CODEC, dimension.get());
-        compound.put("placedEntityId", CodecUtils.OPTIONAL_UUID, placedEntityId.get());
+        compound.put("spell", Spell.writeNbt(delegate, lookup));
+        compound.store("position", CodecUtils.OPTIONAL_VECTOR, position.get());
+        compound.store("orientation", CodecUtils.OPTIONAL_VECTOR, orientation.get());
+        compound.store("dimension", OPTIONAL_DIMENSION_CODEC, dimension.get());
+        compound.store("placedEntityId", CodecUtils.OPTIONAL_UUID, placedEntityId.get());
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        delegate = Spell.readNbt(compound.getCompound("spell"), lookup).orElse(null);
-        placedEntityId.set(compound.get("placedEntityId", Uuids.CODEC));
-        position.set(compound.get("position", CodecUtils.VECTOR));
-        orientation.set(compound.get("orientation", CodecUtils.VECTOR));
-        dimension.set(compound.get("dimension", DIMENSION_CODEC));
+        delegate = Spell.readNbt(compound.getCompoundOrEmpty("spell"), lookup);
+        placedEntityId.set(compound.read("placedEntityId", CodecUtils.OPTIONAL_UUID).orElse(Optional.empty()));
+        position.set(compound.read("position", CodecUtils.OPTIONAL_VECTOR).orElse(Optional.empty()));
+        orientation.set(compound.read("orientation", CodecUtils.OPTIONAL_VECTOR).orElse(Optional.empty()));
+        dimension.set(compound.read("dimension", OPTIONAL_DIMENSION_CODEC).orElse(Optional.empty()));
     }
 
     public interface PlacementDelegate {

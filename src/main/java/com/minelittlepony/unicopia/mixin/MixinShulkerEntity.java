@@ -1,28 +1,27 @@
 package com.minelittlepony.unicopia.mixin;
 
+import net.minecraft.world.entity.monster.Shulker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-import net.minecraft.entity.mob.ShulkerEntity;
-
-@Mixin(ShulkerEntity.class)
+@Mixin(Shulker.class)
 public interface MixinShulkerEntity {
     @Accessor
-    float getOpenProgress();
+    float getCurrentPeekAmount();
 
     @Accessor
-    void setOpenProgress(float value);
+    void setCurrentPeekAmount(float value);
 
-    @Accessor("lastOpenProgress")
+    @Accessor("currentPeekAmountO")
     float getPrevOpenProgress();
 
-    @Accessor("lastOpenProgress")
+    @Accessor("currentPeekAmountO")
     void setPrevOpenProgress(float value);
 
-    @Invoker("getPeekAmount")
+    @Invoker("getRawPeekAmount")
     int callGetPeekAmount();
 
-    @Invoker("setPeekAmount")
+    @Invoker("setRawPeekAmount")
     void callSetPeekAmount(int amount);
 }

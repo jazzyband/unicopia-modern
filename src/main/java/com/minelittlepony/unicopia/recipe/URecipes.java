@@ -10,7 +10,6 @@ import com.minelittlepony.unicopia.datagen.providers.recipe.CuttingBoardRecipeJs
 import com.minelittlepony.unicopia.mixin.RegistryEntryListOwnerAccessor;
 import com.minelittlepony.unicopia.server.world.gen.ULootTableEntryType;
 import com.minelittlepony.unicopia.util.Untyped;
-import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 
@@ -18,22 +17,22 @@ import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredientSerializer;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalItemTags;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.SpecialCraftingRecipe;
-import net.minecraft.recipe.StonecuttingRecipe;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.StonecutterRecipe;
 
 public interface URecipes {
     Codec<List<Ingredient>> SHAPELESS_RECIPE_INGREDIENTS_CODEC = Ingredient.CODEC.listOf(1, 9);
@@ -45,22 +44,22 @@ public interface URecipes {
 
     RecipeSerializer<ZapAppleRecipe> ZAP_APPLE_SERIALIZER = register("crafting_zap_apple", ZapAppleRecipe.CODEC, ZapAppleRecipe.PACKET_CODEC);
     RecipeSerializer<ItemConversionShapedRecipe> CONVERSION_SERIALIZER = register("conversion", ItemConversionShapedRecipe.CODEC, ItemConversionShapedRecipe.PACKET_CODEC);
-    RecipeSerializer<GlowingRecipe> GLOWING_SERIALIZER = register("crafting_glowing", new SpecialCraftingRecipe.SpecialRecipeSerializer<>(GlowingRecipe::new));
-    RecipeSerializer<JarInsertRecipe> JAR_INSERT_SERIALIZER = register("jar_insert", new SpecialCraftingRecipe.SpecialRecipeSerializer<>(JarInsertRecipe::new));
-    RecipeSerializer<JarExtractRecipe> JAR_EXTRACT_SERIALIZER = register("jar_extract", new SpecialCraftingRecipe.SpecialRecipeSerializer<>(JarExtractRecipe::new));
+    RecipeSerializer<GlowingRecipe> GLOWING_SERIALIZER = register("crafting_glowing", MapCodec.unit(new GlowingRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)), StreamCodec.unit(new GlowingRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)));
+    RecipeSerializer<JarInsertRecipe> JAR_INSERT_SERIALIZER = register("jar_insert", MapCodec.unit(new JarInsertRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)), StreamCodec.unit(new JarInsertRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)));
+    RecipeSerializer<JarExtractRecipe> JAR_EXTRACT_SERIALIZER = register("jar_extract", MapCodec.unit(new JarExtractRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)), StreamCodec.unit(new JarExtractRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)));
     RecipeSerializer<SpellShapedCraftingRecipe> CRAFTING_MAGICAL_SERIALIZER = register("crafting_magical", SpellShapedCraftingRecipe.CODEC, SpellShapedCraftingRecipe.PACKET_CODEC);
     RecipeSerializer<SpellCraftingRecipe> TRAIT_REQUIREMENT = register("spellbook/crafting", SpellCraftingRecipe.CODEC, SpellCraftingRecipe.PACKET_CODEC);
     RecipeSerializer<SpellEnhancingRecipe> TRAIT_COMBINING = register("spellbook/combining", SpellEnhancingRecipe.CODEC, SpellEnhancingRecipe.PACKET_CODEC);
     RecipeSerializer<SpellDuplicatingRecipe> SPELL_DUPLICATING = register("spellbook/duplicating", SpellDuplicatingRecipe.CODEC, SpellDuplicatingRecipe.PACKET_CODEC);
-    RecipeSerializer<CloudShapingRecipe> CLOUD_SHAPING_SERIALIZER = register("cloud_shaping", new StonecuttingRecipe.Serializer<>(CloudShapingRecipe::new) {});
-    RecipeSerializer<TransformCropsRecipe> TRANSFORM_CROP_SERIALIZER = register("transform_crop", TransformCropsRecipe.CODEC, TransformCropsRecipe.PACKET_CODEC);
-    RecipeSerializer<AltarRecipe> ALTAR_SERIALIZER = register("altar", AltarRecipe.CODEC, AltarRecipe.PACKET_CODEC);
+    RecipeSerializer<CloudShapingRecipe> CLOUD_SHAPING_SERIALIZER = register("cloud_shaping", CloudShapingRecipe.CODEC, CloudShapingRecipe.PACKET_CODEC);
+    RecipeSerializer<TransformCropsRecipe> TRANSFORM_CROP_SERIALIZER = register("transform_crop", TransformCropsRecipe.CODEC, TransformCropsRecipe.STREAM_CODEC);
+    RecipeSerializer<AltarRecipe> ALTAR_SERIALIZER = register("altar", AltarRecipe.CODEC, AltarRecipe.STREAM_CODEC);
 
     CustomIngredientSerializer<ExclusiveIngredient> EXCLUSIVE_INGREDIENT_SERIALIZER = registerIngredient("exclusive", ExclusiveIngredient.CODEC, ExclusiveIngredient.PACKET_CODEC);
 
     static <T extends Recipe<?>> RecipeType<T> register(String name) {
         Identifier id = Unicopia.id(name);
-        return Registry.register(Registries.RECIPE_TYPE, id, new RecipeType<T>() {
+        return Registry.register(BuiltInRegistries.RECIPE_TYPE, id, new RecipeType<T>() {
             @Override
             public String toString() {
                 return id.toString();
@@ -68,25 +67,15 @@ public interface URecipes {
         });
     }
 
-    static <T extends Recipe<?>> RecipeSerializer<T> register(String name, MapCodec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec) {
-        return register(name, new RecipeSerializer<>() {
-            @Override
-            public MapCodec<T> codec() {
-                return codec;
-            }
-
-            @Override
-            public PacketCodec<RegistryByteBuf, T> packetCodec() {
-                return packetCodec;
-            }
-        });
+    static <T extends Recipe<?>> RecipeSerializer<T> register(String name, MapCodec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec) {
+        return register(name, new RecipeSerializer<>(codec, packetCodec));
     }
 
     static <S extends RecipeSerializer<T>, T extends Recipe<?>> S register(String name, S serializer) {
-        return Registry.register(Registries.RECIPE_SERIALIZER, Unicopia.id(name), serializer);
+        return Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, Unicopia.id(name), serializer);
     }
 
-    static <T extends CustomIngredient> CustomIngredientSerializer<T> registerIngredient(String name, MapCodec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec) {
+    static <T extends CustomIngredient> CustomIngredientSerializer<T> registerIngredient(String name, MapCodec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec) {
         var serializer = new CustomIngredientSerializer<T>() {
             private final Identifier id = Unicopia.id(name);
 
@@ -101,7 +90,7 @@ public interface URecipes {
             }
 
             @Override
-            public PacketCodec<RegistryByteBuf, T> getPacketCodec() {
+            public StreamCodec<RegistryFriendlyByteBuf, T> getStreamCodec() {
                 return packetCodec;
             }
         };
@@ -110,52 +99,29 @@ public interface URecipes {
     }
 
     @SuppressWarnings("deprecation")
-    static Optional<RegistryEntryList<Item>> getRecipeContentsReplacement(RegistryEntry<Item> stack) {
-        if (stack.matches(Items.STICK.getRegistryEntry())) {
+    static Optional<HolderSet<Item>> getRecipeContentsReplacement(Holder<Item> stack) {
+        if (stack.is(Items.STICK.builtInRegistryHolder())) {
+            BuiltInRegistries.ITEM.get(ConventionalItemTags.WOODEN_RODS);
             return lookupTag(ConventionalItemTags.WOODEN_RODS, stack);
         }
-        if (stack.matches(Items.FEATHER.getRegistryEntry())) {
+        if (stack.is(Items.FEATHER.builtInRegistryHolder())) {
             return lookupTag(UTags.Items.MAGIC_FEATHERS, stack);
         }
         return Optional.empty();
     }
 
-    private static Optional<RegistryEntryList<Item>> lookupTag(TagKey<Item> tag, RegistryEntry<Item> canonicalParent) {
-        Registry<Item> registry = canonicalParent instanceof RegistryEntryListOwnerAccessor accessor && accessor.getOwner() instanceof Registry r ? Untyped.cast(r) : Registries.ITEM;
+    @SuppressWarnings("deprecation")
+    private static Optional<HolderSet<Item>> lookupTag(TagKey<Item> tag, Holder<Item> canonicalParent) {
+        Registry<Item> registry = canonicalParent instanceof RegistryEntryListOwnerAccessor accessor && accessor.getOwner() instanceof Registry r ? Untyped.cast(r) :BuiltInRegistries.ITEM;
 
-        return registry.getOptional(tag)
-                .<RegistryEntryList<Item>>map(Untyped::cast)
-                .or(() -> Optional.of(new RegistryEntryList.ListBacked<Item>() {
-                    @Override
-                    public boolean isBound() {
-                        return Registries.ITEM.getOptional(tag).filter(RegistryEntryList::isBound).isPresent();
-                    }
-
-                    @Override
-                    public Either<TagKey<Item>, List<RegistryEntry<Item>>> getStorage() {
-                        return Either.left(tag);
-                    }
-
-                    @Override
-                    public boolean contains(RegistryEntry<Item> entry) {
-                        return Registries.ITEM.getOptional(tag).filter(i -> i.contains(entry)).isPresent();
-                    }
-
-                    @Override
-                    public Optional<TagKey<Item>> getTagKey() {
-                        return Optional.of(tag);
-                    }
-
-                    @Override
-                    protected List<RegistryEntry<Item>> getEntries() {
-                        return Registries.ITEM.getOptional(tag).stream().flatMap(i -> i.stream()).toList();
-                    }
-                }));
+        return registry.get(tag)
+                .<HolderSet<Item>>map(Untyped::cast)
+                .or(() -> Optional.of(HolderSet.emptyNamed(registry, tag)));
     }
 
     static void bootstrap() {
         URecipeBookCategories.bootstrap();
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (FabricLoader.getInstance().isDevelopmentEnvironment() && !FabricLoader.getInstance().isModLoaded("farmersdelight")) {
             CuttingBoardRecipeJsonBuilder.CuttingBoardRecipe.bootstrap();
         }
         URecipeDisplays.bootstrap();

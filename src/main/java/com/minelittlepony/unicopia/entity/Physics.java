@@ -1,17 +1,16 @@
 package com.minelittlepony.unicopia.entity;
 
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public interface Physics extends NbtSerialisable {
     float DEFAULT_GRAVITY_FACTOR = 1;
 
     double calcGravity(double worldConstant);
 
-    Vec3d getMotionAngle();
+    Vec3 getMotionAngle();
 
     float getGravityModifier();
 
@@ -33,9 +32,9 @@ public interface Physics extends NbtSerialisable {
         return (int)Math.signum(getGravityModifier());
     }
 
-    default Box getBoxAtPosition(Vec3d pos) {
+    default AABB getBoxAtPosition(Vec3 pos) {
         return getBoxAtPosition(pos, isGravityNegative());
     }
 
-    Box getBoxAtPosition(Vec3d pos, boolean inverted);
+    AABB getBoxAtPosition(Vec3 pos, boolean inverted);
 }

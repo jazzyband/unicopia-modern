@@ -14,14 +14,13 @@ import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSpell, ProjectileDelegate.EntityHitListener {
     static final SpellAttribute<Boolean> TARGET_FOCUSED_ENTITY = SpellAttribute.createConditional(SpellAttributeType.FOCUSED_ENTITY, Trait.ORDER, order -> order >= 20);
@@ -53,8 +52,8 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
         target.getOrEmpty(caster.asWorld())
             .filter(entity -> entity.distanceTo(caster.asEntity()) > getDrawDropOffRange(caster))
             .ifPresent(entity -> {
-                Vec3d pos = caster.getOriginVector();
-                entity.requestTeleport(pos.x, pos.y, pos.z);
+                Vec3 pos = caster.getOriginVector();
+                entity.teleportTo(pos.x, pos.y, pos.z);
             });
 
         return super.tick(caster, situation);
@@ -63,14 +62,14 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
     @Override
     public void generateParticles(Caster<?> source) {
         double range = getDrawDropOffRange(source);
-        Vec3d origin = getOrigin(source);
+        Vec3 origin = getOrigin(source);
 
         source.spawnParticles(origin, new Sphere(false, range), 7, p -> {
             source.addParticle(
                     new FollowingParticleEffect(UParticles.HEALTH_DRAIN, origin, 0.4F)
-                        .withChild(ParticleTypes.EFFECT),
+                        .withChild(net.minecraft.core.particles.SpellParticleOption.create(ParticleTypes.EFFECT, 0xFFFFFF, 1)),
                     p,
-                    Vec3d.ZERO
+                    Vec3.ZERO
             );
         });
     }
@@ -91,19 +90,19 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
             force *= AttractionUtils.getForceAdjustment(target);
         }
 
-        if (!source.isClient() && !isGood && source.asWorld().random.nextInt(4500) == 0) {
-            source.asEntity().damage(source.asServerWorld(), source.damageOf(UDamageTypes.GAVITY_WELL_RECOIL, source), 4);
+        if (!source.isClient() && !isGood && source.asWorld().getRandom().nextInt(4500) == 0) {
+            source.asEntity().hurtServer(source.asServerWorld(), source.damageOf(UDamageTypes.GAVITY_WELL_RECOIL, source), 4);
         }
 
         AttractionUtils.applyForce(getOrigin(source), target, -force, 0, false);
 
         float maxVel = !isFriendlyTogether(source) ? 1 : 1.6f;
 
-        Vec3d vel = target.getVelocity();
+        Vec3 vel = target.getDeltaMovement();
 
-        double x = MathHelper.clamp(vel.x, -maxVel, maxVel);
-        double y = MathHelper.clamp(vel.y, -maxVel, maxVel);
-        double z = MathHelper.clamp(vel.z, -maxVel, maxVel);
+        double x = Mth.clamp(vel.x, -maxVel, maxVel);
+        double y = Mth.clamp(vel.y, -maxVel, maxVel);
+        double z = Mth.clamp(vel.z, -maxVel, maxVel);
 
         if (distance < 0.5) {
             z += maxVel * 2;
@@ -116,12 +115,12 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
         if (this.target.referenceEquals(target)) {
             target.fallDistance = 0;
 
-            if (target.isOnGround()) {
-                target.setPosition(target.getPos().add(0, 0.3, 0));
+            if (target.onGround()) {
+                target.setPos(target.position().add(0, 0.3, 0));
                 target.setOnGround(false);
             }
         }
-        target.setVelocity(x, y, z);
+        target.setDeltaMovement(x, y, z);
         Living.updateVelocity(target);
     }
 
@@ -129,7 +128,7 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
     public boolean setTarget(Entity target) {
         if (TARGET_FOCUSED_ENTITY.get(getTraits())) {
             this.target.set(target);
-            target.setGlowing(true);
+            target.setGlowingTag(true);
             return true;
         }
         return false;
@@ -138,7 +137,7 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
     @Override
     protected void onDestroyed(Caster<?> caster) {
         super.onDestroyed(caster);
-        target.getOrEmpty(caster.asWorld()).ifPresent(target -> target.setGlowing(false));
+        target.getOrEmpty(caster.asWorld()).ifPresent(target -> target.setGlowingTag(false));
     }
 
     @Override
@@ -150,14 +149,14 @@ public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSp
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
-        compound.put("target", EntityReference.codec().codec(), target);
+        compound.store("target", EntityReference.CODEC, target);
         timer.toNBT(compound, lookup);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         target.fromNBT(compound.getCompoundOrEmpty("target"), lookup);
         timer.fromNBT(compound, lookup);

@@ -1,0 +1,19 @@
+{
+  "values": [
+    "unicopia:cooked_tropical_fish",
+    "unicopia:cooked_pufferfish",
+    "unicopia:fried_axolotl",
+    {
+      "id": "farmersdelight:fish_stew",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:baked_cod_stew",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:grilled_salmon",
+      "required": false
+    }
+  ]
+}

@@ -2,73 +2,71 @@ package com.minelittlepony.unicopia.command;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.function.Function;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerPlayer;
 import com.minelittlepony.unicopia.*;
 import com.minelittlepony.unicopia.client.TextHelper;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 class RacelistCommand {
 
-    static LiteralArgumentBuilder<ServerCommandSource> create() {
-        return CommandManager.literal("racelist").requires(s -> s.hasPermissionLevel(3))
-            .then(CommandManager.literal("show")
+    static LiteralArgumentBuilder<CommandSourceStack> create() {
+        return Commands.literal("racelist").requires(s -> s.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_ADMIN))
+            .then(Commands.literal("show")
             .executes(context -> {
-                context.getSource().sendFeedback(() -> {
+                context.getSource().sendSuccess(() -> {
                     if (!AllowList.INSTANCE.isEnabled()) {
-                        return Text.translatable("commands.racelist.inactive");
+                        return Component.translatable("commands.racelist.inactive");
                     }
-                    Set<MutableText> allowed = new HashSet<>();
-                    Set<MutableText> unallowed = new HashSet<>();
+                    Set<MutableComponent> allowed = new HashSet<>();
+                    Set<MutableComponent> unallowed = new HashSet<>();
                     Race.REGISTRY.forEach(race -> {
-                        (AllowList.INSTANCE.permits(race) ? allowed : unallowed).add(Text.translatable("commands.racelist.get.list_item",
+                        (AllowList.INSTANCE.permits(race) ? allowed : unallowed).add(Component.translatable("commands.racelist.get.list_item",
                                 race.getDisplayName(),
-                                Text.literal(race.getId().toString()).formatted(Formatting.GRAY)
+                                Component.literal(race.getId().toString()).withStyle(ChatFormatting.GRAY)
                         ));
                     });
 
-                    return Text.translatable("commands.racelist.get.allowed", allowed.size()).formatted(Formatting.YELLOW)
-                            .append("\n").append(TextHelper.join(Text.literal("\n"), allowed))
+                    return Component.translatable("commands.racelist.get.allowed", allowed.size()).withStyle(ChatFormatting.YELLOW)
+                            .append("\n").append(TextHelper.join(Component.literal("\n"), allowed))
                             .append("\n")
-                            .append(Text.translatable("commands.racelist.get.not_allowed", unallowed.size()).formatted(Formatting.YELLOW))
-                            .append("\n").append(TextHelper.join(Text.literal("\n"), unallowed));
+                            .append(Component.translatable("commands.racelist.get.not_allowed", unallowed.size()).withStyle(ChatFormatting.YELLOW))
+                            .append("\n").append(TextHelper.join(Component.literal("\n"), unallowed));
                 }, false);
                 return 0;
             })
             )
-            .then(CommandManager.literal("reset")
+            .then(Commands.literal("reset")
             .executes(context -> {
-                boolean success = AllowList.INSTANCE.disable(context.getSource().getServer());
-                context.getSource().sendFeedback(() -> Text.translatable("commands.racelist.reset." + (success ? "success" : "fail")).formatted(Formatting.YELLOW), false);
+                boolean success = AllowList.INSTANCE.disable();
+                context.getSource().sendSuccess(() -> Component.translatable("commands.racelist.reset." + (success ? "success" : "fail")).withStyle(ChatFormatting.YELLOW), false);
                 return 0;
             })
             )
-            .then(CommandManager.literal("allow")
-                .then(CommandManager.argument("race", Race.argument()).suggests(UCommandSuggestion.ALL_RACE_SUGGESTIONS)
+            .then(Commands.literal("allow")
+                .then(Commands.argument("race", Race.argument()).suggests(UCommandSuggestion.ALL_RACE_SUGGESTIONS)
                 .executes(context -> toggle(context.getSource(), context.getSource().getPlayer(), Race.fromArgument(context, "race"), "allowed", AllowList.INSTANCE::add))
             ))
-            .then(CommandManager.literal("disallow")
-                .then(CommandManager.argument("race", Race.argument()).suggests(UCommandSuggestion.ALL_RACE_SUGGESTIONS)
+            .then(Commands.literal("disallow")
+                .then(Commands.argument("race", Race.argument()).suggests(UCommandSuggestion.ALL_RACE_SUGGESTIONS)
                 .executes(context -> toggle(context.getSource(), context.getSource().getPlayer(), Race.fromArgument(context, "race"), "disallowed", AllowList.INSTANCE::remove))
             ));
     }
 
-    static int toggle(ServerCommandSource source, ServerPlayerEntity player, Race race, String action, BiFunction<MinecraftServer, Race, Boolean> func) {
+    static int toggle(CommandSourceStack source, ServerPlayer player, Race race, String action, Function<Race, Boolean> func) {
         boolean enabled = AllowList.INSTANCE.isEnabled();
-        boolean success = func.apply(source.getServer(), race);
+        boolean success = func.apply(race);
 
         if (enabled != AllowList.INSTANCE.isEnabled()) {
-            source.sendFeedback(() -> Text.translatable("commands.racelist." + (enabled ? "disabled" : "enabled")).formatted(enabled ? Formatting.RED : Formatting.GREEN), false);
+            source.sendSuccess(() -> Component.translatable("commands.racelist." + (enabled ? "disabled" : "enabled")).withStyle(enabled ? ChatFormatting.RED : ChatFormatting.GREEN), false);
         }
 
-        source.sendFeedback(() -> {
+        source.sendSuccess(() -> {
             String translationKey = "commands.racelist." + action;
             if (!success) {
                 if (race.isUnset()) {
@@ -78,9 +76,8 @@ class RacelistCommand {
                 }
             }
 
-            return Text.translatable(translationKey, race.getDisplayName().copy().formatted(Formatting.GOLD)).formatted(success ? Formatting.GREEN : Formatting.RED);
+            return Component.translatable(translationKey, race.getDisplayName().copy().withStyle(ChatFormatting.GOLD)).withStyle(success ? ChatFormatting.GREEN : ChatFormatting.RED);
         }, false);
-
         return 0;
     }
 }

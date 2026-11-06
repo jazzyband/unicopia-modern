@@ -3,35 +3,34 @@ package com.minelittlepony.unicopia.diet.affliction;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.Mth;
+import net.minecraft.util.StringUtil;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.StringHelper;
-import net.minecraft.util.math.MathHelper;
-
-public record StatusEffectAffliction(RegistryEntry<StatusEffect> effect, Range seconds, Range amplifier, int chance) implements Affliction {
+public record StatusEffectAffliction(Holder<MobEffect> effect, Range seconds, Range amplifier, int chance) implements Affliction {
     public static final MapCodec<StatusEffectAffliction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Registries.STATUS_EFFECT.getEntryCodec().fieldOf("effect").forGetter(StatusEffectAffliction::effect),
+            BuiltInRegistries.MOB_EFFECT.holderByNameCodec().fieldOf("effect").forGetter(StatusEffectAffliction::effect),
             Range.CODEC.fieldOf("seconds").forGetter(StatusEffectAffliction::seconds),
             Range.CODEC.optionalFieldOf("amplifier", Range.of(0, -1)).forGetter(StatusEffectAffliction::amplifier),
             Codec.INT.optionalFieldOf("chance", 0).forGetter(StatusEffectAffliction::chance)
     ).apply(instance, StatusEffectAffliction::new));
-    public static final PacketCodec<RegistryByteBuf, StatusEffectAffliction> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.registryEntry(RegistryKeys.STATUS_EFFECT), StatusEffectAffliction::effect,
+    public static final StreamCodec<RegistryFriendlyByteBuf, StatusEffectAffliction> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.holderRegistry(Registries.MOB_EFFECT), StatusEffectAffliction::effect,
             Range.PACKET_CODEC, StatusEffectAffliction::seconds,
             Range.PACKET_CODEC, StatusEffectAffliction::amplifier,
-            PacketCodecs.INTEGER, StatusEffectAffliction::chance,
+            ByteBufCodecs.INT, StatusEffectAffliction::chance,
             StatusEffectAffliction::new
     );
 
@@ -41,37 +40,37 @@ public record StatusEffectAffliction(RegistryEntry<StatusEffect> effect, Range s
     }
 
     @Override
-    public void afflict(PlayerEntity player, ItemStack stack) {
-        if (player.getWorld().isClient || (chance > 0 && player.getWorld().random.nextInt(chance) > 0)) {
+    public void afflict(Player player, ItemStack stack) {
+        if (player.level().isClientSide() || (chance > 0 && player.level().getRandom().nextInt(chance) > 0)) {
             return;
         }
 
         float health = player.getHealth();
         float oldMaxHealth = player.getMaxHealth();
-        StatusEffectInstance current = player.getStatusEffect(effect);
-        player.addStatusEffect(new StatusEffectInstance(effect,
+        MobEffectInstance current = player.getEffect(effect);
+        player.addEffect(new MobEffectInstance(effect,
                 seconds.getClamped(current == null ? 0 : current.getDuration(), 20),
                 amplifier.getClamped(current == null ? 0 : current.getAmplifier(), 1)
         ));
         // keep original health
         if (player.getMaxHealth() != oldMaxHealth) {
-            player.setHealth(MathHelper.clamp(health, 0, player.getMaxHealth()));
+            player.setHealth(Mth.clamp(health, 0, player.getMaxHealth()));
         }
     }
 
     @Override
-    public Text getName() {
-        MutableText text = effect.value().getName().copy();
+    public Component getName() {
+        MutableComponent text = effect.value().getDisplayName().copy();
 
         if (amplifier.min() > 0) {
-            text = Text.translatable("potion.withAmplifier", text, Text.translatable("potion.potency." + (amplifier.min())));
+            text = Component.translatable("potion.withAmplifier", text, Component.translatable("potion.potency." + (amplifier.min())));
         }
 
-        float tickRate = MinecraftClient.getInstance().world == null ? 20 : MinecraftClient.getInstance().world.getTickManager().getTickRate();
-        text = Text.translatable("potion.withDuration", text, StringHelper.formatTicks(seconds.min() * 20, tickRate));
+        float tickRate = Minecraft.getInstance().level == null ? 20 : Minecraft.getInstance().level.tickRateManager().tickrate();
+        text = Component.translatable("potion.withDuration", text, StringUtil.formatTickDuration(seconds.min() * 20, tickRate));
 
         if (chance > 0) {
-            text = Text.translatable("potion.withChance", chance, text);
+            text = Component.translatable("potion.withChance", chance, text);
         }
         return text;
     }

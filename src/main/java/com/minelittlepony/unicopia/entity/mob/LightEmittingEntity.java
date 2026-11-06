@@ -1,15 +1,14 @@
 package com.minelittlepony.unicopia.entity.mob;
 
 import com.minelittlepony.unicopia.entity.DynamicLightSource;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.Level;
 
 public abstract class LightEmittingEntity extends Entity implements DynamicLightSource {
     private final LightEmitter<?> emitter = new LightEmitter<>(this);
 
-    public LightEmittingEntity(EntityType<?> type, World world) {
+    public LightEmittingEntity(EntityType<?> type, Level world) {
         super(type, world);
     }
 
@@ -20,8 +19,8 @@ public abstract class LightEmittingEntity extends Entity implements DynamicLight
     }
 
     @Override
-    public void onRemoved() {
-        super.onRemoved();
+    public void onClientRemoval() {
+        super.onClientRemoval();
         emitter.remove();
     }
 }

@@ -6,28 +6,27 @@ import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.effect.EffectUtils;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
-import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MovementType;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 
 public interface AttractionUtils {
 
-    static double getAttractiveForce(double wellMass, Vec3d wellPosition, Entity target) {
-        return (wellMass * AttractionUtils.getMass(target)) / MathHelper.square(wellPosition.distanceTo(target.getPos()));
+    static double getAttractiveForce(double wellMass, Vec3 wellPosition, Entity target) {
+        return (wellMass * AttractionUtils.getMass(target)) / Mth.square(wellPosition.distanceTo(target.position()));
     }
 
     static double getMass(Entity entity) {
-        double baseMass = entity.getWidth() * entity.getHeight();
+        double baseMass = entity.getBbWidth() * entity.getBbHeight();
         if (entity instanceof ItemEntity item) {
-            baseMass *= item.getStack().getCount();
+            baseMass *= item.getItem().getCount();
             @Nullable
-            Block block = Block.getBlockFromItem(item.getStack().getItem());
+            Block block = Block.byItem(item.getItem().getItem());
             if (block != null) {
-                baseMass *= MathHelper.clamp(1 + block.getHardness(), 1, 5);
+                baseMass *= Mth.clamp(1 + block.defaultDestroyTime(), 1, 5);
             }
         }
         return baseMass;
@@ -36,22 +35,21 @@ public interface AttractionUtils {
     /**
      * Applies a force to the given entity relative to a given center position
      */
-    static void applyForce(Vec3d center, Entity target, double force, double yChange, boolean clampVelocity) {
+    static void applyForce(Vec3 center, Entity target, double force, double yChange, boolean clampVelocity) {
         if (clampVelocity) {
-            target.setVelocity(target.getVelocity().multiply(Math.min(1, 1 - force)));
+            target.setDeltaMovement(target.getDeltaMovement().scale(Math.min(1, 1 - force)));
         }
-        center = target.getPos().subtract(center).normalize().multiply(force);
+        center = target.position().subtract(center).normalize().scale(force);
 
         if (target instanceof LivingEntity) {
-            center = center.multiply(1 / EnchantmentUtil.getWeight((LivingEntity)target));
+            center = center.scale(1 / EnchantmentUtil.getWeight((LivingEntity)target));
         }
 
-        target.addVelocity(
+        target.push(
                 center.x,
                 center.y + yChange,
                 center.z
         );
-        target.move(MovementType.PISTON, target.getVelocity());
         Living.updateVelocity(target);
     }
 

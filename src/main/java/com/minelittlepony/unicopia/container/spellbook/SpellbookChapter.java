@@ -3,16 +3,14 @@ package com.minelittlepony.unicopia.container.spellbook;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.UnaryOperator;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.text.TextColor;
 
 public record SpellbookChapter (
     TabSide side,
@@ -26,11 +24,11 @@ public record SpellbookChapter (
             Codec.INT.optionalFieldOf("color", 0).forGetter(SpellbookChapter::color),
             Contents.CODEC.xmap(Contents::pages, Contents::new).fieldOf("content").forGetter(SpellbookChapter::pages)
     ).apply(instance, SpellbookChapter::new));
-    public static final PacketCodec<RegistryByteBuf, SpellbookChapter> PACKET_CODEC = PacketCodec.tuple(
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpellbookChapter> PACKET_CODEC = StreamCodec.composite(
             TabSide.PACKET_CODEC, SpellbookChapter::side,
-            PacketCodecs.INTEGER, SpellbookChapter::tabY,
-            PacketCodecs.INTEGER, SpellbookChapter::color,
-            Page.PACKET_CODEC.collect(PacketCodecs.toList()), SpellbookChapter::pages,
+            ByteBufCodecs.INT, SpellbookChapter::tabY,
+            ByteBufCodecs.INT, SpellbookChapter::color,
+            Page.PACKET_CODEC.apply(ByteBufCodecs.list()), SpellbookChapter::pages,
             SpellbookChapter::new
     );
 
@@ -41,74 +39,59 @@ public record SpellbookChapter (
     }
 
     public record Page (
-            Text title,
+            Component title,
             int level,
             int color,
             List<ChapterPageElement> elements
         ) {
         public static final Codec<Page> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                TextCodecs.CODEC.optionalFieldOf("title", Text.empty()).forGetter(Page::title),
+                ComponentSerialization.CODEC.optionalFieldOf("title", Component.empty()).forGetter(Page::title),
                 Codec.INT.optionalFieldOf("level", 0).forGetter(Page::level),
-                TextColor.CODEC.xmap(TextColor::getRgb, TextColor::fromRgb).optionalFieldOf("color", 0).forGetter(Page::color),
+                TextColor.CODEC.xmap(TextColor::getValue, TextColor::fromRgb).optionalFieldOf("color", 0).forGetter(Page::color),
                 ChapterPageElement.CODEC.listOf().optionalFieldOf("elements", List.of()).forGetter(Page::elements)
         ).apply(instance, Page::new));
-        public static final PacketCodec<RegistryByteBuf, Page> PACKET_CODEC = PacketCodec.tuple(
-            TextCodecs.PACKET_CODEC, Page::title,
-            PacketCodecs.INTEGER, Page::level,
-            PacketCodecs.INTEGER, Page::color,
-            ChapterPageElement.PACKET_CODEC.collect(PacketCodecs.toList()), Page::elements,
+        public static final StreamCodec<RegistryFriendlyByteBuf, Page> PACKET_CODEC = StreamCodec.composite(
+            ComponentSerialization.TRUSTED_CONTEXT_FREE_STREAM_CODEC, Page::title,
+            ByteBufCodecs.INT, Page::level,
+            ByteBufCodecs.INT, Page::color,
+            ChapterPageElement.PACKET_CODEC.apply(ByteBufCodecs.list()), Page::elements,
             Page::new
         );
 
-        public static final class Builder implements UnaryOperator<SpellbookChapter.Builder> {
-            private Text title = Text.empty();
+        public static final class Builder {
+            private Component title = Component.empty();
             private int level = 0;
             private int color = 0;
             private final List<ChapterPageElement> elements = new ArrayList<>();
 
             private Builder() {}
 
-            public Builder title(Text title) {
+            public com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page.Builder title(Component title) {
                 this.title = title;
                 return this;
             }
 
-            public Builder level(int level) {
+            public com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page.Builder level(int level) {
                 this.level = level;
                 return this;
             }
 
-            public Builder color(int color) {
+            public com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page.Builder color(int color) {
                 this.color = color;
                 return this;
             }
 
-            public Builder element(ChapterPageElement element) {
-                this.elements.add(element);
+            public com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page.Builder element(ChapterPageElement...elements) {
+                this.elements.addAll(List.of(elements));
                 return this;
             }
 
-            public Builder apply(UnaryOperator<Builder> action) {
+            public com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page.Builder apply(UnaryOperator<com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page.Builder> action) {
                 return action.apply(this);
-            }
-
-            @SafeVarargs
-            public final Builder apply(UnaryOperator<Builder>...actions) {
-                var self = this;
-                for (int i = 0; i < actions.length; i++) {
-                    self = self.apply(actions[i]);
-                }
-                return self;
             }
 
             public Page build() {
                 return new Page(title, level, color, List.copyOf(elements));
-            }
-
-            @Override
-            public SpellbookChapter.Builder apply(SpellbookChapter.Builder builder) {
-                builder.pages.add(build());
-                return builder;
             }
         }
     }
@@ -144,7 +127,6 @@ public record SpellbookChapter (
             return this;
         }
 
-        @Deprecated
         public Builder page(Page.Builder page) {
             this.pages.add(page.build());
             return this;
@@ -152,15 +134,6 @@ public record SpellbookChapter (
 
         public Builder apply(UnaryOperator<Builder> action) {
             return action.apply(this);
-        }
-
-        @SafeVarargs
-        public final Builder apply(UnaryOperator<Builder>...actions) {
-            var self = this;
-            for (int i = 0; i < actions.length; i++) {
-                self = self.apply(actions[i]);
-            }
-            return self;
         }
 
         public SpellbookChapter build() {

@@ -1,7 +1,19 @@
 package com.minelittlepony.unicopia.item;
 
 import java.util.function.Consumer;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.InteractionManager;
@@ -12,38 +24,24 @@ import com.minelittlepony.unicopia.entity.mob.UEntityAttributes;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.projectile.PhysicsBodyProjectileEntity;
 
-import net.minecraft.component.type.AttributeModifierSlot;
-import net.minecraft.component.type.AttributeModifiersComponent;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.world.World;
-
 public class HorseShoeItem extends HeavyProjectileItem {
 
     private final float projectileInnacuracy;
     private final float baseProjectileSpeed;
 
-    public HorseShoeItem(Item.Settings settings, float projectileDamage, float projectileInnacuracy, float baseProjectileSpeed) {
-        super(settings.attributeModifiers(AttributeModifiersComponent.builder().add(
+    public HorseShoeItem(Item.Properties settings, float projectileDamage, float projectileInnacuracy, float baseProjectileSpeed) {
+        super(settings.attributes(ItemAttributeModifiers.builder().add(
             UEntityAttributes.EXTENDED_ATTACK_DISTANCE,
-            new EntityAttributeModifier(UItemModifierIds.ATTACK_RANGE_MODIFIER_ID, -3F, EntityAttributeModifier.Operation.ADD_VALUE),
-            AttributeModifierSlot.MAINHAND
+            new AttributeModifier(UItemModifierIds.ATTACK_RANGE_MODIFIER_ID, -3F, AttributeModifier.Operation.ADD_VALUE),
+            EquipmentSlotGroup.MAINHAND
     ).build()), projectileDamage);
         this.projectileInnacuracy = projectileInnacuracy;
         this.baseProjectileSpeed = baseProjectileSpeed;
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, Item.TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
-        float degradation = (stack.getDamage() / (float)stack.getMaxDamage());
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
+        float degradation = (stack.getDamageValue() / (float)stack.getMaxDamage());
         float inaccuracy = projectileInnacuracy + degradation * 30;
 
         var race = InteractionManager.getInstance().getClientPony().map(Pony::getCompositeRace).orElse(null);
@@ -59,17 +57,17 @@ public class HorseShoeItem extends HeavyProjectileItem {
         speed /= 1.5F;
         speed *= 1 - (0.6F * degradation);
 
-        textConsumer.accept(Text.empty());
-        textConsumer.accept(Text.translatable("item.unicopia.horse_shoe.accuracy", 100 * (30 - inaccuracy) / 30).formatted(Formatting.GRAY));
-        textConsumer.accept(Text.translatable("item.unicopia.horse_shoe.speed", Math.max(0.2F, speed)).formatted(Formatting.GRAY));
+        textConsumer.accept(Component.empty());
+        textConsumer.accept(Component.translatable("item.unicopia.horse_shoe.accuracy", 100 * (30 - inaccuracy) / 30).withStyle(ChatFormatting.GRAY));
+        textConsumer.accept(Component.translatable("item.unicopia.horse_shoe.speed", Math.max(0.2F, speed)).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
-    public PhysicsBodyProjectileEntity createProjectile(ItemStack stack, World world, @Nullable PlayerEntity player) {
+    public PhysicsBodyProjectileEntity createProjectile(ItemStack stack, Level world, @Nullable Player player) {
         PhysicsBodyProjectileEntity projectile = super.createProjectile(stack, world, player);
         projectile.setDamageType(UDamageTypes.HORSESHOE);
 
-        float degradation = (stack.getDamage() / (float)stack.getMaxDamage());
+        float degradation = (stack.getDamageValue() / (float)stack.getMaxDamage());
 
         if (player != null) {
             Pony pony = Pony.of(player);
@@ -84,27 +82,27 @@ public class HorseShoeItem extends HeavyProjectileItem {
             speed /= 1.5F;
             speed *= 1 - (0.6F * degradation);
             float inaccuracy = projectileInnacuracy + degradation * 30;
-            projectile.setVelocity(player, player.getPitch(), player.getYaw(), 0, Math.max(0.2F, speed), inaccuracy);
+            projectile.shootFromRotation(player, player.getXRot(), player.getYRot(), 0, Math.max(0.2F, speed), inaccuracy);
         }
         return projectile;
     }
 
     @Override
-    public void initializeProjectile(ProjectileEntity entity, double x, double y, double z, float power, float uncertainty) {
+    public void shoot(Projectile entity, double x, double y, double z, float power, float uncertainty) {
         float degradation = 0;
         if (entity instanceof PhysicsBodyProjectileEntity p) {
-            ItemStack stack = p.getStack();
-            degradation = (stack.getDamage() / (float)stack.getMaxDamage());
+            ItemStack stack = p.getItem();
+            degradation = (stack.getDamageValue() / (float)stack.getMaxDamage());
         }
 
         float speed = Math.max(0.2F, ((baseProjectileSpeed + 0.1F) / 1.5F) * (1 - (0.6F * degradation)));
         float inaccuracy = projectileInnacuracy + degradation * 30;
-        entity.setVelocity(x, y, z, speed, inaccuracy);
+        entity.shoot(x, y, z, speed, inaccuracy);
     }
 
 
     @Override
     public SoundEvent getThrowSound(ItemStack stack) {
-        return USounds.Vanilla.ITEM_TRIDENT_THROW.value();
+        return USounds.Vanilla.TRIDENT_THROW.value();
     }
 }

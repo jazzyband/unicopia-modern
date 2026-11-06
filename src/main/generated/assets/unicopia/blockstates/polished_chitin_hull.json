@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "unicopia:block/polished_chitin_hull",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "unicopia:block/polished_chitin_hull",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "unicopia:block/polished_chitin_hull",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "unicopia:block/polished_chitin_hull",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "unicopia:block/polished_chitin_hull"
+    },
+    "facing=west": {
+      "model": "unicopia:block/polished_chitin_hull",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

@@ -1,19 +1,18 @@
 package com.minelittlepony.unicopia.block.state;
 
 import java.util.*;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.Identifier;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.world.World;
 
 public interface ReversableStateChange {
     Codec<ReversableStateChange> CODEC = Identifier.CODEC.dispatch(ReversableStateChange::getType, type -> ReversableStateChange.REGISTRY.get(type));
@@ -29,7 +28,7 @@ public interface ReversableStateChange {
 
     Identifier getType();
 
-    Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state);
+    Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state);
 
     default Optional<StatePredicate> getInverse() {
         return getInverse(this);
@@ -57,8 +56,8 @@ public interface ReversableStateChange {
         }
 
         @Override
-        public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
-            if (world.random.nextFloat() > chance) {
+        public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
+            if (world.getRandom().nextFloat() > chance) {
                 return Optional.empty();
             }
             return change.getConverted(world, state);
@@ -80,10 +79,10 @@ public interface ReversableStateChange {
         }
 
         @Override
-        public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
-            return Registries.BLOCK.getRandomEntry(tag.tag(), world.random)
-                    .map(RegistryEntry::value)
-                    .map(Block::getDefaultState)
+        public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
+            return BuiltInRegistries.BLOCK.getRandomElementOf(tag.tag(), world.getRandom())
+                    .map(Holder::value)
+                    .map(Block::defaultBlockState)
                     .map(newState -> StateUtil.copyState(state, newState));
         }
     }
@@ -103,8 +102,8 @@ public interface ReversableStateChange {
         }
 
         @Override
-        public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
-            return Registries.BLOCK.getOptionalValue(this.state.id()).map(Block::getDefaultState)
+        public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
+            return BuiltInRegistries.BLOCK.getOptional(this.state.id()).map(Block::defaultBlockState)
                     .map(newState -> this.state.applyTo(world, StateUtil.copyState(state, newState)));
         }
     }
@@ -122,9 +121,9 @@ public interface ReversableStateChange {
         }
 
         @Override
-        public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
+        public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
             return StatePredicate.getProperty(state, property)
-                    .flatMap(property -> property.parse(value).map(v -> state.with(property, v)));
+                    .flatMap(property -> property.getValue(value).map(v -> state.setValue(property, v)));
         }
     }
 
@@ -138,7 +137,7 @@ public interface ReversableStateChange {
         }
 
         @Override
-        public Optional<@NotNull BlockState> getConverted(World world, @NotNull BlockState state) {
+        public Optional<@NotNull BlockState> getConverted(Level world, @NotNull BlockState state) {
             return StatePredicate.getProperty(state, property).map(property -> state.cycle(property));
         }
     }

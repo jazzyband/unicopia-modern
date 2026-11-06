@@ -3,8 +3,9 @@ package com.minelittlepony.unicopia.entity.player;
 import com.minelittlepony.unicopia.ability.magic.Levelled;
 import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.network.track.TrackableDataType;
-import net.minecraft.sound.*;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 
 class PlayerLevelStore implements Levelled.LevelStore {
 
@@ -30,7 +31,7 @@ class PlayerLevelStore implements Levelled.LevelStore {
             if (upgradeMana) {
                 pony.getMagicalReserves().getMana().addPercent(50);
             }
-            pony.asWorld().playSound(null, pony.getOrigin(), levelUpSound, SoundCategory.PLAYERS, 1, 2);
+            pony.asWorld().playSound(null, pony.getOrigin(), levelUpSound, SoundSource.PLAYERS, 1, 2);
         }
     }
 
@@ -46,6 +47,6 @@ class PlayerLevelStore implements Levelled.LevelStore {
 
     @Override
     public void set(int level) {
-        dataEntry.set(MathHelper.clamp(level, 0, getMax()));
+        dataEntry.set(Mth.clamp(level, 0, getMax()));
     }
 }

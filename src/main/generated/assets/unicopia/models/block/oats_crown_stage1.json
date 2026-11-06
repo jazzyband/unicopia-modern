@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/crop",
+  "textures": {
+    "crop": "unicopia:block/oats_crown_stage1"
+  }
+}

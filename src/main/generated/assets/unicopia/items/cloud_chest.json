@@ -1,0 +1,10 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "unicopia:item/cloud_chest",
+    "model": {
+      "type": "unicopia:cloud_chest",
+      "texture": "unicopia:textures/entity/chest/cloud.png"
+    }
+  }
+}

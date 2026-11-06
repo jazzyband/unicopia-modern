@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:harmony",
+  "author": {
+    "translate": "painting.unicopia.harmony.author"
+  },
+  "height": 3,
+  "title": {
+    "translate": "painting.unicopia.harmony.title"
+  },
+  "width": 3
+}

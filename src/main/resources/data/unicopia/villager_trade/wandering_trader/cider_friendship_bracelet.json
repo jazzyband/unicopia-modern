@@ -1,0 +1,11 @@
+{
+  "wants": {
+    "id": "unicopia:cider"
+  },
+  "gives": {
+    "id": "unicopia:friendship_bracelet"
+  },
+  "max_uses": 6,
+  "xp": 1,
+  "reputation_discount": 0.05
+}

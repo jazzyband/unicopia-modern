@@ -13,28 +13,28 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredientSerializer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.ItemLike;
 
 public class IngredientWithSpell implements CustomIngredient {
     public static final Codec<IngredientWithSpell> CODEC = RecordCodecBuilder.create(i -> i.group(
             Ingredient.CODEC.optionalFieldOf("item").forGetter(o -> o.stack),
-            SpellType.REGISTRY.getCodec().optionalFieldOf("spell").forGetter(o -> o.spell)
+            SpellType.REGISTRY.byNameCodec().optionalFieldOf("spell").forGetter(o -> o.spell)
     ).apply(i, IngredientWithSpell::new));
     public static final Codec<IngredientWithSpell> FLEXIBLE_CODEC = Codec.xor(Ingredient.CODEC, CODEC).xmap(
             either -> Either.unwrap(either.mapLeft(i -> new IngredientWithSpell(Optional.of(i), Optional.empty()))),
             ingredient -> ingredient.stack.isEmpty() || ingredient.spell.isPresent() ? Either.right(ingredient) : Either.left(ingredient.stack.get())
     );
-    public static final PacketCodec<RegistryByteBuf, IngredientWithSpell> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.optional(Ingredient.PACKET_CODEC), i -> i.stack,
-            PacketCodecs.optional(Identifier.PACKET_CODEC.xmap(SpellType::getKey, SpellType::getId)), i -> i.spell,
+    public static final StreamCodec<RegistryFriendlyByteBuf, IngredientWithSpell> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.optional(Ingredient.CONTENTS_STREAM_CODEC), i -> i.stack,
+            ByteBufCodecs.optional(Identifier.STREAM_CODEC.map(SpellType::getKey, SpellType::getId)), i -> i.spell,
             IngredientWithSpell::new
     );
 
@@ -43,25 +43,24 @@ public class IngredientWithSpell implements CustomIngredient {
 
     private final Supplier<ItemStack[]> stacks;
 
-    public static IngredientWithSpell mundane(ItemConvertible item) {
-        return new IngredientWithSpell(Optional.of(Ingredient.ofItems(item)), Optional.empty());
+    public static IngredientWithSpell mundane(ItemLike item) {
+        return new IngredientWithSpell(Optional.of(Ingredient.of(item)), Optional.empty());
     }
 
-    public static IngredientWithSpell of(ItemConvertible base, SpellType<?> spell) {
+    public static IngredientWithSpell of(ItemLike base, SpellType<?> spell) {
         if (spell == SpellType.EMPTY_KEY) {
             return mundane(base);
         }
-        return new IngredientWithSpell(Optional.of(Ingredient.ofItems(base)), Optional.of(spell));
+        return new IngredientWithSpell(Optional.of(Ingredient.of(base)), Optional.of(spell));
     }
 
-    @SuppressWarnings("deprecation")
     private IngredientWithSpell(Optional<Ingredient> stack, Optional<SpellType<?>> spell) {
         this.stack = stack;
         this.spell = spell;
         stacks = Suppliers.memoize(() -> {
             return stack.stream()
-                    .flatMap(Ingredient::getMatchingItems)
-                    .map(item -> item.value().getDefaultStack())
+                    .flatMap(Ingredient::items)
+                    .map(item -> item.value().getDefaultInstance())
                     .map(s -> spell.map(p -> EnchantableItem.enchant(s, p)).orElse(s))
                     .toArray(ItemStack[]::new);
         });
@@ -86,8 +85,8 @@ public class IngredientWithSpell implements CustomIngredient {
 
     @Deprecated
     @Override
-    public Stream<RegistryEntry<Item>> getMatchingItems() {
-        return stack.stream().flatMap(i -> i.getMatchingItems());
+    public Stream<Holder<Item>> items() {
+        return stack.stream().flatMap(i -> i.items());
     }
 
     public ItemStack[] getMatchingStacks() {

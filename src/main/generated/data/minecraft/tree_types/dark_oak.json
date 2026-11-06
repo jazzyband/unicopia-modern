@@ -1,0 +1,26 @@
+{
+  "drops": [
+    {
+      "item": "unicopia:sweet_apple",
+      "weight": 2
+    },
+    {
+      "item": "unicopia:rotten_apple",
+      "weight": 1
+    },
+    {
+      "item": "minecraft:apple",
+      "weight": 5
+    }
+  ],
+  "leaves": [
+    "minecraft:dark_oak_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:dark_oak_wood",
+    "minecraft:dark_oak_log"
+  ],
+  "rarity": 7,
+  "wideTrunk": true
+}

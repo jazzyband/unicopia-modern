@@ -1,12 +1,11 @@
 package com.minelittlepony.unicopia.mixin;
 
+import net.minecraft.world.entity.monster.Blaze;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-import net.minecraft.entity.mob.BlazeEntity;
-
-@Mixin(BlazeEntity.class)
+@Mixin(Blaze.class)
 public interface MixinBlazeEntity {
     @Invoker
-    void invokeSetFireActive(boolean active);
+    void invokeSetCharged(boolean active);
 }

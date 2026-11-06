@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:pegasus/pegasus_route",
+  "criteria": {
+    "deter_phantom": {
+      "conditions": {
+        "event": "kill_phantom_while_flying",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.deter_phantom.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "minecraft:phantom_membrane"
+    },
+    "title": {
+      "translate": "advancements.unicopia.deter_phantom.title"
+    }
+  },
+  "requirements": [
+    [
+      "deter_phantom"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "sends_telemetry_event": true
+}

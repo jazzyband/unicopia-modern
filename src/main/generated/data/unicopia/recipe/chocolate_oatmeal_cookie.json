@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "unicopia:oats",
+    "unicopia:oats",
+    "minecraft:cocoa_beans"
+  ],
+  "result": {
+    "id": "unicopia:chocolate_oatmeal_cookie"
+  }
+}

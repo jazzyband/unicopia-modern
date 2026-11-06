@@ -5,25 +5,24 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import com.minelittlepony.unicopia.entity.duck.RotatedView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.chunk.LevelChunk;
 
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.chunk.WorldChunk;
-
-@Mixin(WorldChunk.class)
+@Mixin(LevelChunk.class)
 abstract class MixinWorldChunk {
 
     @ModifyVariable(method = {
-            "getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;",
-            "setBlockState(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;I)Lnet/minecraft/block/BlockState;",
-            "getBlockEntity(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/world/chunk/WorldChunk$CreationType;)Lnet/minecraft/block/entity/BlockEntity;",
-            "removeBlockEntity(Lnet/minecraft/util/math/BlockPos;)V",
+            "getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;",
+            "setBlockState(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Lnet/minecraft/world/level/block/state/BlockState;",
+            "getBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/chunk/LevelChunk$EntityCreationType;)Lnet/minecraft/world/level/block/entity/BlockEntity;",
+            "removeBlockEntity(Lnet/minecraft/core/BlockPos;)V",
     }, at = @At("HEAD"))
     private BlockPos modifyBlockPos(BlockPos pos) {
-        return ((RotatedView)((WorldChunk)(Object)this).getWorld()).applyRotation(pos);
+        return ((RotatedView)((LevelChunk)(Object)this).getLevel()).applyRotation(pos);
     }
 
-    @ModifyVariable(method = "getFluidState(III)Lnet/minecraft/fluid/FluidState;", at = @At("HEAD"), ordinal = 1)
+    @ModifyVariable(method = "getFluidState(III)Lnet/minecraft/world/level/material/FluidState;", at = @At("HEAD"), ordinal = 1)
     private int modifyFluidPos(int y) {
-        return ((RotatedView)((WorldChunk)(Object)this).getWorld()).applyRotation(y);
+        return ((RotatedView)((LevelChunk)(Object)this).getLevel()).applyRotation(y);
     }
 }

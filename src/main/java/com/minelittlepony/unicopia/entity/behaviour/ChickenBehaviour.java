@@ -3,16 +3,15 @@ package com.minelittlepony.unicopia.entity.behaviour;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.passive.ChickenEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.Vec3d;
-
-public class ChickenBehaviour extends EntityBehaviour<ChickenEntity> {
+public class ChickenBehaviour extends EntityBehaviour<Chicken> {
 
     @Override
     protected boolean skipSlot(EquipmentSlot slot) {
@@ -20,44 +19,44 @@ public class ChickenBehaviour extends EntityBehaviour<ChickenEntity> {
     }
 
     @Override
-    public void update(Living<?> source, ChickenEntity entity, Disguise spell) {
-        entity.eggLayTime = Integer.MAX_VALUE;
+    public void update(Living<?> source, Chicken entity, Disguise spell) {
+        entity.eggTime = Integer.MAX_VALUE;
 
         if (source instanceof Pony player) {
             if (player.sneakingChanged()) {
-                ItemStack egg = entity.getEquippedStack(EquipmentSlot.OFFHAND);
+                ItemStack egg = entity.getItemBySlot(EquipmentSlot.OFFHAND);
 
-                if (player.asEntity().isSneaking()) {
+                if (player.asEntity().isShiftKeyDown()) {
                     if (egg.isEmpty()) {
                         egg = new ItemStack(Items.EGG);
 
-                        int slot = player.asEntity().getInventory().getMatchingSlot(egg.getRegistryEntry(), egg);
+                        int slot = player.asEntity().getInventory().findSlotMatchingCraftingIngredient(egg.getItem().builtInRegistryHolder(), egg);
                         if (slot > -1) {
-                            player.asEntity().getInventory().removeStack(slot, 1);
-                            entity.playSound(USounds.Vanilla.ENTITY_CHICKEN_EGG,
+                            player.asEntity().getInventory().removeItem(slot, 1);
+                            entity.playSound(USounds.Vanilla.CHICKEN_EGG,
                                     1,
-                                    (entity.getWorld().random.nextFloat() - entity.getWorld().random.nextFloat()) * 0.2F + 4
+                                    (entity.level().getRandom().nextFloat() - entity.level().getRandom().nextFloat()) * 0.2F + 4
                             );
-                            entity.equipStack(EquipmentSlot.OFFHAND, egg);
+                            entity.setItemSlot(EquipmentSlot.OFFHAND, egg);
                         }
                     }
-                } else if (egg.isOf(Items.EGG)) {
-                    entity.equipStack(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
-                    entity.eggLayTime = 0;
+                } else if (egg.is(Items.EGG)) {
+                    entity.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+                    entity.eggTime = 0;
                 }
             }
         }
 
         Entity src = source.asEntity();
 
-        if (src.isOnGround() || src instanceof PlayerEntity player && player.getAbilities().flying) {
+        if (src.onGround() || src instanceof Player player && player.getAbilities().flying) {
             return;
         }
 
-        Vec3d vel = src.getVelocity();
+        Vec3 vel = src.getDeltaMovement();
 
         if (vel.y < 0) {
-            src.setVelocity(vel.multiply(1, 0.8, 1));
+            src.setDeltaMovement(vel.multiply(1, 0.8, 1));
         }
 
     }

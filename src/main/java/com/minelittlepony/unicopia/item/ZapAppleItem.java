@@ -15,89 +15,91 @@ import com.minelittlepony.unicopia.particle.LightningBoltParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.RegistryUtils;
-
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.mob.CreeperEntity;
-import net.minecraft.entity.passive.PigEntity;
-import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.*;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Rarity;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.Items;
 
 public class ZapAppleItem extends Item implements MultiItem, Appearance.AppearanceChangeCallback {
-    public ZapAppleItem(Settings settings) {
+    public ZapAppleItem(Properties settings) {
         super(settings.rarity(Rarity.RARE).component(UDataComponentTypes.APPEARANCE, Appearance.DEFAULT_FULLY_DISGUISED));
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
+    public InteractionResult use(Level world, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
         return TraceHelper.findEntity(player, 5, 1, e -> canFeedTo(stack, e))
                 .map(entity -> onFedTo(stack, player, entity))
                 .orElseGet(() -> super.use(world, player, hand));
     }
 
     @Override
-    public ItemStack finishUsing(ItemStack stack, World w, LivingEntity player) {
-        stack = super.finishUsing(stack, w, player);
+    public ItemStack finishUsingItem(ItemStack stack, Level w, LivingEntity player) {
+        stack = super.finishUsingItem(stack, w, player);
 
-        if (w instanceof ServerWorld sw) {
-            player.damage(sw, Living.living(player).damageOf(UDamageTypes.ZAP_APPLE), 120);
+        if (w instanceof ServerLevel sw) {
+            player.hurtServer(sw, Living.living(player).damageOf(UDamageTypes.ZAP_APPLE), 120);
 
-            LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(sw, SpawnReason.EVENT);
-            lightning.refreshPositionAfterTeleport(player.getX(), player.getY(), player.getZ());
+            LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(sw, EntitySpawnReason.EVENT);
+            lightning.snapTo(player.getX(), player.getY(), player.getZ());
 
-            player.onStruckByLightning((ServerWorld)w, lightning);
+            player.thunderHit((ServerLevel)w, lightning);
 
-            if (player instanceof PlayerEntity) {
+            if (player instanceof Player) {
                 UCriteria.EAT_TRICK_APPLE.trigger(player);
             }
         }
 
-        player.emitGameEvent(GameEvent.LIGHTNING_STRIKE);
-        ParticleUtils.spawnParticle(w, LightningBoltParticleEffect.DEFAULT, player.getPos(), Vec3d.ZERO);
+        player.gameEvent(GameEvent.LIGHTNING_STRIKE);
+        ParticleUtils.spawnParticle(w, LightningBoltParticleEffect.DEFAULT, player.position(), Vec3.ZERO);
 
         return stack;
     }
 
     public boolean canFeedTo(ItemStack stack, Entity e) {
-        return e instanceof VillagerEntity
-                || e instanceof CreeperEntity
-                || e instanceof PigEntity;
+        return e instanceof Villager
+                || e instanceof Creeper
+                || e instanceof Pig;
     }
 
-    public ActionResult onFedTo(ItemStack stack, PlayerEntity player, Entity e) {
-        LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(e.getWorld(), SpawnReason.EVENT);
-        lightning.refreshPositionAfterTeleport(e.getX(), e.getY(), e.getZ());
-        lightning.setCosmetic(true);
-        if (player instanceof ServerPlayerEntity) {
-            lightning.setChanneler((ServerPlayerEntity)player);
+    public InteractionResult onFedTo(ItemStack stack, Player player, Entity e) {
+        LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(e.level(), EntitySpawnReason.EVENT);
+        lightning.snapTo(e.getX(), e.getY(), e.getZ());
+        lightning.setVisualOnly(true);
+        if (player instanceof ServerPlayer) {
+            lightning.setCause((ServerPlayer)player);
         }
 
-        if (!e.getWorld().isClient) {
-            e.onStruckByLightning((ServerWorld)e.getWorld(), lightning);
+        if (!e.level().isClientSide()) {
+            e.thunderHit((ServerLevel)e.level(), lightning);
             UCriteria.FEED_TRICK_APPLE.trigger(player);
         }
-        player.getWorld().spawnEntity(lightning);
+        player.level().addFreshEntity(lightning);
 
-        if (!player.getAbilities().creativeMode) {
-            stack.decrement(1);
+        if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
         }
 
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
     @Override
@@ -106,18 +108,18 @@ public class ZapAppleItem extends Item implements MultiItem, Appearance.Appearan
                 .stream()
                 .flatMap(world -> RegistryUtils.valuesForTag(world, UConventionalTags.Items.APPLES))
                 .filter(a -> a != this).map(item -> {
-            return Appearance.set(getDefaultStack(), item.getDefaultStack());
+            return Appearance.set(getDefaultInstance(), item.getDefaultInstance());
         }).toList();
     }
 
     @Override
-    public Text getName(ItemStack stack) {
+    public Component getName(ItemStack stack) {
         Appearance appearance = Appearance.get(stack);
-        return appearance.item().isEmpty() ? super.getName(stack) : appearance.item().getName();
+        return appearance.item().isEmpty() ? super.getName(stack) : appearance.item().getHoverName();
     }
 
     @Override
     public void onAppearanceSet(ItemStack stack, Appearance appearance) {
-        stack.set(DataComponentTypes.RARITY, appearance.item().isEmpty() ? stack.getDefaultComponents().get(DataComponentTypes.RARITY) : Rarity.EPIC);
+        stack.set(DataComponents.RARITY, appearance.item().isEmpty() ? stack.getPrototype().get(DataComponents.RARITY) : Rarity.EPIC);
     }
 }

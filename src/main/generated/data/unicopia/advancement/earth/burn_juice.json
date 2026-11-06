@@ -1,0 +1,33 @@
+{
+  "parent": "unicopia:earth/juice",
+  "criteria": {
+    "has_burned_juice": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:burned_juice"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.burn_juice.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:burned_juice"
+    },
+    "title": {
+      "translate": "advancements.unicopia.burn_juice.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_burned_juice"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

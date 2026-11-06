@@ -10,20 +10,20 @@ import com.minelittlepony.unicopia.client.render.PlayerPoser.Animation.Recipient
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.MagicReserves.Bar;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World.ExplosionSourceType;
-import net.minecraft.world.event.GameEvent;
-import net.minecraft.world.explosion.Explosion;
-import net.minecraft.world.explosion.ExplosionBehavior;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.ExplosionDamageCalculator;
+import net.minecraft.world.level.Level.ExplosionInteraction;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 
 /**
  * Internal.
@@ -52,9 +52,9 @@ public class RageAbilitySpell extends AbstractSpell {
             return false;
         }
 
-        if (source.asEntity().isTouchingWaterOrRain() || source.asEntity().isFrozen() || ticksToExtenguish > 0) {
+        if (source.asEntity().isInWaterOrRain() || source.asEntity().isFullyFrozen() || ticksToExtenguish > 0) {
             ticksExtenguishing++;
-            source.playSound(USounds.Vanilla.ENTITY_GENERIC_EXTINGUISH_FIRE, 1);
+            source.playSound(USounds.Vanilla.GENERIC_EXTINGUISH_FIRE, 1);
             source.spawnParticles(ParticleTypes.CLOUD, 12);
         } else {
             ticksExtenguishing = 0;
@@ -72,50 +72,50 @@ public class RageAbilitySpell extends AbstractSpell {
 
         if (!source.isClient()) {
             if (age == 0) {
-                source.asWorld().createExplosion(source.asEntity(), source.asWorld().getDamageSources().create(DamageTypes.FIREBALL, source.asEntity()), new ExplosionBehavior(){
+                source.asWorld().explode(source.asEntity(), source.asWorld().damageSources().source(DamageTypes.FIREBALL, source.asEntity()), new ExplosionDamageCalculator(){
                     @Override
-                    public boolean canDestroyBlock(Explosion explosion, BlockView world, BlockPos pos, BlockState state, float power) {
+                    public boolean shouldBlockExplode(Explosion explosion, BlockGetter world, BlockPos pos, BlockState state, float power) {
                         return false;
                     }
-                }, source.getOriginVector(), 3, true, ExplosionSourceType.MOB);
+                }, source.getOriginVector(), 3, true, ExplosionInteraction.MOB);
 
                 if (source instanceof Pony pony) {
                     pony.setAnimation(Animation.ARMS_UP, Recipient.ANYONE, 12);
                 }
                 source.playSound(USounds.ENTITY_PLAYER_KIRIN_RAGE, 2F, 0.1F);
-                source.asEntity().emitGameEvent(GameEvent.EXPLODE);
+                source.asEntity().gameEvent(GameEvent.EXPLODE);
             }
 
-            if (source.asEntity().isOnGround() && source.asWorld().isAir(pos) && age % 10 == 0) {
-                source.asWorld().setBlockState(pos, Blocks.FIRE.getDefaultState());
+            if (source.asEntity().onGround() && source.asWorld().isEmptyBlock(pos) && age % 10 == 0) {
+                source.asWorld().setBlockAndUpdate(pos, Blocks.FIRE.defaultBlockState());
             }
 
             if (source instanceof Pony pony) {
-                if (pony.asEntity().getAttackCooldownProgress(0) == 0) {
-                    LivingEntity adversary = pony.asEntity().getPrimeAdversary();
+                if (pony.asEntity().getAttackStrengthScale(0) == 0) {
+                    LivingEntity adversary = pony.asEntity().getKillCredit();
                     if (adversary != null) {
-                        adversary.setOnFireFor(10);
+                        adversary.igniteForSeconds(10);
                     }
                 }
             }
         } else {
             if (age % 5 == 0) {
                 source.spawnParticles(ParticleTypes.LAVA, 4);
-                if (source instanceof Pony pony && !pony.asEntity().handSwinging) {
-                    source.subtractEnergyCost(Math.min(12, 3 + source.asEntity().getVelocity().length() * 0.1));
+                if (source instanceof Pony pony && !pony.asEntity().isSwinging()) {
+                    source.subtractEnergyCost(Math.min(12, 3 + source.asEntity().getDeltaMovement().length() * 0.1));
                 }
             }
         }
 
         if (source instanceof Pony pony) {
-            if (pony.isClientPlayer() && (age == 0 || pony.asEntity().getAttackCooldownProgress(0) == 0)) {
-                InteractionManager.getInstance().playLoopingSound(source.asEntity(), InteractionManager.SOUND_KIRIN_RAGE, source.asWorld().random.nextLong());
+            if (pony.isClientPlayer() && (age == 0 || pony.asEntity().getAttackStrengthScale(0) == 0)) {
+                InteractionManager.getInstance().playLoopingSound(source.asEntity(), InteractionManager.SOUND_KIRIN_RAGE, source.asWorld().getRandom().nextLong());
             }
 
             Bar energyBar = pony.getMagicalReserves().getEnergy();
             var energy = Math.min(1.01F, 0.5F + (age / 1000F));
             float newEnergy = energyBar.get() + energy;
-            energyBar.set(Math.min(1.9F + MathHelper.sin(age / 3F) * 1.7F, newEnergy));
+            energyBar.set(Math.min(1.9F + Mth.sin(age / 3F) * 1.7F, newEnergy));
 
             float charge = pony.getMagicalReserves().getCharge().get();
             float cost = 1 + age / 1000F;
@@ -129,8 +129,8 @@ public class RageAbilitySpell extends AbstractSpell {
             }
         }
 
-        if (source.asWorld().hasRain(pos.up()) && source.asWorld().random.nextInt(15) == 0) {
-            source.playSound(USounds.Vanilla.ENTITY_GENERIC_EXTINGUISH_FIRE, 0.3F);
+        if (source.asWorld().isRainingAt(pos.above()) && source.asWorld().getRandom().nextInt(15) == 0) {
+            source.playSound(USounds.Vanilla.GENERIC_EXTINGUISH_FIRE, 0.3F);
             source.spawnParticles(ParticleTypes.CLOUD, 3);
         }
 
@@ -141,14 +141,14 @@ public class RageAbilitySpell extends AbstractSpell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.putInt("age", age);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        age = compound.getInt("age", 0);
+        age = compound.getIntOr("age", 0);
     }
 }

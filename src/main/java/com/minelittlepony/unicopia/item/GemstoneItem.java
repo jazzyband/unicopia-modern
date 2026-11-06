@@ -4,7 +4,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Predicate;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
@@ -14,34 +21,25 @@ import com.minelittlepony.unicopia.item.group.MultiItem;
 import com.minelittlepony.unicopia.util.TypedActionResult;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.ActionResult;
-import net.minecraft.world.World;
-
 public class GemstoneItem extends Item implements MultiItem {
 
-    public GemstoneItem(Settings settings) {
+    public GemstoneItem(Properties settings) {
         super(settings);
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity user, Hand hand) {
-        ActionResult result = super.use(world, user, hand);
+    public InteractionResult use(Level world, Player user, InteractionHand hand) {
+        InteractionResult result = super.use(world, user, hand);
 
-        if (!result.isAccepted()) {
-            ItemStack stack = user.getStackInHand(hand);
+        if (!result.consumesAction()) {
+            ItemStack stack = user.getItemInHand(hand);
             PlayerCharmTracker charms = Pony.of(user).getCharms();
 
             if (!Pony.of(user).getCompositeRace().canCast()) {
                 return result;
             }
 
-            hand = user.isSneaking() ? Hand.OFF_HAND : Hand.MAIN_HAND;
+            hand = user.isShiftKeyDown() ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
 
             TypedActionResult<CustomisedSpellType<?>> spell = EnchantableItem.consumeSpell(stack, user, ((Predicate<CustomisedSpellType<?>>)charms.getEquippedSpell(hand)::equals).negate(), true);
 
@@ -52,11 +50,11 @@ public class GemstoneItem extends Item implements MultiItem {
                 if (stack.getCount() == 1) {
                     stack = existing.traits().applyTo(EnchantableItem.enchant(stack, existing.type()));
                 } else {
-                    user.giveItemStack(existing.traits().applyTo(EnchantableItem.enchant(stack.split(1), existing.type())));
+                    user.addItem(existing.traits().applyTo(EnchantableItem.enchant(stack.split(1), existing.type())));
                 }
             }
 
-            if (spell.result().isAccepted()) {
+            if (spell.result().consumesAction()) {
                 charms.equipSpell(hand, spell.value());
             } else {
 
@@ -67,8 +65,8 @@ public class GemstoneItem extends Item implements MultiItem {
                 charms.equipSpell(hand, SpellType.EMPTY_KEY.withTraits());
             }
 
-            user.getItemCooldownManager().set(stack, 20);
-            return ActionResult.SUCCESS;
+            user.getCooldowns().addCooldown(stack, 20);
+            return InteractionResult.SUCCESS;
         }
 
         return result;
@@ -81,28 +79,28 @@ public class GemstoneItem extends Item implements MultiItem {
                 .sorted(
                         Comparator.<SpellType<?>, GemstoneItem.Shape>comparing(SpellType::getGemShape).thenComparing(Comparator.comparing(SpellType::getAffinity))
                 )
-                .map(type -> EnchantableItem.enchant(getDefaultStack(), type))
+                .map(type -> EnchantableItem.enchant(getDefaultInstance(), type))
                 .toList();
     }
 
     @Override
-    public boolean hasGlint(ItemStack stack) {
-        return super.hasGlint(stack) || (InteractionManager.getInstance().getClientSpecies().canCast() && EnchantableItem.isEnchanted(stack));
+    public boolean isFoil(ItemStack stack) {
+        return super.isFoil(stack) || (InteractionManager.getInstance().getClientSpecies().canCast() && EnchantableItem.isEnchanted(stack));
     }
 
     @Override
-    public Text getName(ItemStack stack) {
+    public Component getName(ItemStack stack) {
         if (EnchantableItem.isEnchanted(stack)) {
             if (!InteractionManager.getInstance().getClientSpecies().canCast()) {
-                return Text.translatable(getTranslationKey() + ".obfuscated");
+                return Component.translatable(getDescriptionId() + ".obfuscated");
             }
 
-            return Text.translatable(getTranslationKey() + ".enchanted", EnchantableItem.getSpellKey(stack).getName());
+            return Component.translatable(getDescriptionId() + ".enchanted", EnchantableItem.getSpellKey(stack).getName());
         }
-        return super.getName();
+        return super.getName(stack);
     }
 
-    public enum Shape implements StringIdentifiable {
+    public enum Shape implements StringRepresentable {
         ARROW,
         BRUSH,
         CROSS,
@@ -122,12 +120,12 @@ public class GemstoneItem extends Item implements MultiItem {
         WAVE;
 
         public static final int LENGTH = values().length;
-        public static final Codec<Shape> CODEC = StringIdentifiable.createCodec(Shape::values);
+        public static final Codec<Shape> CODEC = StringRepresentable.fromEnum(Shape::values);
 
         private final String name = name().toLowerCase(Locale.ROOT);
 
         @Override
-        public String asString() {
+        public String getSerializedName() {
             return name;
         }
     }

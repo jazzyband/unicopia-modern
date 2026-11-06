@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:bloom",
+  "author": {
+    "translate": "painting.unicopia.bloom.author"
+  },
+  "height": 1,
+  "title": {
+    "translate": "painting.unicopia.bloom.title"
+  },
+  "width": 2
+}

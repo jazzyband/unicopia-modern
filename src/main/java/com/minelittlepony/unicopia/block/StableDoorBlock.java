@@ -2,53 +2,44 @@ package com.minelittlepony.unicopia.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.block.BlockSetType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.block.enums.DoubleBlockHalf;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.WorldView;
-import net.minecraft.world.tick.ScheduledTickView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockSetType;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
 public class StableDoorBlock extends DoorBlock {
-    public static final MapCodec<StableDoorBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockSetType.CODEC.fieldOf("block_set_type").forGetter(StableDoorBlock::getBlockSetType),
-            DoorBlock.createSettingsCodec()
-    ).apply(instance, StableDoorBlock::new));
 
-    public StableDoorBlock(BlockSetType blockSet, Settings settings) {
+    public StableDoorBlock(BlockSetType blockSet, Properties settings) {
         super(blockSet, settings);
     }
 
-    @Override
-    public MapCodec<? extends StableDoorBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected BlockState getStateForNeighborUpdate(BlockState state, WorldView world, ScheduledTickView tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, Random random) {
-        DoubleBlockHalf half = state.get(HALF);
+    protected BlockState updateShape(BlockState state, LevelReader world, ScheduledTickAccess tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        DoubleBlockHalf half = state.getValue(HALF);
 
         if (direction.getAxis() == Direction.Axis.Y && half == DoubleBlockHalf.LOWER == (direction == Direction.UP)) {
-            if (neighborState.isOf(this) && neighborState.get(HALF) != half) {
+            if (neighborState.is(this) && neighborState.getValue(HALF) != half) {
                 state = state
-                        .with(FACING, neighborState.get(FACING))
-                        .with(HINGE, neighborState.get(HINGE));
-                if (half ==  DoubleBlockHalf.UPPER && direction == Direction.DOWN && !state.get(POWERED)) {
-                    state = state.with(OPEN, neighborState.get(OPEN));
+                        .setValue(FACING, neighborState.getValue(FACING))
+                        .setValue(HINGE, neighborState.getValue(HINGE));
+                if (half ==  DoubleBlockHalf.UPPER && direction == Direction.DOWN && !state.getValue(POWERED)) {
+                    state = state.setValue(OPEN, neighborState.getValue(OPEN));
                 }
                 return state;
             }
 
-            return Blocks.AIR.getDefaultState();
+            return Blocks.AIR.defaultBlockState();
         }
 
-        if (half == DoubleBlockHalf.LOWER && direction == Direction.DOWN && !state.canPlaceAt(world, pos)) {
-            return Blocks.AIR.getDefaultState();
+        if (half == DoubleBlockHalf.LOWER && direction == Direction.DOWN && !state.canSurvive(world, pos)) {
+            return Blocks.AIR.defaultBlockState();
         }
 
         return state;

@@ -5,18 +5,18 @@ import java.util.concurrent.CompletableFuture;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.item.UJukeboxSongs;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
-import net.minecraft.block.jukebox.JukeboxSong;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.text.Text;
 import net.minecraft.util.Util;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.item.JukeboxSong;
 
 public class UJukeboxSongProvider extends FabricDynamicRegistryProvider {
-    public UJukeboxSongProvider(FabricDataOutput output, CompletableFuture<WrapperLookup> registriesFuture) {
+    public UJukeboxSongProvider(FabricPackOutput output, CompletableFuture<Provider> registriesFuture) {
         super(output, registriesFuture);
     }
 
@@ -26,7 +26,7 @@ public class UJukeboxSongProvider extends FabricDynamicRegistryProvider {
     }
 
     @Override
-    protected void configure(WrapperLookup registries, Entries entries) {
+    protected void configure(Provider registries, Entries entries) {
         register(entries, UJukeboxSongs.CRUSADE, USounds.RECORD_CRUSADE, 181, 1);
         register(entries, UJukeboxSongs.PET, USounds.RECORD_PET, 221, 2);
         register(entries, UJukeboxSongs.POPULAR, USounds.RECORD_POPULAR, 112, 3);
@@ -35,9 +35,9 @@ public class UJukeboxSongProvider extends FabricDynamicRegistryProvider {
 
     private void register(
             Entries entries,
-            RegistryKey<JukeboxSong> key,
-            RegistryEntry.Reference<SoundEvent> soundEvent, int lengthInSeconds, int comparatorOutput) {
-        entries.add(key, new JukeboxSong(soundEvent, Text.translatable(Util.createTranslationKey("jukebox_song", key.getValue())), lengthInSeconds, comparatorOutput));
+            ResourceKey<JukeboxSong> key,
+            Holder.Reference<SoundEvent> soundEvent, int lengthInSeconds, int comparatorOutput) {
+        entries.add(key, new JukeboxSong(soundEvent, Component.translatable(Util.makeDescriptionId("jukebox_song", key.identifier())), lengthInSeconds, comparatorOutput));
     }
 
 }

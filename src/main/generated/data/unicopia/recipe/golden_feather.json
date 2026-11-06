@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": "#unicopia:magic_feathers",
+    "*": "minecraft:gold_nugget"
+  },
+  "pattern": [
+    "***",
+    "*#*",
+    "***"
+  ],
+  "result": {
+    "id": "unicopia:golden_feather"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_mysterious_egg": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:mysterious_egg"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:green_fried_egg_from_campfire_cooking"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_mysterious_egg"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:green_fried_egg_from_campfire_cooking"
+    ]
+  }
+}

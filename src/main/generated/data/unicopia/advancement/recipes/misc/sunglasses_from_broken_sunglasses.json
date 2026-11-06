@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_broken_sunglasses": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:broken_sunglasses"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:sunglasses_from_broken_sunglasses"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_broken_sunglasses"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:sunglasses_from_broken_sunglasses"
+    ]
+  }
+}

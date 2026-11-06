@@ -2,12 +2,10 @@ package com.minelittlepony.unicopia;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.item.FriendshipBraceletItem;
-
-import net.minecraft.entity.Entity;
 
 /**
  * Interface for things that can be owned by an entity.
@@ -45,11 +43,11 @@ public interface Owned<E extends Entity> {
         }
 
         Entity owner = getMaster();
-        return target != null && owner != null && owner.isConnectedThroughVehicle(target);
+        return target != null && owner != null && owner.isPassengerOfSameVehicle(target);
     }
 
     default boolean isOwnedBy(@Nullable Object owner) {
-        return owner instanceof Entity e && e.getUuid().equals(getMasterId().orElse(null));
+        return owner instanceof Entity e && e.getUUID().equals(getMasterId().orElse(null));
     }
 
     default boolean hasCommonOwner(Owned<?> sibling) {

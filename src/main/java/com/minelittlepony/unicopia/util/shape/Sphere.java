@@ -1,10 +1,9 @@
 package com.minelittlepony.unicopia.util.shape;
 
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.include.com.google.common.base.Objects;
-
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
 
 /**
  * A sphere, or 2d circle of you so desire.
@@ -13,7 +12,7 @@ import net.minecraft.util.math.random.Random;
 public class Sphere implements Shape {
     public static final Sphere UNIT_SPHERE = new Sphere(false, 1);
 
-    protected final Vec3d stretch;
+    protected final Vec3 stretch;
     private final boolean hollow;
     private final double rad;
 
@@ -44,7 +43,7 @@ public class Sphere implements Shape {
      */
     public Sphere(boolean hollow, double radius, float stretchX, float stretchY, float stretchZ) {
         this.hollow = hollow;
-        stretch = new Vec3d(stretchX, stretchY, stretchZ);
+        stretch = new Vec3(stretchX, stretchY, stretchZ);
         rad = radius;
         volume = computeSpawnableSpace();
     }
@@ -67,18 +66,18 @@ public class Sphere implements Shape {
     }
 
     @Override
-    public Vec3d computePoint(Random rand) {
+    public Vec3 computePoint(RandomSource rand) {
         double rad = this.rad;
 
         if (!hollow) {
-            rad = MathHelper.nextDouble(rand, 0, rad);
+            rad = Mth.nextDouble(rand, 0, rad);
         }
 
-        double z = MathHelper.nextDouble(rand, -rad, rad);
-        double phi = MathHelper.nextDouble(rand, 0, Math.PI * 2);
+        double z = Mth.nextDouble(rand, -rad, rad);
+        double phi = Mth.nextDouble(rand, 0, Math.PI * 2);
         double theta = Math.asin(z / rad);
 
-        return new Vec3d(
+        return new Vec3(
                 rad * Math.cos(theta) * Math.cos(phi) * stretch.x,
                 rad * Math.cos(theta) * Math.sin(phi) * stretch.y,
                 z * stretch.z
@@ -86,8 +85,8 @@ public class Sphere implements Shape {
     }
 
     @Override
-    public boolean isPointInside(Vec3d point) {
-        point = new Vec3d(point.x / stretch.x, point.y / stretch.y, point.z / stretch.z);
+    public boolean isPointInside(Vec3 point) {
+        point = new Vec3(point.x / stretch.x, point.y / stretch.y, point.z / stretch.z);
 
         double dist = point.length();
 
@@ -95,13 +94,13 @@ public class Sphere implements Shape {
     }
 
     @Override
-    public Vec3d getLowerBound() {
-        return stretch.multiply(-rad);
+    public Vec3 getLowerBound() {
+        return stretch.scale(-rad);
     }
 
     @Override
-    public Vec3d getUpperBound() {
-        return stretch.multiply(rad);
+    public Vec3 getUpperBound() {
+        return stretch.scale(rad);
     }
 
     @Override
@@ -117,7 +116,7 @@ public class Sphere implements Shape {
         return Objects.hashCode(stretch, hollow, rad);
     }
 
-    public static double computeEllipsoidArea(double rad, Vec3d stretch) {
+    public static double computeEllipsoidArea(double rad, Vec3 stretch) {
         double p = 1.6075;
         double result = Math.pow(rad * stretch.x, p) * Math.pow(rad * stretch.y, p);
         result += Math.pow(rad * stretch.x, p) * Math.pow(rad * stretch.z, p);
@@ -126,7 +125,7 @@ public class Sphere implements Shape {
         return 2 * Math.PI * Math.pow(result, 1/p);
     }
 
-    public static double computeEllipsoidVolume(double rad, Vec3d stretch) {
+    public static double computeEllipsoidVolume(double rad, Vec3 stretch) {
         double result = (4/3) * Math.PI;
         result *= (rad * stretch.x);
         result *= (rad * stretch.y);

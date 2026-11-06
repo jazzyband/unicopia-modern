@@ -1,7 +1,17 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.block.state.StateUtil;
@@ -10,40 +20,19 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-
 public class PoreousCloudBlock extends CloudBlock implements Soakable {
-    private static final MapCodec<PoreousCloudBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.fieldOf("meltable").forGetter(b -> b.meltable),
-            CodecUtils.supplierOf(Soakable.CODEC).optionalFieldOf("soggy_block", null).forGetter(b -> b.soggyBlock),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, PoreousCloudBlock::new));
 
     @Nullable
     protected final Supplier<Soakable> soggyBlock;
 
-    public PoreousCloudBlock(boolean meltable, @Nullable Supplier<Soakable> soggyBlock, Settings settings) {
-        super(meltable, settings.nonOpaque());
+    public PoreousCloudBlock(boolean meltable, @Nullable Supplier<Soakable> soggyBlock, Properties settings) {
+        super(meltable, settings.noOcclusion());
         this.soggyBlock = soggyBlock;
     }
 
-    @Override
-    public MapCodec<? extends PoreousCloudBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         return Soakable.tryDepositMoisture(stack, state, world, pos, player, hand, hit);
     }
 
@@ -51,18 +40,18 @@ public class PoreousCloudBlock extends CloudBlock implements Soakable {
     @Override
     public BlockState getStateWithMoisture(BlockState state, int moisture) {
         if (moisture <= 0) {
-            return StateUtil.copyState(state, getDefaultState());
+            return StateUtil.copyState(state, defaultBlockState());
         }
         return soggyBlock == null ? null : soggyBlock.get().getStateWithMoisture(state, moisture);
     }
 
     @Override
-    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (state.getBlock() instanceof Soakable soakable && world.hasRain(pos) && world.isAir(pos.up())) {
+    protected void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        if (state.getBlock() instanceof Soakable soakable && world.isRainingAt(pos) && world.isEmptyBlock(pos.above())) {
             @Nullable
-            BlockState soggyState = soakable.getStateWithMoisture(state, random.nextBetween(1, 5));
+            BlockState soggyState = soakable.getStateWithMoisture(state, random.nextIntBetweenInclusive(1, 5));
             if (soggyState != null) {
-                world.setBlockState(pos, soggyState);
+                world.setBlockAndUpdate(pos, soggyState);
                 return;
             }
         }

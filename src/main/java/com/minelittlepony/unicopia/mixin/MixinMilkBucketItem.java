@@ -7,16 +7,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.SpellSlots;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.consume_effects.ClearAllStatusEffectsConsumeEffect;
+import net.minecraft.world.level.Level;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.consume.ClearAllEffectsConsumeEffect;
-import net.minecraft.world.World;
-
-@Mixin(ClearAllEffectsConsumeEffect.class)
+@Mixin(ClearAllStatusEffectsConsumeEffect.class)
 abstract class MixinMilkBucketItem {
-    @Inject(method = "onConsume", at = @At("HEAD"))
-    private void onOnConsume(World world, ItemStack stack, LivingEntity user, CallbackInfoReturnable<Boolean> info) {
+    @Inject(method = "apply", at = @At("HEAD"))
+    private void onOnConsume(Level world, ItemStack stack, LivingEntity user, CallbackInfoReturnable<Boolean> info) {
         Caster.of(user).map(Caster::getSpellSlot).ifPresent(SpellSlots::clear);
     }
 }

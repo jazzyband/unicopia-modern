@@ -9,8 +9,8 @@ import com.minelittlepony.unicopia.server.world.ZapAppleStageStore;
 import com.sollace.fabwork.api.packets.*;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 
 public interface Channel {
     C2SPacketType<MsgPlayerAbility<?>> CLIENT_PLAYER_ABILITY = SimpleNetworking.clientToServer(Unicopia.id("player_ability"), MsgPlayerAbility.PACKET_CODEC);
@@ -31,8 +31,8 @@ public interface Channel {
 
     S2CPacketType<MsgTribeSelect> SERVER_SELECT_TRIBE = SimpleNetworking.serverToClient(Unicopia.id("select_tribe"), MsgTribeSelect.PACKET_CODEC);
 
-    S2CPacketType<MsgSpellbookStateChanged<PlayerEntity>> SERVER_SPELLBOOK_UPDATE = SimpleNetworking.serverToClient(Unicopia.id("server_spellbook_update"), MsgSpellbookStateChanged.packetCodec());
-    C2SPacketType<MsgSpellbookStateChanged<ServerPlayerEntity>> CLIENT_SPELLBOOK_UPDATE = SimpleNetworking.clientToServer(Unicopia.id("client_spellbook_update"), MsgSpellbookStateChanged.packetCodec());
+    S2CPacketType<MsgSpellbookStateChanged<Player>> SERVER_SPELLBOOK_UPDATE = SimpleNetworking.serverToClient(Unicopia.id("server_spellbook_update"), MsgSpellbookStateChanged.packetCodec());
+    C2SPacketType<MsgSpellbookStateChanged<ServerPlayer>> CLIENT_SPELLBOOK_UPDATE = SimpleNetworking.clientToServer(Unicopia.id("client_spellbook_update"), MsgSpellbookStateChanged.packetCodec());
 
     S2CPacketType<MsgServerResources> SERVER_RESOURCES = SimpleNetworking.serverToClient(Unicopia.id("resources"), MsgServerResources.PACKET_CODEC);
 
@@ -46,28 +46,24 @@ public interface Channel {
 
     static void bootstrap() {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            sender.sendPacket(SERVER_RESOURCES.toPacket(new MsgServerResources(server)));
-            sender.sendPacket(CONFIGURATION_CHANGE.toPacket(new MsgConfigurationChange(InteractionManager.getInstance().getSyncedConfig())));
-            sender.sendPacket(SERVER_SKY_ANGLE.toPacket(new MsgSkyAngle(UnicopiaWorldProperties.forWorld(handler.getPlayer().getServerWorld()).getTangentalSkyAngle())));
-            sender.sendPacket(SERVER_ZAP_STAGE.toPacket(new MsgZapAppleStage(ZapAppleStageStore.get(handler.player.getServerWorld()).getStage())));
-            boolean requireSelection = false;
             Pony pony = Pony.of(handler.player);
             if (pony.getSpecies() == Race.UNSET) {
-                Race race = UnicopiaWorldProperties.forWorld(handler.player.getServerWorld()).getDefaultRace();
+                Race race = UnicopiaWorldProperties.forWorld(handler.player.level()).getDefaultRace();
                 if (!race.isPermitted(handler.player)) {
                     race = Race.UNSET;
                 }
                 if (race.isUnset()) {
-                    requireSelection = true;
+                    sender.sendPacket(SERVER_SELECT_TRIBE.toPacket(new MsgTribeSelect(Race.allPermitted(handler.player), "gui.unicopia.tribe_selection.welcome")));
                 } else {
                     pony.setSpecies(race);
-                    Unicopia.LOGGER.info("Setting {}'s race to {} due to host setting", handler.player.getDisplayName().getString(), Race.REGISTRY.getId(race).toString());
+                    Unicopia.LOGGER.info("Setting {}'s race to {} due to host setting", handler.player.getDisplayName().getString(), Race.REGISTRY.getKey(race).toString());
                 }
             }
+            sender.sendPacket(SERVER_RESOURCES.toPacket(new MsgServerResources(server)));
+            sender.sendPacket(SERVER_SKY_ANGLE.toPacket(new MsgSkyAngle(UnicopiaWorldProperties.forWorld(handler.getPlayer().level()).getTangentalSkyAngle())));
+            sender.sendPacket(CONFIGURATION_CHANGE.toPacket(new MsgConfigurationChange(InteractionManager.getInstance().getSyncedConfig())));
+            sender.sendPacket(SERVER_ZAP_STAGE.toPacket(new MsgZapAppleStage(ZapAppleStageStore.get(handler.player.level()).getStage())));
             sender.sendPacket(SERVER_PLAYER_CAPABILITIES.toPacket(new MsgPlayerCapabilities(pony, true)));
-            if (requireSelection) {
-                sender.sendPacket(SERVER_SELECT_TRIBE.toPacket(new MsgTribeSelect(Race.allPermitted(handler.player), "gui.unicopia.tribe_selection.welcome")));
-            }
         });
         UPDATE_PLAYER_FEATURES.receiver().addPersistentListener((player, features) -> {
             Pony.of(player).setSkinFeatures(features);

@@ -1,14 +1,13 @@
 package com.minelittlepony.unicopia.client.render.entity;
 
 import com.minelittlepony.unicopia.Unicopia;
+import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
+import net.minecraft.client.renderer.entity.SilverfishRenderer;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.monster.Silverfish;
 
-import net.minecraft.client.render.entity.EntityRendererFactory.Context;
-import net.minecraft.util.Identifier;
-import net.minecraft.client.render.entity.SilverfishEntityRenderer;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.entity.mob.SilverfishEntity;
-
-public class LootBugEntityRenderer extends SilverfishEntityRenderer {
+public class LootBugEntityRenderer extends SilverfishRenderer {
     private static final Identifier TEXTURE = Unicopia.id("textures/entity/loot_bug.png");
 
     public LootBugEntityRenderer(Context context) {
@@ -16,13 +15,13 @@ public class LootBugEntityRenderer extends SilverfishEntityRenderer {
     }
 
     @Override
-    public Identifier getTexture(LivingEntityRenderState entity) {
+    public Identifier getTextureLocation(LivingEntityRenderState entity) {
         return TEXTURE;
     }
 
     @Override
-    public void updateRenderState(SilverfishEntity entity, LivingEntityRenderState state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
-        state.baseScale *= 2;
+    public void extractRenderState(Silverfish entity, LivingEntityRenderState state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
+        state.scale *= 2;
     }
 }

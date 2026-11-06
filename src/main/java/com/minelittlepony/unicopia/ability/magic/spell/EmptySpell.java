@@ -1,15 +1,13 @@
 package com.minelittlepony.unicopia.ability.magic.spell;
 
 import java.util.UUID;
-
+import net.minecraft.util.Util;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.network.track.DataTracker;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Util;
 
 public final class EmptySpell implements Spell {
     public static final EmptySpell INSTANCE = new EmptySpell();
@@ -17,10 +15,10 @@ public final class EmptySpell implements Spell {
     private EmptySpell() {}
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) { }
+    public void toNBT(CompoundTag compound, Provider lookup) { }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) { }
+    public void fromNBT(CompoundTag compound, Provider lookup) { }
 
     @Override
     public CustomisedSpellType<?> getTypeAndTraits() {

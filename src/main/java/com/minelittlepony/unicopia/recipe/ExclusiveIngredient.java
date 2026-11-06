@@ -7,21 +7,21 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredientSerializer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
 public record ExclusiveIngredient(Ingredient include, Ingredient exclude) implements CustomIngredient {
     public static final MapCodec<ExclusiveIngredient> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ingredient.CODEC.fieldOf("include").forGetter(ExclusiveIngredient::include),
             Ingredient.CODEC.fieldOf("exclude").forGetter(ExclusiveIngredient::exclude)
     ).apply(i, ExclusiveIngredient::new));
-    public static final PacketCodec<RegistryByteBuf, ExclusiveIngredient> PACKET_CODEC = PacketCodec.tuple(
-            Ingredient.PACKET_CODEC, ExclusiveIngredient::include,
-            Ingredient.PACKET_CODEC, ExclusiveIngredient::exclude,
+    public static final StreamCodec<RegistryFriendlyByteBuf, ExclusiveIngredient> PACKET_CODEC = StreamCodec.composite(
+            Ingredient.CONTENTS_STREAM_CODEC, ExclusiveIngredient::include,
+            Ingredient.CONTENTS_STREAM_CODEC, ExclusiveIngredient::exclude,
             ExclusiveIngredient::new
     );
 
@@ -32,8 +32,8 @@ public record ExclusiveIngredient(Ingredient include, Ingredient exclude) implem
 
     @Deprecated
     @Override
-    public Stream<RegistryEntry<Item>> getMatchingItems() {
-        return include.getMatchingItems().filter(i -> test(i.value().getDefaultStack()));
+    public Stream<Holder<Item>> items() {
+        return include.items().filter(i -> test(i.value().getDefaultInstance()));
     }
 
     @Override

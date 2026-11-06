@@ -4,69 +4,68 @@ import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.client.UnicopiaClient;
 import com.minelittlepony.unicopia.client.gui.ItemTraitsTooltipRenderer;
-
-import net.minecraft.component.type.AttributeModifiersComponent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.StringHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.StringUtil;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 public enum AttributeFormat {
     REGULAR {
         @Override
         public String formatValue(float value) {
-            return AttributeModifiersComponent.DECIMAL_FORMAT.format(value);
+            return ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(value);
         }
     },
     TIME {
         @Override
         public String formatValue(float value) {
-            return StringHelper.formatTicks((int)Math.abs(value), InteractionManager.getInstance().getTickRate());
+            return StringUtil.formatTickDuration((int)Math.abs(value), InteractionManager.getInstance().getTickRate());
         }
     },
     PERCENTAGE {
         @Override
         public String formatValue(float value) {
-            return AttributeModifiersComponent.DECIMAL_FORMAT.format((int)(Math.abs(value) * 100)) + "%";
+            return ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format((int)(Math.abs(value) * 100)) + "%";
         }
     };
 
     public abstract String formatValue(float value);
 
-    public MutableText getBase(Text attributeName, float value, float max, String comparison, Formatting color) {
-        return formatAttributeLine(Text.translatable(
+    public MutableComponent getBase(Component attributeName, float value, float max, String comparison, ChatFormatting color) {
+        return formatAttributeLine(Component.translatable(
                 "attribute.modifier." + comparison + ".0",
-                Text.translatable("item.unicopia.magic_staff.enchanted", formatValue(value), formatValue(max)),
+                Component.translatable("item.unicopia.magic_staff.enchanted", formatValue(value), formatValue(max)),
                 attributeName
-        ).formatted(color));
+        ).withStyle(color));
     }
 
-    public MutableText getBase(Text attributeName, float value, String comparison, Formatting color) {
-        return formatAttributeLine(Text.translatable("attribute.modifier." + comparison + ".0", formatValue(value), attributeName).formatted(color));
+    public MutableComponent getBase(Component attributeName, float value, String comparison, ChatFormatting color) {
+        return formatAttributeLine(Component.translatable("attribute.modifier." + comparison + ".0", formatValue(value), attributeName).withStyle(color));
     }
 
-    public Text get(Text attributeName, float value) {
-        return getBase(attributeName, value, "equals", Formatting.LIGHT_PURPLE);
+    public Component get(Component attributeName, float value) {
+        return getBase(attributeName, value, "equals", ChatFormatting.LIGHT_PURPLE);
     }
 
-    public Text getRelative(float baseValue, float currentValue, boolean detrimental) {
+    public Component getRelative(float baseValue, float currentValue, boolean detrimental) {
         float difference = currentValue - baseValue;
-        return Text.literal(" (" + (difference > 0 ? "+" : "-") + formatValue(this == PERCENTAGE ? difference / baseValue : difference) + ")").formatted((detrimental ? difference : -difference) < 0 ? Formatting.DARK_GREEN : Formatting.RED);
+        return Component.literal(" (" + (difference > 0 ? "+" : "-") + formatValue(this == PERCENTAGE ? difference / baseValue : difference) + ")").withStyle((detrimental ? difference : -difference) < 0 ? ChatFormatting.DARK_GREEN : ChatFormatting.RED);
     }
 
-    static Text formatTraitDifference(Trait trait, float value) {
+    static Component formatTraitDifference(Trait trait, float value) {
         boolean known = ItemTraitsTooltipRenderer.isKnown(trait);
         boolean canCast = UnicopiaClient.getClientPony() != null && UnicopiaClient.getClientPony().getObservedSpecies().canCast();
-        Text name = canCast ? known
+        Component name = canCast ? known
                 ? trait.getName()
-                : Text.translatable("spell_attribute.unicopia.added_trait.unknown").formatted(Formatting.YELLOW)
-                : trait.getName().copy().formatted(Formatting.OBFUSCATED, Formatting.YELLOW);
-        Text count = Text.literal(AttributeModifiersComponent.DECIMAL_FORMAT.format(value));
-        return Text.translatable("spell_attribute.unicopia.added_trait." + ((value > 0) ? "plus" : "take"), name, count).formatted(Formatting.DARK_AQUA);
+                : Component.translatable("spell_attribute.unicopia.added_trait.unknown").withStyle(ChatFormatting.YELLOW)
+                : trait.getName().copy().withStyle(ChatFormatting.OBFUSCATED, ChatFormatting.YELLOW);
+        Component count = Component.literal(ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(value));
+        return Component.translatable("spell_attribute.unicopia.added_trait." + ((value > 0) ? "plus" : "take"), name, count).withStyle(ChatFormatting.DARK_AQUA);
     }
 
-    public static MutableText formatAttributeLine(Text attributeName) {
-        return Text.literal(" ").append(attributeName).formatted(Formatting.LIGHT_PURPLE);
+    public static MutableComponent formatAttributeLine(Component attributeName) {
+        return Component.literal(" ").append(attributeName).withStyle(ChatFormatting.LIGHT_PURPLE);
     }
 
 }

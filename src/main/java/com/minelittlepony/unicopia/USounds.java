@@ -1,33 +1,33 @@
 package com.minelittlepony.unicopia;
 
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Identifier;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.Registries;
+import static net.minecraft.sounds.SoundEvents.*;
 
-import static net.minecraft.sound.SoundEvents.*;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 
 public interface USounds {
-    SoundEvent ENTITY_GENERIC_BUTTER_FINGERS = BLOCK_HONEY_BLOCK_SLIDE;
+    SoundEvent ENTITY_GENERIC_BUTTER_FINGERS = HONEY_BLOCK_SLIDE;
 
     SoundEvent ENTITY_PLAYER_CORRUPTION = register("entity.player.corrupt");
     SoundEvent ENTITY_PLAYER_BATPONY_SCREECH = register("entity.player.batpony.screech");
     SoundEvent ENTITY_PLAYER_HIPPOGRIFF_SCREECH = register("entity.player.hippogriff.screech");
-    SoundEvent ENTITY_PLAYER_HIPPOGRIFF_PECK = ENTITY_CHICKEN_STEP;
+    SoundEvent ENTITY_PLAYER_HIPPOGRIFF_PECK = CHICKEN_STEP.value();
     SoundEvent ENTITY_PLAYER_REBOUND = register("entity.player.rebound");
     SoundEvent ENTITY_PLAYER_PEGASUS_WINGSFLAP = register("entity.player.pegasus.wingsflap");
     SoundEvent ENTITY_PLAYER_PEGASUS_FLYING = register("entity.player.pegasus.flying");
     SoundEvent ENTITY_PLAYER_PEGASUS_DASH = register("entity.player.pegasus.dash");
     SoundEvent ENTITY_PLAYER_PEGASUS_MOLT = register("entity.player.pegasus.molt");
-    SoundEvent ENTITY_PLAYER_EARTHPONY_DASH = ENTITY_RAVAGER_STEP;
+    SoundEvent ENTITY_PLAYER_EARTHPONY_DASH = RAVAGER_STEP;
     SoundEvent ENTITY_PLAYER_CHANGELING_BUZZ = register("entity.player.changeling.buzz");
     SoundEvent ENTITY_PLAYER_CHANGELING_TRANSFORM = register("entity.player.changeling.transform");
-    RegistryEntry<SoundEvent> ENTITY_PLAYER_CHANGELING_FEED = ENTITY_GENERIC_DRINK;
-    SoundEvent ENTITY_PLAYER_CHANGELING_CLIMB = ENTITY_CHICKEN_STEP;
+    Holder<SoundEvent> ENTITY_PLAYER_CHANGELING_FEED = GENERIC_DRINK;
+    SoundEvent ENTITY_PLAYER_CHANGELING_CLIMB = CHICKEN_STEP.value();
     SoundEvent ENTITY_PLAYER_UNICORN_TELEPORT = register("entity.player.unicorn.teleport");
-    SoundEvent ENTITY_PLAYER_KIRIN_RAGE = ENTITY_POLAR_BEAR_WARNING;
+    SoundEvent ENTITY_PLAYER_KIRIN_RAGE = POLAR_BEAR_WARNING;
     SoundEvent ENTITY_PLAYER_KIRIN_RAGE_LOOP = register("entity.player.kirin.rage.loop");
     SoundEvent ENTITY_PLAYER_SEAPONY_SONAR = register("entity.player.seapony.sonar", 64);
 
@@ -52,31 +52,33 @@ public interface USounds {
     SoundEvent ENTITY_CRYSTAL_HEART_ACTIVATE = register("entity.crystal_heart.activate");
     SoundEvent ENTITY_CRYSTAL_HEART_DEACTIVATE = register("entity.crystal_heart.deactivate");
 
-    SoundEvent ENTITY_HOT_AIR_BALLOON_BOOST = ENTITY_GHAST_SHOOT;
-    SoundEvent ENTITY_HOT_AIR_BALLOON_BURNER_FIRE = ENTITY_GHAST_SHOOT;
-    RegistryEntry<SoundEvent> ENTITY_HOT_AIR_BALLOON_EQUIP_CANOPY = ITEM_ARMOR_EQUIP_LEATHER;
-    SoundEvent ENTITY_HOT_AIR_BALLOON_EQUIP_BURNER = ENTITY_IRON_GOLEM_DAMAGE;
+    SoundEvent ENTITY_HOT_AIR_BALLOON_BOOST = GHAST_SHOOT;
+    SoundEvent ENTITY_HOT_AIR_BALLOON_BURNER_FIRE = GHAST_SHOOT;
+    SoundEvent ENTITY_HOT_AIR_BALLOON_STEP = WOOL_STEP;
+    SoundEvent ENTITY_HOT_AIR_BALLOON_BASKET_STEP = BAMBOO_STEP;
+    Holder<SoundEvent> ENTITY_HOT_AIR_BALLOON_EQUIP_CANOPY = ARMOR_EQUIP_LEATHER;
+    SoundEvent ENTITY_HOT_AIR_BALLOON_EQUIP_BURNER = IRON_GOLEM_DAMAGE;
 
     SoundEvent ENTITY_SOMBRA_AMBIENT = register("entity.sombra.ambient");
     SoundEvent ENTITY_SOMBRA_LAUGH = register("entity.sombra.laugh");
     SoundEvent ENTITY_SOMBRA_SNICKER = register("entity.sombra.snicker");
-    SoundEvent ENTITY_SOMBRA_SCARY = ENTITY_GHAST_AMBIENT;
+    SoundEvent ENTITY_SOMBRA_SCARY = GHAST_AMBIENT;
 
-    SoundEvent ENTITY_CRYSTAL_SHARDS_AMBIENT = BLOCK_AMETHYST_BLOCK_HIT;
-    SoundEvent ENTITY_CRYSTAL_SHARDS_JOSTLE = BLOCK_AMETHYST_BLOCK_BREAK;
+    SoundEvent ENTITY_CRYSTAL_SHARDS_AMBIENT = AMETHYST_BLOCK_HIT;
+    SoundEvent ENTITY_CRYSTAL_SHARDS_JOSTLE = AMETHYST_BLOCK_BREAK;
 
-    SoundEvent ENTITY_IGNIMEOUS_BULB_HURT = ENTITY_WARDEN_HURT;
-    SoundEvent ENTITY_IGNIMEOUS_BULB_DEATH = ENTITY_WARDEN_DEATH;
+    SoundEvent ENTITY_IGNIMEOUS_BULB_HURT = WARDEN_HURT;
+    SoundEvent ENTITY_IGNIMEOUS_BULB_DEATH = WARDEN_DEATH;
 
-    SoundEvent ENTITY_TENTACLE_ROAR = ENTITY_RAVAGER_ROAR;
-    SoundEvent ENTITY_TENTACLE_AMBIENT = BLOCK_CONDUIT_AMBIENT_SHORT;
-    SoundEvent ENTITY_TENTACLE_DIG = ENTITY_WARDEN_DIG;
+    SoundEvent ENTITY_TENTACLE_ROAR = RAVAGER_ROAR;
+    SoundEvent ENTITY_TENTACLE_AMBIENT = CONDUIT_AMBIENT_SHORT;
+    SoundEvent ENTITY_TENTACLE_DIG = WARDEN_DIG;
 
     SoundEvent ITEM_AMULET_CHARGING = register("item.amulet.charging");
     SoundEvent ITEM_AMULET_RECHARGE = register("item.amulet.recharge");
 
-    SoundEvent ITEM_DRAGON_BREATH_SCROLL_USE = ITEM_FIRECHARGE_USE;
-    SoundEvent ITEM_DRAGON_BREATH_ARRIVE = ITEM_FIRECHARGE_USE;
+    SoundEvent ITEM_DRAGON_BREATH_SCROLL_USE = FIRECHARGE_USE;
+    SoundEvent ITEM_DRAGON_BREATH_ARRIVE = FIRECHARGE_USE;
 
     SoundEvent ITEM_ICARUS_WINGS_PURIFY = register("item.icarus_wings.resonate");
     SoundEvent ITEM_ICARUS_WINGS_CORRUPT = register("item.icarus_wings.corrupted");
@@ -87,20 +89,20 @@ public interface USounds {
     SoundEvent ITEM_ALICORN_AMULET_HALLUCINATION = register("item.alicorn_amulet.hallucination");
     SoundEvent ITEM_ALICORN_AMULET_AMBIENT = register("item.alicorn_amulet.ambient");
 
-    SoundEvent ITEM_GROGAR_BELL_USE = BLOCK_BELL_USE;
-    SoundEvent ITEM_GROGAR_BELL_STOP_USING = BLOCK_BELL_USE;
-    SoundEvent ITEM_GROGAR_BELL_CHARGE = BLOCK_BELL_RESONATE;
-    SoundEvent ITEM_GROGAR_BELL_DRAIN = ENTITY_GUARDIAN_ATTACK;
+    SoundEvent ITEM_GROGAR_BELL_USE = BELL_BLOCK;
+    SoundEvent ITEM_GROGAR_BELL_STOP_USING = BELL_BLOCK;
+    SoundEvent ITEM_GROGAR_BELL_CHARGE = BELL_RESONATE;
+    SoundEvent ITEM_GROGAR_BELL_DRAIN = GUARDIAN_ATTACK;
 
-    SoundEvent ITEM_STAFF_STRIKE = ENTITY_PLAYER_ATTACK_CRIT;
-    SoundEvent ITEM_MAGIC_STAFF_CHARGE = ENTITY_GUARDIAN_ATTACK;
+    SoundEvent ITEM_STAFF_STRIKE = PLAYER_ATTACK_CRIT;
+    SoundEvent ITEM_MAGIC_STAFF_CHARGE = GUARDIAN_ATTACK;
 
-    SoundEvent ITEM_CURING_JOKE_CURE = BLOCK_AMETHYST_BLOCK_BREAK;
+    SoundEvent ITEM_CURING_JOKE_CURE = AMETHYST_BLOCK_BREAK;
 
-    SoundEvent ITEM_ROCK_LAND = BLOCK_STONE_HIT;
-    RegistryEntry.Reference<SoundEvent> ITEM_MUFFIN_BOUNCE = BLOCK_NOTE_BLOCK_BANJO;
+    SoundEvent ITEM_ROCK_LAND = STONE_HIT;
+    Holder.Reference<SoundEvent> ITEM_MUFFIN_BOUNCE = NOTE_BLOCK_BANJO;
 
-    RegistryEntry<SoundEvent> ITEM_SUNGLASSES_SHATTER = Registries.SOUND_EVENT.getEntry(BLOCK_GLASS_BREAK);
+    Holder<SoundEvent> ITEM_SUNGLASSES_SHATTER = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(GLASS_BREAK);
 
     SoundEvent ITEM_APPLE_ROT = register("item.apple.rot");
     SoundEvent ITEM_BRACELET_SIGN = register("item.bracelet.sign");
@@ -109,9 +111,9 @@ public interface USounds {
     SoundEvent BLOCK_CHITIN_AMBIENCE = register("block.chitin.ambience");
     SoundEvent BLOCK_SLIME_PUSTULE_POP = register("block.slime_pustule.pop");
 
-    SoundEvent BLOCK_WEATHER_VANE_ROTATE = BLOCK_LANTERN_STEP;
-    SoundEvent BLOCK_PIE_SLICE = BLOCK_BEEHIVE_SHEAR;
-    SoundEvent BLOCK_PIE_SLICE_POP = ENTITY_ITEM_PICKUP;
+    SoundEvent BLOCK_WEATHER_VANE_ROTATE = LANTERN_STEP;
+    SoundEvent BLOCK_PIE_SLICE = BEEHIVE_SHEAR;
+    SoundEvent BLOCK_PIE_SLICE_POP = ITEM_PICKUP;
 
     SoundEvent SPELL_CAST_FAIL = register("spell.cast.fail");
     SoundEvent SPELL_CAST_SUCCESS = register("spell.cast.success");
@@ -122,21 +124,21 @@ public interface USounds {
     SoundEvent SPELL_SHIELD_BURN_PROJECTILE = register("spell.shield.projectile.burn");
     SoundEvent SPELL_TRANSFORM_TRANSMUTE_ENTITY = register("spell.transform.transmute.entity");
 
-    SoundEvent SPELL_AMBIENT = BLOCK_BEACON_AMBIENT;
-    SoundEvent SPELL_MINDSWAP_SWAP = ENTITY_ZOMBIE_INFECT;
-    SoundEvent SPELL_MINDSWAP_UNSWAP = ENTITY_ZOMBIE_VILLAGER_CURE;
+    SoundEvent SPELL_AMBIENT = BEACON_AMBIENT;
+    SoundEvent SPELL_MINDSWAP_SWAP = ZOMBIE_INFECT;
+    SoundEvent SPELL_MINDSWAP_UNSWAP = ZOMBIE_VILLAGER_CURE;
 
-    SoundEvent SPELL_BUBBLE_DISTURB = BLOCK_HONEY_BLOCK_STEP;
-    SoundEvent SPELL_FIRE_CRACKLE = BLOCK_FURNACE_FIRE_CRACKLE;
+    SoundEvent SPELL_BUBBLE_DISTURB = HONEY_BLOCK_STEP;
+    SoundEvent SPELL_FIRE_CRACKLE = FURNACE_FIRE_CRACKLE;
 
-    SoundEvent SPELL_NECROMANCY_ACTIVATE = BLOCK_BELL_USE;
+    SoundEvent SPELL_NECROMANCY_ACTIVATE = BELL_BLOCK;
 
-    SoundEvent SPELL_DISPLACEMENT_TELEPORT = ENTITY_HUSK_CONVERTED_TO_ZOMBIE;
+    SoundEvent SPELL_DISPLACEMENT_TELEPORT = HUSK_CONVERTED_TO_ZOMBIE;
 
-    SoundEvent ENCHANTMENT_CONSUMPTION_CONSUME = ENTITY_PLAYER_BURP;
+    SoundEvent ENCHANTMENT_CONSUMPTION_CONSUME = PLAYER_BURP;
 
-    SoundEvent PARTICLE_RAINBOOM_THUNDER = ENTITY_LIGHTNING_BOLT_THUNDER;
-    SoundEvent PARTICLE_RAINBOOM_REVERB = ENTITY_LIGHTNING_BOLT_THUNDER;
+    SoundEvent PARTICLE_RAINBOOM_THUNDER = LIGHTNING_BOLT_THUNDER;
+    SoundEvent PARTICLE_RAINBOOM_REVERB = LIGHTNING_BOLT_THUNDER;
 
     SoundEvent AMBIENT_WIND_GUST = register("ambient.wind.gust");
     SoundEvent AMBIENT_DARK_VORTEX_MOOD = register("ambient.dark_vortex.mood");
@@ -146,26 +148,26 @@ public interface USounds {
 
     SoundEvent GUI_ABILITY_FAIL = register("gui.ability.fail");
     SoundEvent GUI_SPELL_CRAFT_SUCCESS = register("gui.spellcraft.success");
-    RegistryEntry.Reference<SoundEvent> GUI_SPELL_EQUIP = UI_BUTTON_CLICK;
+    Holder.Reference<SoundEvent> GUI_SPELL_EQUIP = UI_BUTTON_CLICK;
 
-    RegistryEntry.Reference<SoundEvent> RECORD_CRUSADE = registerReference("music_disc.crusade");
-    RegistryEntry.Reference<SoundEvent> RECORD_PET = registerReference("music_disc.pet");
-    RegistryEntry.Reference<SoundEvent> RECORD_POPULAR = registerReference("music_disc.popular");
-    RegistryEntry.Reference<SoundEvent> RECORD_FUNK = registerReference("music_disc.funk");
+    Holder.Reference<SoundEvent> RECORD_CRUSADE = registerReference("music_disc.crusade");
+    Holder.Reference<SoundEvent> RECORD_PET = registerReference("music_disc.pet");
+    Holder.Reference<SoundEvent> RECORD_POPULAR = registerReference("music_disc.popular");
+    Holder.Reference<SoundEvent> RECORD_FUNK = registerReference("music_disc.funk");
 
     static SoundEvent register(String name) {
         Identifier id = Unicopia.id(name);
-        return Registry.register(Registries.SOUND_EVENT, id, SoundEvent.of(id));
+        return Registry.register(BuiltInRegistries.SOUND_EVENT, id, SoundEvent.createVariableRangeEvent(id));
     }
 
-    static RegistryEntry.Reference<SoundEvent> registerReference(String name) {
+    static Holder.Reference<SoundEvent> registerReference(String name) {
         Identifier id = Unicopia.id(name);
-        return Registry.registerReference(Registries.SOUND_EVENT, id, SoundEvent.of(id));
+        return Registry.registerForHolder(BuiltInRegistries.SOUND_EVENT, id, SoundEvent.createVariableRangeEvent(id));
     }
 
     static SoundEvent register(String name, float range) {
         Identifier id = Unicopia.id(name);
-        return Registry.register(Registries.SOUND_EVENT, id, SoundEvent.of(id, range));
+        return Registry.register(BuiltInRegistries.SOUND_EVENT, id, SoundEvent.createFixedRangeEvent(id, range));
     }
 
     static void bootstrap() {}

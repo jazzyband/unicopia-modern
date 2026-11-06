@@ -1,0 +1,7 @@
+{
+  "parent": "unicopia:block/template_bale_bnw",
+  "textures": {
+    "side": "minecraft:block/hay_block_side",
+    "top": "minecraft:block/hay_block_top"
+  }
+}

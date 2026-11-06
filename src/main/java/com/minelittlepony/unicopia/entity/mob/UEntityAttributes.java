@@ -2,27 +2,25 @@ package com.minelittlepony.unicopia.entity.mob;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import com.minelittlepony.unicopia.Unicopia;
 
-import net.minecraft.entity.attribute.ClampedEntityAttribute;
-import net.minecraft.entity.attribute.EntityAttribute;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.Registries;
-
 public interface UEntityAttributes {
-    List<EntityAttribute> REGISTRY = new ArrayList<>();
+    List<Attribute> REGISTRY = new ArrayList<>();
 
-    RegistryEntry<EntityAttribute> EXTENDED_REACH_DISTANCE = EntityAttributes.BLOCK_INTERACTION_RANGE;
-    RegistryEntry<EntityAttribute> EXTENDED_ATTACK_DISTANCE = EntityAttributes.ENTITY_INTERACTION_RANGE;
-    RegistryEntry<EntityAttribute> EXTRA_MINING_SPEED = register("earth.mining_speed", new ClampedEntityAttribute("player.miningSpeed", 1, 0, 5).setTracked(true));
-    RegistryEntry<EntityAttribute> ENTITY_GRAVITY_MODIFIER = register("player.gravity", (new EntityAttribute("player.gravityModifier", 1) {}).setTracked(true));
+    Holder<Attribute> EXTENDED_REACH_DISTANCE = Attributes.BLOCK_INTERACTION_RANGE;
+    Holder<Attribute> EXTENDED_ATTACK_DISTANCE = Attributes.ENTITY_INTERACTION_RANGE;
+    Holder<Attribute> EXTRA_MINING_SPEED = register("earth.mining_speed", new RangedAttribute("player.miningSpeed", 1, 0, 5).setSyncable(true));
+    Holder<Attribute> ENTITY_GRAVITY_MODIFIER = register("player.gravity", (new Attribute("player.gravityModifier", 1) {}).setSyncable(true));
 
-    private static RegistryEntry<EntityAttribute> register(String name, EntityAttribute attribute) {
+    private static Holder<Attribute> register(String name, Attribute attribute) {
         REGISTRY.add(attribute);
-        return Registry.registerReference(Registries.ATTRIBUTE, Unicopia.id(name), attribute);
+        return Registry.registerForHolder(BuiltInRegistries.ATTRIBUTE, Unicopia.id(name), attribute);
     }
 
     static void bootstrap() {}

@@ -2,7 +2,11 @@ package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntitySpawnReason;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.CastingMethod;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
@@ -21,12 +25,6 @@ import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import com.minelittlepony.unicopia.util.VecHelper;
 
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.MathHelper;
-
 public class LightSpell extends AbstractSpell implements TimedSpell, ProjectileDelegate.HitListener {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
             .with(Trait.LIFE, 10)
@@ -35,7 +33,7 @@ public class LightSpell extends AbstractSpell implements TimedSpell, ProjectileD
             .with(Trait.ORDER, 25)
             .build();
 
-    private static final SpellAttribute<Integer> ORB_COUNT = SpellAttribute.create(SpellAttributeType.ORB_COUNT, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.LIFE, life -> 2 + (int)(MathHelper.clamp(life, 10, 20) / 10F));
+    private static final SpellAttribute<Integer> ORB_COUNT = SpellAttribute.create(SpellAttributeType.ORB_COUNT, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.LIFE, life -> 2 + (int)(Mth.clamp(life, 10, 20) / 10F));
 
     static final TooltipFactory TOOLTIP = TooltipFactory.of(TIME, ORB_COUNT);
 
@@ -67,7 +65,7 @@ public class LightSpell extends AbstractSpell implements TimedSpell, ProjectileD
 
         if (!caster.isClient()) {
             if (lights.isEmpty()) {
-                int size = caster.asWorld().random.nextInt(2) + ORB_COUNT.get(getTraits());
+                int size = caster.asWorld().getRandom().nextInt(2) + ORB_COUNT.get(getTraits());
                 while (lights.size() < size) {
                     lights.add(new EntityReference<>());
                 }
@@ -75,12 +73,12 @@ public class LightSpell extends AbstractSpell implements TimedSpell, ProjectileD
 
             lights.forEach(ref -> {
                 if (ref.getOrEmpty(caster.asWorld()).isEmpty()) {
-                    FairyEntity entity = UEntities.TWITTERMITE.create(caster.asWorld(), SpawnReason.EVENT);
-                    entity.setPosition(ref.getTarget().map(EntityValues::pos).orElseGet(() -> {
-                        return caster.getOriginVector().add(VecHelper.supply(() -> caster.asWorld().random.nextInt(3) - 1));
+                    FairyEntity entity = UEntities.TWITTERMITE.create(caster.asWorld(), EntitySpawnReason.EVENT);
+                    entity.setPos(ref.getTarget().map(EntityValues::pos).orElseGet(() -> {
+                        return caster.getOriginVector().add(VecHelper.supply(() -> caster.asWorld().getRandom().nextInt(3) - 1));
                     }));
                     entity.setMaster(caster);
-                    entity.getWorld().spawnEntity(entity);
+                    entity.level().addFreshEntity(entity);
 
                     ref.set(entity);
                 }
@@ -103,18 +101,18 @@ public class LightSpell extends AbstractSpell implements TimedSpell, ProjectileD
         }
         lights.forEach(ref -> {
             ref.ifPresent(caster.asWorld(), e -> {
-                e.getWorld().sendEntityStatus(e, (byte)60);
+                e.level().broadcastEntityEvent(e, (byte)60);
                 e.discard();
             });
         });
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         timer.toNBT(compound, lookup);
         if (!lights.isEmpty()) {
-            NbtList list = new NbtList();
+            ListTag list = new ListTag();
             lights.forEach(light -> {
                 list.add(light.toNBT(lookup));
             });
@@ -123,10 +121,10 @@ public class LightSpell extends AbstractSpell implements TimedSpell, ProjectileD
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         timer.fromNBT(compound, lookup);
         lights.clear();
-        compound.get("lights", EntityReference.<FairyEntity>listCodec()).ifPresent(lights::addAll);
+        compound.read("lights", EntityReference.<FairyEntity>listCodec()).ifPresent(lights::addAll);
     }
 }

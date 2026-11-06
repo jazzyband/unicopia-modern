@@ -3,24 +3,23 @@ package com.minelittlepony.unicopia.diet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.serialization.PacketCodecUtils;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.Identifier;
-
 public record PonyDiets (Map<Race, DietProfile> diets, Map<Identifier, FoodGroup> effects) {
     private static PonyDiets INSTANCE = new PonyDiets(Map.of(), Map.of());
 
-    public static final PacketCodec<RegistryByteBuf, PonyDiets> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.map(HashMap::new, Race.PACKET_CODEC, DietProfile.PACKET_CODEC), diets -> diets.diets,
-            FoodGroup.PACKET_CODEC.collect(PacketCodecUtils.toMap(FoodGroup::id)), diets -> diets.effects,
+    public static final StreamCodec<RegistryFriendlyByteBuf, PonyDiets> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.map(HashMap::new, ByteBufCodecs.registry(Race.REGISTRY_KEY), DietProfile.PACKET_CODEC), diets -> diets.diets,
+            FoodGroup.PACKET_CODEC.apply(PacketCodecUtils.toMap(FoodGroup::id)), diets -> diets.effects,
             PonyDiets::new
     );
 

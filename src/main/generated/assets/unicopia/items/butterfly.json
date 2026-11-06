@@ -1,0 +1,117 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "cases": [
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/butterfly"
+        },
+        "when": "butterfly"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/yellow_butterfly"
+        },
+        "when": "yellow"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/lime_butterfly"
+        },
+        "when": "lime"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/red_butterfly"
+        },
+        "when": "red"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/green_butterfly"
+        },
+        "when": "green"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/blue_butterfly"
+        },
+        "when": "blue"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/purple_butterfly"
+        },
+        "when": "purple"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/magenta_butterfly"
+        },
+        "when": "magenta"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/pink_butterfly"
+        },
+        "when": "pink"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/hedylidae_butterfly"
+        },
+        "when": "hedylidae"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/lycaenidae_butterfly"
+        },
+        "when": "lycaenidae"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/nymphalidae_butterfly"
+        },
+        "when": "nymphalidae"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/monarch_butterfly"
+        },
+        "when": "monarch"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/white_monarch_butterfly"
+        },
+        "when": "white_monarch"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/brimstone_butterfly"
+        },
+        "when": "brimstone"
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "unicopia:item/butterfly"
+    },
+    "property": "unicopia:butterfly_variant"
+  }
+}

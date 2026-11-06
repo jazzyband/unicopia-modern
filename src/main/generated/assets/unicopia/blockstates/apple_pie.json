@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "bites=0,stomped=false": {
+      "model": "unicopia:block/apple_pie_full"
+    },
+    "bites=0,stomped=true": {
+      "model": "unicopia:block/apple_pie_stomped_full"
+    },
+    "bites=1,stomped=false": {
+      "model": "unicopia:block/apple_pie_elbow"
+    },
+    "bites=1,stomped=true": {
+      "model": "unicopia:block/apple_pie_stomped_elbow"
+    },
+    "bites=2,stomped=false": {
+      "model": "unicopia:block/apple_pie_straight"
+    },
+    "bites=2,stomped=true": {
+      "model": "unicopia:block/apple_pie_stomped_straight"
+    },
+    "bites=3,stomped=false": {
+      "model": "unicopia:block/apple_pie_corner"
+    },
+    "bites=3,stomped=true": {
+      "model": "unicopia:block/apple_pie_stomped_corner"
+    }
+  }
+}

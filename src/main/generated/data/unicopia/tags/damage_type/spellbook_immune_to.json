@@ -1,0 +1,15 @@
+{
+  "values": [
+    "unicopia:zap",
+    "unicopia:love_draining",
+    "unicopia:life_draining",
+    "unicopia:rainboom",
+    "unicopia:sun",
+    "unicopia:sunlight",
+    "unicopia:smash",
+    "#minecraft:is_fall",
+    "#minecraft:is_freezing",
+    "#minecraft:is_lightning",
+    "#minecraft:is_projectile"
+  ]
+}

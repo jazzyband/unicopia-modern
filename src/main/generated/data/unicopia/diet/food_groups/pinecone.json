@@ -1,0 +1,18 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:healing",
+      "health": 1.0
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "can_always_eat": true,
+      "nutrition": 0,
+      "saturation": 0.0
+    }
+  },
+  "tags": [
+    "c:foods/pinecone"
+  ]
+}

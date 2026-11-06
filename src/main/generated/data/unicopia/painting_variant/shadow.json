@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:shadow",
+  "author": {
+    "translate": "painting.unicopia.shadow.author"
+  },
+  "height": 3,
+  "title": {
+    "translate": "painting.unicopia.shadow.title"
+  },
+  "width": 2
+}

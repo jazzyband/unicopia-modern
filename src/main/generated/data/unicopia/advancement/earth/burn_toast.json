@@ -1,0 +1,33 @@
+{
+  "parent": "unicopia:earth/toast",
+  "criteria": {
+    "has_burned_toast": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:burned_toast"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.burn_toast.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:burned_toast"
+    },
+    "title": {
+      "translate": "advancements.unicopia.burn_toast.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_burned_toast"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

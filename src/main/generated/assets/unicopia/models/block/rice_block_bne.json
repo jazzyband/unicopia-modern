@@ -1,0 +1,7 @@
+{
+  "parent": "unicopia:block/template_bale_bne",
+  "textures": {
+    "side": "farmersdelight:block/rice_bale_side",
+    "top": "farmersdelight:block/rice_bale_top"
+  }
+}

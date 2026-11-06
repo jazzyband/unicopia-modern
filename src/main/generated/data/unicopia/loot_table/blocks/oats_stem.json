@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:block",
+  "modifier": {
+    "type": "minecraft:explosion_decay"
+  },
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:oats_stem",
+            "state": {
+              "age": "6"
+            }
+          },
+          "name": "unicopia:oats"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

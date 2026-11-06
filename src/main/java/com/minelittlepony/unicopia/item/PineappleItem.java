@@ -4,38 +4,37 @@ import com.minelittlepony.unicopia.AwaitTickQueue;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.util.RegistryUtils;
-
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ConsumableComponent;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.world.World;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.level.Level;
 
 public class PineappleItem extends Item {
-    public PineappleItem(Settings settings) {
+    public PineappleItem(Properties settings) {
         super(settings);
     }
 
     @Override
-    public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
-        ConsumableComponent consumable = stack.get(DataComponentTypes.CONSUMABLE);
+    public ItemStack finishUsingItem(ItemStack stack, Level world, LivingEntity user) {
+        Consumable consumable = stack.get(DataComponents.CONSUMABLE);
         if (consumable != null) {
-            stack = consumable.finishConsumption(world, user, stack);
-            if (!world.isClient) {
-                stack.damage(1, (ServerWorld)world, user instanceof ServerPlayerEntity p ? p : null, i -> {
+            stack = consumable.onConsume(world, user, stack);
+            if (!world.isClientSide()) {
+                stack.hurtAndBreak(1, (ServerLevel)world, user instanceof ServerPlayer p ? p : null, i -> {
                     AwaitTickQueue.scheduleTask(world, w -> {
-                        w.playSoundFromEntity(null, user, USounds.Vanilla.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 1, 0.7F);
+                        w.playSound(null, user, USounds.Vanilla.PLAYER_BURP, SoundSource.PLAYERS, 1, 0.7F);
                     });
                 });
 
-                if (world.random.nextInt(20) == 0) {
-                    RegistryUtils.pickRandomEntry(world, UTags.StatusEffects.PINEAPPLE_EFFECTS, e -> !user.hasStatusEffect(e)).ifPresent(effect -> {
-                        user.addStatusEffect(new StatusEffectInstance(effect, 10, 1));
+                if (world.getRandom().nextInt(20) == 0) {
+                    RegistryUtils.pickRandomEntry(world, UTags.StatusEffects.PINEAPPLE_EFFECTS, e -> !user.hasEffect(e)).ifPresent(effect -> {
+                        user.addEffect(new MobEffectInstance(effect, 10, 1));
                     });
                 }
             }

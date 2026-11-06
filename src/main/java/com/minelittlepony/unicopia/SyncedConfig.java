@@ -1,23 +1,17 @@
 package com.minelittlepony.unicopia;
 
-import java.util.HashSet;
 import java.util.Set;
-
+import net.minecraft.network.codec.StreamCodec;
 import com.minelittlepony.unicopia.util.serialization.PacketCodecUtils;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.RegistryKey;
 
 public record SyncedConfig (
     Set<String> wantItNeedItExcludeList,
-    Set<String> dimensionsWithoutAtmosphere,
-    Set<RegistryKey<Race>> speciesWhiteList) {
-    public static final PacketCodec<ByteBuf, SyncedConfig> PACKET_CODEC = PacketCodec.tuple(
+    Set<String> dimensionsWithoutAtmosphere) {
+    public static final StreamCodec<ByteBuf, SyncedConfig> PACKET_CODEC = StreamCodec.composite(
             PacketCodecUtils.STRING_SET, SyncedConfig::wantItNeedItExcludeList,
             PacketCodecUtils.STRING_SET, SyncedConfig::dimensionsWithoutAtmosphere,
-            RegistryKey.createPacketCodec(RaceKeys.REGISTRY).collect(PacketCodecs.toCollection(HashSet::new)), SyncedConfig::speciesWhiteList,
             SyncedConfig::new
     );
 }

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "group": "waxed_stripped_zap_log",
+  "ingredients": [
+    "minecraft:honeycomb",
+    "unicopia:stripped_zap_log"
+  ],
+  "result": {
+    "id": "unicopia:waxed_stripped_zap_log"
+  }
+}

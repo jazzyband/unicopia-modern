@@ -1,0 +1,60 @@
+{
+  "values": [
+    {
+      "id": "ad_astra:earth_orbit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:glacio_orbit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:mars_orbit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:mercury_orbit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:moon",
+      "required": false
+    },
+    {
+      "id": "adastra:moon_orbit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:venus_orbit",
+      "required": false
+    },
+    {
+      "id": "adastra:earth_orbit",
+      "required": false
+    },
+    {
+      "id": "adastra:glacio_orbit",
+      "required": false
+    },
+    {
+      "id": "adastra:mars_orbit",
+      "required": false
+    },
+    {
+      "id": "adastra:mercury_orbit",
+      "required": false
+    },
+    {
+      "id": "adastra:moon",
+      "required": false
+    },
+    {
+      "id": "adastra:moon_orbit",
+      "required": false
+    },
+    {
+      "id": "adastra:venus_orbit",
+      "required": false
+    }
+  ]
+}

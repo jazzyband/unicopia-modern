@@ -6,22 +6,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import com.google.gson.JsonElement;
 import com.minelittlepony.unicopia.Race;
+import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.block.UBlocks;
 import com.minelittlepony.unicopia.datagen.DataCollector;
 import com.minelittlepony.unicopia.item.BedsheetsItem;
 import com.minelittlepony.unicopia.item.UItems;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.minecraft.block.Block;
-import net.minecraft.data.DataOutput;
-import net.minecraft.data.DataWriter;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.client.data.BlockStateModelGenerator;
-import net.minecraft.client.data.ItemModelGenerator;
-import net.minecraft.client.render.model.json.BlockModelDefinition;
-import net.minecraft.component.type.DyedColorComponent;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.minecraft.client.data.models.BlockModelGenerators;
+import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.data.CachedOutput;
+import net.minecraft.data.PackOutput;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.DyedItemColor;
+import net.minecraft.world.level.block.Block;
 
 public class UModelProvider extends FabricModelProvider {
     public static final Set<Block> FRUITS = Set.of(
@@ -35,27 +37,27 @@ public class UModelProvider extends FabricModelProvider {
     );
 
     private final DataCollector<Supplier<JsonElement>> seasonsModels;
-    private final DataCollector<BlockModelDefinition> indirectBlockStatesDefinitions;
+    private final DataCollector<BlockStateModelDispatcher> indirectBlockStatesDefinitions;
 
-    public UModelProvider(FabricDataOutput output) {
+    public UModelProvider(FabricPackOutput output) {
         super(output);
-        seasonsModels = new DataCollector<>(output.getResolver(DataOutput.OutputType.RESOURCE_PACK, "seasons/models"), Supplier::get);
-        indirectBlockStatesDefinitions = new DataCollector<>(output.getResolver(DataOutput.OutputType.RESOURCE_PACK, "blockstates"), BlockModelDefinition.CODEC);
+        seasonsModels = new DataCollector<>(output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "seasons/models"), Supplier::get);
+        indirectBlockStatesDefinitions = new DataCollector<>(output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "blockstates"), BlockStateModelDispatcher.CODEC);
     }
 
     @Override
-    public void generateBlockStateModels(BlockStateModelGenerator modelGenerator0) {
-        UBlockStateModelGenerator.create(modelGenerator0).register();
+    public void generateBlockStateModels(BlockModelGenerators modelGenerator0) {
+        UBlockStateModelGenerator.create(modelGenerator0).run();
         new UExternalBlockStateModelGenerator(modelGenerator0, indirectBlockStatesDefinitions.prime((states, consumer) -> {
             if (states instanceof DataCollector.Identifiable i) {
-                consumer.accept(i.getId(), states.createBlockModelDefinition());
+                consumer.accept(i.getId(), states.create());
             }
-        })).register();
-        new SeasonsModelGenerator(modelGenerator0, seasonsModels.prime()).register();
+        })).run();
+        new SeasonsModelGenerator(modelGenerator0, seasonsModels.prime()).run();
     }
 
     @Override
-    public CompletableFuture<?> run(DataWriter writer) {
+    public CompletableFuture<?> run(CachedOutput writer) {
         return CompletableFuture.allOf(
             super.run(writer),
             indirectBlockStatesDefinitions.upload(writer),
@@ -64,7 +66,7 @@ public class UModelProvider extends FabricModelProvider {
     }
 
     @Override
-    public void generateItemModels(ItemModelGenerator itemModelGenerator) {
+    public void generateItemModels(ItemModelGenerators itemModelGenerator) {
         ItemModels.register(itemModelGenerator,
                 UItems.ACORN, UItems.APPLE_PIE_HOOF, UItems.APPLE_PIE_SLICE, UItems.APPLE_PIE,
                 UItems.BANANA, UItems.BOTCHED_GEM, UItems.BOWL_OF_NUTS, UItems.BROKEN_SUNGLASSES, UItems.BURNED_JUICE, UItems.BURNED_TOAST,
@@ -92,17 +94,18 @@ public class UModelProvider extends FabricModelProvider {
                 UItems.MUSIC_DISC_CRUSADE, UItems.MUSIC_DISC_FUNK, UItems.MUSIC_DISC_PET, UItems.MUSIC_DISC_POPULAR,
         // baskets
                 UItems.ACACIA_BASKET, UItems.BAMBOO_BASKET, UItems.BIRCH_BASKET, UItems.CHERRY_BASKET,
-                UItems.DARK_OAK_BASKET, UItems.PALE_OAK_BASKET, UItems.JUNGLE_BASKET, UItems.MANGROVE_BASKET, UItems.OAK_BASKET, UItems.SPRUCE_BASKET,
-                UItems.CRIMSON_BASKET, UItems.WARPED_BASKET,
-                UItems.PALM_BASKET, UItems.ZAP_BASKET, UItems.GOLDEN_OAK_BASKET,
+                UItems.DARK_OAK_BASKET, UItems.JUNGLE_BASKET, UItems.MANGROVE_BASKET, UItems.OAK_BASKET, UItems.SPRUCE_BASKET,
+                UItems.PALM_BASKET,
         // boats
                 UItems.PALM_BOAT, UItems.PALM_CHEST_BOAT,
         // horseshoes
                 UItems.COPPER_HORSE_SHOE, UItems.GOLDEN_HORSE_SHOE, UItems.IRON_HORSE_SHOE, UItems.NETHERITE_HORSE_SHOE
         );
-        ItemModels.registerDyeable(itemModelGenerator, UItems.FRIENDSHIP_BRACELET, DyedColorComponent.DEFAULT_COLOR);
+        ItemModels.registerDyeable(itemModelGenerator, UItems.FRIENDSHIP_BRACELET, DyedItemColor.LEATHER_COLOR);
         // spawn eggs
-        ItemModels.register(itemModelGenerator, ItemModels.GENERATED, UItems.BUTTERFLY_SPAWN_EGG, UItems.LOOT_BUG_SPAWN_EGG);
+        itemModelGenerator.generateFlatItem(UItems.PALE_OAK_BASKET, Unicopia.id("item/birch_basket"), ItemModels.GENERATED);
+        itemModelGenerator.generateFlatItem(UItems.BUTTERFLY_SPAWN_EGG, Identifier.withDefaultNamespace("item/bee_spawn_egg"), ItemModels.GENERATED);
+        itemModelGenerator.generateFlatItem(UItems.LOOT_BUG_SPAWN_EGG, Identifier.withDefaultNamespace("item/silverfish_spawn_egg"), ItemModels.GENERATED);
         // amulets
         ItemModels.register(itemModelGenerator, ItemModels.TEMPLATE_AMULET, UItems.ALICORN_AMULET, UItems.BROKEN_ALICORN_AMULET, UItems.PEARL_NECKLACE, UItems.PEGASUS_AMULET, UItems.UNICORN_AMULET);
         // mugs
@@ -127,7 +130,7 @@ public class UModelProvider extends FabricModelProvider {
         // badges
         ItemModels.register(itemModelGenerator, Race.REGISTRY.stream()
                 .map(race -> race.getId().withPath(p -> p + "_badge"))
-                .flatMap(id -> Registries.ITEM.getOptionalValue(id).stream())
+                .flatMap(id -> BuiltInRegistries.ITEM.getOptional(id).stream())
                 .toArray(Item[]::new));
 
         ItemModels.registerButterfly(itemModelGenerator, UItems.BUTTERFLY);

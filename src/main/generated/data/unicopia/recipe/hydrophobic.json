@@ -1,0 +1,25 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:frost"
+    },
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:shield"
+    }
+  ],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:stored_spell": "unicopia:hydrophobic"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:focus": 6.0
+  }
+}

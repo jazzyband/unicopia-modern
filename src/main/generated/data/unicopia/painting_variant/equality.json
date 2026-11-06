@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:equality",
+  "author": {
+    "translate": "painting.unicopia.equality.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.equality.title"
+  },
+  "width": 2
+}

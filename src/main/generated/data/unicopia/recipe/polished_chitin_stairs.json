@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "group": "chitin_stairs",
+  "key": {
+    "#": "unicopia:polished_chitin"
+  },
+  "pattern": [
+    "#  ",
+    "## ",
+    "###"
+  ],
+  "result": {
+    "count": 4,
+    "id": "unicopia:polished_chitin_stairs"
+  }
+}

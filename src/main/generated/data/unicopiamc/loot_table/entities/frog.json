@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:enchanted_count_increase",
+            "count": 2.0,
+            "enchantment": "minecraft:looting"
+          },
+          "name": "unicopia:frog_legs"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

@@ -1,28 +1,27 @@
 package com.minelittlepony.unicopia.recipe;
 
 import com.minelittlepony.unicopia.item.GlowableItem;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Pair;
+import net.minecraft.core.HolderLookup.Provider;
+import com.minelittlepony.unicopia.util.Tuple;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 
 public class GlowingRecipe extends ItemCombinationRecipe {
 
-    public GlowingRecipe(CraftingRecipeCategory category) {
+    public GlowingRecipe(CraftingBookCategory category) {
         super(category);
     }
 
     @Override
-    public final ItemStack craft(CraftingRecipeInput inventory, WrapperLookup registries) {
-        Pair<ItemStack, ItemStack> pair = runMatch(inventory);
+    public final ItemStack assemble(CraftingInput inventory) {
+        Tuple<ItemStack, ItemStack> pair = runMatch(inventory);
 
-        ItemStack result = pair.getLeft().copy();
+        ItemStack result = pair.getA().copy();
 
-        GlowableItem.setGlowing(result, pair.getRight().getItem() == Items.GLOWSTONE_DUST);
+        GlowableItem.setGlowing(result, pair.getB().getItem() == Items.GLOWSTONE_DUST);
 
         return result;
     }

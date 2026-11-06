@@ -9,19 +9,22 @@ import com.minelittlepony.unicopia.entity.mob.StormCloudEntity;
 import com.minelittlepony.unicopia.util.MeteorlogicalUtil;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-
-public class WeatherConditions extends PersistentState {
+public class WeatherConditions extends SavedData {
     public static final double FIRE_UPDRAFT = 0.13;
     public static final double SAND_UPDRAFT = 0.03;
     public static final double SOUL_SAND_UPDRAFT = -0.03;
@@ -34,20 +37,20 @@ public class WeatherConditions extends PersistentState {
 
     @SuppressWarnings("deprecation")
     public static final Plane THERMAL_FIELD = (world, pos) -> {
-        if (!world.isChunkLoaded(pos)) {
+        if (!world.hasChunkAt(pos)) {
             return 0;
         }
         double factor = 1 - getScaledDistanceFromTerrain(pos, world, MAX_UPDRAFT_HEIGHT);
         return (float)(factor * getMaterialSurfaceTemperature(pos, world));
     };
     public static final Plane LOCAL_ALTITUDE_FIELD = (world, pos) -> {
-        if (!world.isAir(pos)) {
+        if (!world.isEmptyBlock(pos)) {
             return 0;
         }
         int y = pos.getY();
         do {
             pos.move(Direction.DOWN);
-        } while (world.isAir(pos) && world.isInBuildLimit(pos));
+        } while (world.isEmptyBlock(pos) && world.isInWorldBounds(pos));
         return y - pos.getY();
     };
 
@@ -60,7 +63,7 @@ public class WeatherConditions extends PersistentState {
             Codec.INT.fieldOf("maxInterpolation").forGetter(i -> i.maxInterpolation)
     ).apply(o, WeatherConditions::new)), WeatherConditions::new);
 
-    public static WeatherConditions get(WorldView world) {
+    public static WeatherConditions get(LevelReader world) {
         return KEY.get(world);
     }
 
@@ -86,7 +89,7 @@ public class WeatherConditions extends PersistentState {
 
     public void addStorm(StormCloudEntity cloud) {
         synchronized (storms) {
-            storms.computeIfAbsent(cloud.getUuid(), id -> new Storm(cloud));
+            storms.computeIfAbsent(cloud.getUUID(), id -> new Storm(cloud));
         }
     }
 
@@ -97,36 +100,36 @@ public class WeatherConditions extends PersistentState {
         }
     }
 
-    public void tick(World world) {
+    public void tick(Level world) {
         if (interpolation < maxInterpolation) {
             interpolation++;
-            markDirty();
+            setDirty();
         }
 
-        boolean isDay = world.isDay();
+        boolean isDay = world.isBrightOutside();
         if (isDay != prevDayState
-            || world.random.nextInt(1200) == 0
-            || (world.isRaining() && world.random.nextInt(120) == 0)
-            || (world.isThundering() && world.random.nextInt(90) == 0)) {
+            || world.getRandom().nextInt(1200) == 0
+            || (world.isRaining() && world.getRandom().nextInt(120) == 0)
+            || (world.isThundering() && world.getRandom().nextInt(90) == 0)) {
             prevDayState = isDay;
             prevWindYaw = getWindYaw();
-            windYaw = world.random.nextFloat() * 360;
+            windYaw = world.getRandom().nextFloat() * 360;
             interpolation = 0;
             maxInterpolation = world.isRaining() || world.isThundering() ? 50 : 100;
-            markDirty();
+            setDirty();
         }
     }
 
     public float getWindYaw() {
-        return MathHelper.lerp(interpolation / (float)maxInterpolation, prevWindYaw, windYaw);
+        return Mth.lerp(interpolation / (float)maxInterpolation, prevWindYaw, windYaw);
     }
 
     public int getWindInterpolation() {
         return interpolation;
     }
 
-    public Vec3d getWindDirection() {
-        return Vec3d.fromPolar(0, getWindYaw()).normalize();
+    public Vec3 getWindDirection() {
+        return Vec3.directionFromRotation(0, getWindYaw()).normalize();
     }
 
     private class Storm {
@@ -141,8 +144,8 @@ public class WeatherConditions extends PersistentState {
             if (cloud == null) {
                 return false;
             }
-            BlockPos cloudPos = cloud.getBlockPos();
-            if (pos.getY() > cloudPos.getY() + cloud.getHeight()) {
+            BlockPos cloudPos = cloud.blockPosition();
+            if (pos.getY() > cloudPos.getY() + cloud.getBbHeight()) {
                 return false;
             }
             float radius = cloud.getSizeInBlocks();
@@ -157,62 +160,62 @@ public class WeatherConditions extends PersistentState {
     }
 
     @SuppressWarnings("deprecation")
-    public static Vec3d getAirflow(BlockPos pos, World world) {
-        if (!world.isChunkLoaded(pos)) {
-            return Vec3d.ZERO;
+    public static Vec3 getAirflow(BlockPos pos, Level world) {
+        if (!world.hasChunkAt(pos)) {
+            return Vec3.ZERO;
         }
 
-        BlockPos.Mutable probedPosition = new BlockPos.Mutable();
+        BlockPos.MutableBlockPos probedPosition = new BlockPos.MutableBlockPos();
 
         final float terrainFactor = 1 - getScaledDistanceFromTerrain(probedPosition.set(pos), world, MAX_TERRAIN_HEIGHT);
         final float windFactor = getScaledDistanceFromTerrain(probedPosition.set(pos), world, MAX_WIND_HEIGHT);
 
-        Vec3d terrainGradient = LOCAL_ALTITUDE_FIELD.computeAverage(world, pos, probedPosition).multiply(terrainFactor);
-        Vec3d thermalGradient = THERMAL_FIELD.computeAverage(world, pos, probedPosition).multiply(terrainFactor);
-        Vec3d wind = get(world).getWindDirection().multiply(windFactor);
+        Vec3 terrainGradient = LOCAL_ALTITUDE_FIELD.computeAverage(world, pos, probedPosition).scale(terrainFactor);
+        Vec3 thermalGradient = THERMAL_FIELD.computeAverage(world, pos, probedPosition).scale(terrainFactor);
+        Vec3 wind = get(world).getWindDirection().scale(windFactor);
 
         return terrainGradient
                 .add(thermalGradient)
                 .add(wind)
                 .normalize()
-                .multiply(windFactor);
+                .scale(windFactor);
     }
 
-    private static float getScaledDistanceFromTerrain(BlockPos.Mutable pos, World world, float maxDistance) {
+    private static float getScaledDistanceFromTerrain(BlockPos.MutableBlockPos pos, Level world, float maxDistance) {
         return Math.min(maxDistance, LOCAL_ALTITUDE_FIELD.getValue(world, pos)) / maxDistance;
     }
 
-    private static double getMaterialSurfaceTemperature(BlockPos.Mutable pos, World world) {
+    private static double getMaterialSurfaceTemperature(BlockPos.MutableBlockPos pos, Level world) {
         BlockState state = world.getBlockState(pos);
 
         if (state.isAir()) {
             return VOID_UPDRAFT;
         }
 
-        if (state.isOf(Blocks.SOUL_SAND) || state.isOf(Blocks.SOUL_SOIL)) {
+        if (state.is(Blocks.SOUL_SAND) || state.is(Blocks.SOUL_SOIL)) {
             return SOUL_SAND_UPDRAFT;
         }
 
-        if (state.isOf(Blocks.LAVA) || state.isOf(Blocks.LAVA_CAULDRON)
-                || state.isIn(BlockTags.FIRE)
-                || state.isIn(BlockTags.CAMPFIRES)
-                || state.isOf(Blocks.MAGMA_BLOCK)) {
+        if (state.is(Blocks.LAVA) || state.is(Blocks.LAVA_CAULDRON)
+                || state.is(BlockTags.FIRE)
+                || state.is(BlockTags.CAMPFIRES)
+                || state.is(Blocks.MAGMA_BLOCK)) {
             return FIRE_UPDRAFT;
         }
 
-        if (state.isIn(BlockTags.SAND)) {
+        if (state.is(BlockTags.SAND)) {
             return SAND_UPDRAFT * MeteorlogicalUtil.getSunIntensity(world);
         }
 
-        if (state.isIn(BlockTags.SNOW) || state.isIn(BlockTags.ICE)) {
+        if (state.is(BlockTags.SNOW) || state.is(BlockTags.ICE)) {
             return ICE_UPDRAFT * MeteorlogicalUtil.getSunIntensity(world);
         }
 
-        if (state.getFluidState().isIn(FluidTags.WATER)) {
+        if (state.getFluidState().is(FluidTags.WATER)) {
             float sunIntensity = MeteorlogicalUtil.getSunIntensity(world);
             int depth = 0;
-            BlockPos.Mutable mutable = pos.mutableCopy();
-            while (depth < 15 && world.getFluidState(mutable).isIn(FluidTags.WATER)) {
+            BlockPos.MutableBlockPos mutable = pos.mutable();
+            while (depth < 15 && world.getFluidState(mutable).is(FluidTags.WATER)) {
                 mutable.move(Direction.DOWN);
                 depth++;
             }
@@ -223,8 +226,8 @@ public class WeatherConditions extends PersistentState {
         return 0;
     }
 
-    public static Vec3d getGustStrength(World world, BlockPos pos) {
-        Random random = getPositionalRandom(world, pos);
+    public static Vec3 getGustStrength(Level world, BlockPos pos) {
+        RandomSource random = getPositionalRandom(world, pos);
         float strength = 0.015F * random.nextFloat();
 
         if (random.nextInt(30) == 0) {
@@ -242,19 +245,19 @@ public class WeatherConditions extends PersistentState {
         float pitch = (180 * random.nextFloat()) - 90;
         float yaw = (180 * random.nextFloat()) - 90;
 
-        return new Vec3d(strength * world.getRainGradient(1), pitch, yaw);
+        return new Vec3(strength * world.getRainLevel(1), pitch, yaw);
     }
 
-    public static Random getPositionalRandom(World world, BlockPos pos) {
-        long posLong = ChunkPos.toLong(pos);
-        long time = world.getTime();
-        return Random.create(posLong + time);
+    public static RandomSource getPositionalRandom(Level world, BlockPos pos) {
+        long posLong = ChunkPos.pack(pos);
+        long time = world.getGameTime();
+        return RandomSource.create(posLong + time);
     }
 
     public interface Plane {
-        float getValue(World world, BlockPos.Mutable pos);
+        float getValue(Level world, BlockPos.MutableBlockPos pos);
 
-        default Vec3d computeAverage(World world, BlockPos pos, BlockPos.Mutable probedPosition) {
+        default Vec3 computeAverage(Level world, BlockPos pos, BlockPos.MutableBlockPos probedPosition) {
 
             float e = getValue(world, probedPosition.set(pos));
 
@@ -265,22 +268,22 @@ public class WeatherConditions extends PersistentState {
             int projectionDistance = 4;
 
             // DEF
-            Vec3d def = new Vec3d(-average(
+            Vec3 def = new Vec3(-average(
                     getValue(world, probedPosition.set(pos).move(Direction.WEST, projectionDistance)) - e,
                     e - getValue(world, probedPosition.set(pos).move(Direction.EAST, projectionDistance))
             ), 0, 0).normalize();
             // BEH
-            Vec3d beh = new Vec3d(0, 0, -average(
+            Vec3 beh = new Vec3(0, 0, -average(
                     getValue(world, probedPosition.set(pos).move(Direction.NORTH, projectionDistance)) - e,
                     e - getValue(world, probedPosition.set(pos).move(Direction.SOUTH, projectionDistance))
             )).normalize();
             // AEI
-            Vec3d aei = diag(average(
+            Vec3 aei = diag(average(
                     getValue(world, probedPosition.set(pos).move(Direction.WEST, projectionDistance).move(Direction.NORTH, projectionDistance)) - e,
                     e - getValue(world, probedPosition.set(pos).move(Direction.EAST, projectionDistance).move(Direction.SOUTH, projectionDistance))
             )).normalize();
             // GEC
-            Vec3d gec = diag(average(
+            Vec3 gec = diag(average(
                     getValue(world, probedPosition.set(pos).move(Direction.EAST, projectionDistance).move(Direction.NORTH, projectionDistance)) - e,
                     e - getValue(world, probedPosition.set(pos).move(Direction.EAST, projectionDistance).move(Direction.WEST, projectionDistance))
             )).normalize();
@@ -288,8 +291,8 @@ public class WeatherConditions extends PersistentState {
             return beh.add(def).add(aei).add(gec).normalize();
         }
 
-        private static Vec3d diag(double mag) {
-            return new Vec3d(0.5 * mag, 0, 0.5 * mag);
+        private static Vec3 diag(double mag) {
+            return new Vec3(0.5 * mag, 0, 0.5 * mag);
         }
 
         private static float average(float a, float b) {

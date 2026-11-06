@@ -1,0 +1,18 @@
+{
+  "fabric:load_conditions": [
+    { "condition": "fabric:all_mods_loaded", "values": ["farmersdelight"] }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_apple_pie": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": "farmersdelight:apple_pie" }] }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": { "recipes": "unicopia:apple_pie_to_apple_pie" }
+    }
+  },
+  "requirements": [["has_apple_pie", "has_the_recipe"]],
+  "rewards": { "recipes": ["unicopia:apple_pie_to_apple_pie"] }
+}

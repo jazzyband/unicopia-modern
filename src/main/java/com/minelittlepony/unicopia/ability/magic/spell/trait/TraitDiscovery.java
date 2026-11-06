@@ -19,24 +19,24 @@ import com.mojang.serialization.Codec;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public class TraitDiscovery implements NbtSerialisable, Copyable<TraitDiscovery> {
-    private static final Codec<Map<RegistryKey<Item>, SpellTraits>> ENTRIES_CODEC = Codec.unboundedMap(RegistryKey.createCodec(RegistryKeys.ITEM), SpellTraits.CODEC);
+    private static final Codec<Map<ResourceKey<Item>, SpellTraits>> ENTRIES_CODEC = Codec.unboundedMap(ResourceKey.codec(Registries.ITEM), SpellTraits.CODEC);
     private final Set<Trait> unreadTraits = new HashSet<>();
 
     private final Set<Trait> traits = new HashSet<>();
-    private final Map<RegistryKey<Item>, SpellTraits> items = new HashMap<>();
+    private final Map<ResourceKey<Item>, SpellTraits> items = new HashMap<>();
 
     private final Pony pony;
 
@@ -67,7 +67,7 @@ public class TraitDiscovery implements NbtSerialisable, Copyable<TraitDiscovery>
             return;
         }
         @SuppressWarnings("deprecation")
-        var key = stack.getItem().getRegistryEntry().registryKey();
+        var key = stack.getItem().builtInRegistryHolder().key();
         SpellTraits traits = SpellTraits.of(key);
         items.put(key, traits);
         Set<Trait> newTraits = new HashSet<>();
@@ -79,21 +79,21 @@ public class TraitDiscovery implements NbtSerialisable, Copyable<TraitDiscovery>
         unreadTraits.addAll(newTraits);
         pony.sendUpdateToPlayer();
         if (!newTraits.isEmpty()) {
-            if (!pony.asWorld().isClient) {
-                Channel.UNLOCK_TRAITS.sendToPlayer(new MsgUnlockTraits(newTraits), (ServerPlayerEntity)pony.asEntity());
+            if (!pony.asWorld().isClientSide()) {
+                Channel.UNLOCK_TRAITS.sendToPlayer(new MsgUnlockTraits(newTraits), (ServerPlayer)pony.asEntity());
             }
             UCriteria.TRAIT_DISCOVERED.trigger(pony.asEntity());
         }
     }
 
     public SpellTraits getKnownTraits(Item item) {
-        return items.getOrDefault(Registries.ITEM.getId(item), SpellTraits.EMPTY);
+        return items.getOrDefault(BuiltInRegistries.ITEM.getKey(item), SpellTraits.EMPTY);
     }
 
     public Stream<Item> getKnownItems(Trait trait) {
         return items.entrySet().stream()
                 .filter(entry -> entry.getValue().get(trait) > 0)
-                .flatMap(entry -> Registries.ITEM.getOptionalValue(entry.getKey()).stream());
+                .flatMap(entry -> BuiltInRegistries.ITEM.getOptional(entry.getKey()).stream());
     }
 
     public boolean isUnread() {
@@ -113,43 +113,43 @@ public class TraitDiscovery implements NbtSerialisable, Copyable<TraitDiscovery>
     }
 
     @Environment(EnvType.CLIENT)
-    public void appendTooltip(ItemStack stack, Consumer<Text> textConsumer) {
+    public void appendTooltip(ItemStack stack, Consumer<Component> textConsumer) {
         SpellTraits.getEmbeddedTraits(stack)
             .orElseGet(() -> getKnownTraits(stack.getItem()))
             .appendTooltip(textConsumer);
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-        NbtCompound disco = new NbtCompound();
+    public void toNBT(CompoundTag compound, Provider lookup) {
+        CompoundTag disco = new CompoundTag();
         items.forEach((key, val) -> {
             disco.put(key.toString(), val.toNbt());
         });
         compound.put("items", disco);
 
-        NbtList a = new NbtList();
-        this.traits.forEach(id -> a.add(NbtString.of(id.getId().toString())));
+        ListTag a = new ListTag();
+        this.traits.forEach(id -> a.add(StringTag.valueOf(id.getId().toString())));
         compound.put("traits", a);
 
-        NbtList b = new NbtList();
-        unreadTraits.forEach(id -> b.add(NbtString.of(id.getId().toString())));
+        ListTag b = new ListTag();
+        unreadTraits.forEach(id -> b.add(StringTag.valueOf(id.getId().toString())));
         compound.put("unreadTraits", b);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         clear();
-        compound.get("items", ENTRIES_CODEC).orElse(Map.of()).forEach((id, traits) -> {
+        compound.read("items", ENTRIES_CODEC).orElse(Map.of()).forEach((id, traits) -> {
             traits = loadTraits(id, traits);
             if (traits.isPresent()) {
                 items.put(id, traits);
             }
         });
-        compound.get("traits", Trait.SET_CODEC).orElse(Set.of()).forEach(traits::add);
-        compound.get("unreadTraits", Trait.SET_CODEC).orElse(Set.of()).forEach(unreadTraits::add);
+        compound.read("traits", Trait.SET_CODEC).orElse(Set.of()).forEach(traits::add);
+        compound.read("unreadTraits", Trait.SET_CODEC).orElse(Set.of()).forEach(unreadTraits::add);
     }
 
-    private SpellTraits loadTraits(RegistryKey<Item> itemKey, SpellTraits storedTraits) {
+    private SpellTraits loadTraits(ResourceKey<Item> itemKey, SpellTraits storedTraits) {
         if (!pony.isClient()) {
             SpellTraits itemTraits = SpellTraits.of(itemKey);
             if (itemTraits.isPresent()) {

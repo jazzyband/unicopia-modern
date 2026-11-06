@@ -1,0 +1,30 @@
+{
+  "parent": "unicopia:bat/praise_the_sun",
+  "criteria": {
+    "wear_shades": {
+      "conditions": {
+        "event": "wear_shades",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.cool_potato.description"
+    },
+    "icon": {
+      "id": "unicopia:sunglasses"
+    },
+    "title": {
+      "translate": "advancements.unicopia.cool_potato.title"
+    }
+  },
+  "requirements": [
+    [
+      "wear_shades"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -4,7 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.IntConsumer;
-
+import net.minecraft.util.Util;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.navigation.ScreenPosition;
+import net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen;
+import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.CommonColors;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.TooltipFlag;
 import com.minelittlepony.common.client.gui.GameGui;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
 import com.minelittlepony.common.client.gui.element.Button;
@@ -22,31 +39,17 @@ import com.minelittlepony.unicopia.container.spellbook.TabSide;
 import com.minelittlepony.unicopia.network.Channel;
 import com.minelittlepony.unicopia.network.MsgSpellbookStateChanged;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import org.joml.Matrix3x2fStack;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.ComponentMap;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item.TooltipContext;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.recipe.display.RecipeDisplay;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.ColorHelper;
-
-public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<SpellbookScreenHandler> implements RecipeBookProvider {
+public class SpellbookScreen extends AbstractRecipeBookScreen<SpellbookScreenHandler> implements RecipeUpdateListener {
     public static final Identifier TEXTURE = Unicopia.id("textures/gui/container/book.png");
     public static final Identifier SLOT = Unicopia.id("textures/gui/container/slot.png");
     public static final Identifier GEM = Unicopia.id("textures/item/gemstone.png");
 
     private static final int CONTENT_PADDING = 30;
+    private final int imageWidth = 405;
+    private final int imageHeight = 219;
 
     public static final int TITLE_X = 30;
     public static final int TITLE_Y = 20;
@@ -62,18 +65,16 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
 
     private Bounds contentBounds = Bounds.empty();
 
-    public SpellbookScreen(SpellbookScreenHandler handler, PlayerInventory inventory, Text title) {
-        super(handler, /*new SpellbookRecipeBookWidget(handler), */inventory, title);
-        backgroundWidth = 405;
-        backgroundHeight = 219;
-        contentBounds = new Bounds(CONTENT_PADDING, CONTENT_PADDING, backgroundWidth - CONTENT_PADDING * 2, backgroundHeight - CONTENT_PADDING * 3 - 2);
+    public SpellbookScreen(SpellbookScreenHandler handler, Inventory inventory, Component title) {
+        super(handler, new SpellbookRecipeBookWidget(handler), inventory, title);
+        contentBounds = new Bounds(CONTENT_PADDING, CONTENT_PADDING, imageWidth - CONTENT_PADDING * 2, imageHeight - CONTENT_PADDING * 3 - 2);
         handler.getSpellbookState().setSynchronizer(state -> {
             Channel.CLIENT_SPELLBOOK_UPDATE.sendToServer(MsgSpellbookStateChanged.create(handler, state));
         });
     }
 
     public SpellbookState getState() {
-        return handler.getSpellbookState();
+        return menu.getSpellbookState();
     }
 
     public SpellbookTraitDexPageContent getTraitDex() {
@@ -81,55 +82,52 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
     }
 
     public void addPageButtons(int buttonY, int prevX, int nextX, IntConsumer pageAction) {
-        addDrawableChild(new PageButton(this, x + nextX, y + buttonY, 1, pageAction));
-        addDrawableChild(new PageButton(this, x + prevX, y + buttonY, -1, pageAction));
+        addRenderableWidget(new PageButton(this, leftPos + nextX, topPos + buttonY, 1, pageAction));
+        addRenderableWidget(new PageButton(this, leftPos + prevX, topPos + buttonY, -1, pageAction));
     }
 
     public int getX() {
-        return x;
+        return leftPos;
     }
 
     public int getY() {
-        return y;
+        return topPos;
     }
 
     public int getBackgroundWidth() {
-        return backgroundWidth;
+        return imageWidth;
     }
 
     public int getBackgroundHeight() {
-        return backgroundHeight;
+        return imageHeight;
     }
 
     public Bounds getFrameBounds() {
         return contentBounds;
     }
 
-    /*@Override
-    protected ScreenPos getRecipeBookButtonPos() {
-        return new ScreenPos(0, 0);
-    }*/
+    @Override
+    protected ScreenPosition getRecipeBookButtonPosition() {
+        return new ScreenPosition(0, 0);
+    }
 
     @Override
-    public <T extends Drawable> T addDrawable(T drawable) {
-        return super.addDrawable(drawable);
+    public <T extends Renderable> T addRenderableOnly(T drawable) {
+        return super.addRenderableOnly(drawable);
     }
 
     @Override
     public void init() {
         super.init();
+        leftPos = (width - imageWidth) / 2;
+        topPos = (height - imageHeight) / 2;
         tabs.init();
         chapters.getCurrentChapter().content().ifPresent(content -> content.init(this, chapters.getCurrentChapter().id()));
     }
 
     @Override
-    public void onCraftFailed(RecipeDisplay display) {
-
-    }
-
-    @Override
-    public void refreshRecipeBook() {
-        //super.refreshRecipeBook();
+    public void recipesUpdated() {
+        super.recipesUpdated();
         chapters.getCurrentChapter()
             .content()
             .map(i -> i instanceof RecipesChangedListener ? (RecipesChangedListener)i : null)
@@ -137,19 +135,17 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
         if (getState().isDirty()) {
-            clearAndInit();
+            rebuildWidgets();
         }
-        super.render(context, mouseX, mouseY, partialTicks);
-        drawMouseoverTooltip(context, mouseX, mouseY);
+        super.extractRenderState(context, mouseX, mouseY, partialTicks);
     }
 
     @Override
-    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShaderColor(1, 1, 1, 1);
+    public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 
-        context.drawTexture(RenderLayer::getGuiTextured, TEXTURE, x, y, 0, 0, backgroundWidth, backgroundHeight, 512, 256);
+        context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 512, 256);
 
         tabs.getAllTabs().forEach(tab -> {
             Bounds bounds = tab.bounds();
@@ -161,19 +157,17 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
             if (color == 0xFFFFFF || color == 0) {
                 v += 48;
             } else {
-                RenderSystem.setShaderColor(ColorHelper.getRedFloat(color), ColorHelper.getGreenFloat(color), ColorHelper.getBlueFloat(color), 1);
             }
 
             boolean isRight = tab.chapter().details().side() == TabSide.RIGHT;
 
-            context.drawTexture(RenderLayer::getGuiTextured, TEXTURE, bounds.left, bounds.top, isRight ? 510 - bounds.width : 402, v, bounds.width, bounds.height, 512, 256);
-            RenderSystem.setShaderColor(1, 1, 1, 1);
+            context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, bounds.left, bounds.top, isRight ? 510 - bounds.width : 402, v, bounds.width, bounds.height, 512, 256);
 
             float widthScale = bounds.width / 35F;
             int resolution = (int)(16 * widthScale);
             int iconInset = (int)(Math.min(widthScale * 2, 1) * 10);
 
-            context.drawTexture(RenderLayer::getGuiTextured, tab.icon().get(),
+            context.blit(RenderPipelines.GUI_TEXTURED, tab.icon().get(),
                     isRight ? bounds.left + bounds.width - resolution - iconInset : bounds.left + iconInset,
                     bounds.top + (bounds.height - resolution) / 2,
                     0, 0,
@@ -182,58 +176,55 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
             );
 
             if (bounds.contains(mouseX, mouseY)) {
-                setTooltip(Text.translatable(Util.createTranslationKey("chapter", tab.chapter().id())));
+                context.setTooltipForNextFrame(Component.translatable(Util.makeDescriptionId("chapter", tab.chapter().id())), mouseX, mouseY);
             }
         });
 
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.translate(x, y, 0);
+        Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate(leftPos, topPos);
         chapters.getCurrentChapter().content().ifPresent(content -> content.draw(context, mouseX, mouseY, this));
-        matrices.pop();
+        matrices.popMatrix();
+        super.extractContents(context, mouseX, mouseY, delta);
     }
 
     @Override
-    protected void drawMouseoverTooltip(DrawContext context, int x, int y) {
+    protected void extractTooltip(GuiGraphicsExtractor context, int x, int y) {
 
-        context.getMatrices().push();
-        context.getMatrices().translate(0, 0, 200);
-
-        if (!(focusedSlot instanceof SpellSlot sp)) {
-            super.drawMouseoverTooltip(context, x, y);
+        if (!(hoveredSlot instanceof SpellSlot sp)) {
+            super.extractTooltip(context, x, y);
             return;
         }
 
         CustomisedSpellType<?> spell = sp.getSpell();
         if (spell.isEmpty()) {
-            context.drawTooltip(textRenderer, Text.translatable("gui.unicopia.spellbook.empty_spell_slot"), x, y);
+            context.setTooltipForNextFrame(font, Component.translatable("gui.unicopia.spellbook.empty_spell_slot"), x, y);
             return;
         }
 
-        List<Text> tooltip = new ArrayList<>();
+        List<Component> tooltip = new ArrayList<>();
         tooltip.add(spell.type().getName());
-        spell.appendTooltip(TooltipContext.create(client.world), tooltip::add, TooltipType.BASIC, ComponentMap.EMPTY);
+        spell.addToTooltip(TooltipContext.of(minecraft.level), tooltip::add, TooltipFlag.NORMAL, DataComponentMap.EMPTY);
 
-        context.drawTooltip(textRenderer, tooltip, x, y);
-        context.getMatrices().pop();
+        context.setComponentTooltipForNextFrame(font, tooltip, x, y);
     }
 
-    void drawSlots(DrawContext context, int mouseX, int mouseY, float delta) {
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.translate(x, y, 0);
+    void drawSlots(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate(leftPos, topPos);
 
-        for (Slot slot : handler.slots) {
-            if (slot.isEnabled() && slot instanceof SpellbookSlot p) {
-                context.drawTexture(RenderLayer::getGuiTextured, SLOT, slot.x - 8, slot.y - 8, 0, 0, 32, 32, 32, 32);
+        for (Slot slot : menu.slots) {
+            if (slot.isActive() && slot instanceof SpellbookSlot p) {
+                context.blit(RenderPipelines.GUI_TEXTURED, SLOT, slot.x - 8, slot.y - 8, 0, 0, 32, 32, 32, 32);
 
-                if (slot.getStack().isEmpty()) {
+                if (slot.getItem().isEmpty()) {
                     Identifier foreground = p.getForegroundIdentifier();
                     if (foreground != null) {
                         if (p.isTrinket()) {
                             foreground = TrinketSlotBackSprites.getBackSprite(foreground);
                         }
-                        context.drawTexture(RenderLayer::getGuiTextured, foreground, slot.x, slot.y, 0, 0, 16, 16, 16, 16, ColorHelper.withAlpha(ColorHelper.channelFromFloat(p.getBackSpriteOpacity()), Colors.WHITE));
+                        context.blit(RenderPipelines.GUI_TEXTURED, foreground, slot.x, slot.y, 0, 0, 16, 16, 16, 16, ARGB.color(ARGB.as8BitChannel(p.getBackSpriteOpacity()), CommonColors.WHITE));
                     }
                 }
 
@@ -241,67 +232,59 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
                     CustomisedSpellType<?> spell = sp.getSpell();
 
                     if (!spell.isEmpty()) {
-                        RenderSystem.setShaderColor(1, 1, 1, 1);
-                        context.getMatrices().push();
-                        context.getMatrices().translate(0, 0, 260);
+                        context.pose().pushMatrix();
                         SpellIconRenderer.renderSpell(context, spell, slot.x, slot.y, 0.5F);
-                        context.getMatrices().pop();
+                        context.pose().popMatrix();
                     }
                 }
 
                 if (p.showTraits()) {
                     float weight = p.getWeight();
-                    ItemTraitsTooltipRenderer.renderStackTraits(slot.getStack(), context, slot.x, slot.y, weight == 0 ? 1 : weight, delta, slot.id);
+                    ItemTraitsTooltipRenderer.renderStackTraits(slot.getItem(), context, slot.x, slot.y, weight == 0 ? 1 : weight, delta, slot.index);
                 }
             }
         }
 
-        matrices.pop();
+        matrices.popMatrix();
     }
 
     @Override
-    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor context, int mouseX, int mouseY) {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
         return tabs.getAllTabs().anyMatch(tab -> {
             if (tab.bounds().contains(mouseX, mouseY) && chapters.getCurrentChapter() != tab.chapter()) {
                 getState().setCurrentPageId(tab.chapter().id());
-                GameGui.playSound(USounds.Vanilla.ITEM_BOOK_PAGE_TURN);
-                clearAndInit();
+                GameGui.playSound(USounds.Vanilla.BOOK_PAGE_TURN);
+                rebuildWidgets();
                 return true;
             }
 
             return false;
-        }) || super.mouseClicked(mouseX, mouseY, button);
+        }) || super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    protected void clearAndInit() {
-        super.clearAndInit();
+    protected void rebuildWidgets() {
+        super.rebuildWidgets();
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return hoveredElement(mouseX, mouseY).filter(e -> {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        return getChildAt(event.x(), event.y()).filter((element) -> {
             setDragging(false);
-            return e.mouseReleased(mouseX, mouseY, button);
-        }).isPresent() || super.mouseReleased(mouseX, mouseY, button);
+            return element.mouseReleased(event);
+        }).isPresent() || super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        return (getFocused() != null && isDragging() && button == 0 && getFocused().mouseDragged(mouseX, mouseY, button, deltaX, deltaY))
-            || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        return hoveredElement(mouseX, mouseY).filter(e -> {
-            return e.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-        })
-                .isPresent() || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        return (getFocused() != null && isDragging() && event.button() == 0 && getFocused().mouseDragged(event, deltaX, deltaY))
+            || super.mouseDragged(event, deltaX, deltaY);
     }
 
     private static class PageButton extends ImageButton {
@@ -318,20 +301,20 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
             getStyle().setIcon(sprite);
             onClick(sender -> {
                 pageAction.accept(increment);
-                screen.clearAndInit();
+                screen.rebuildWidgets();
             });
         }
 
         @Override
-        public void renderWidget(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
             if (!active) {
                return;
             }
 
-            int state = hovered ? 1 : 0;
+            int state = isHovered ? 1 : 0;
 
             sprite.setTextureOffset(23 * state, (int)(479 + 6.5F - (increment * 6.5F)));
-            super.renderWidget(context, mouseX, mouseY, tickDelta);
+            super.extractContents(context, mouseX, mouseY, tickDelta);
         }
     }
 
@@ -346,14 +329,12 @@ public class SpellbookScreen extends /*RecipeBookScreen*/ HandledScreen<Spellboo
         }
 
         @Override
-        public void renderWidget(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-            RenderSystem.setShaderColor(1, 1, 1, alpha);
+        public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
 
             if (getStyle().hasIcon()) {
                 getStyle().getIcon().render(context, getX(), getY(), mouseX, mouseY, tickDelta);
             }
 
-            RenderSystem.setShaderColor(1, 1, 1, 1);
         }
     }
 

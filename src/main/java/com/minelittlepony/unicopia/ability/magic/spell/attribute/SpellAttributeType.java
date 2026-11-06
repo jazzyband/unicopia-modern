@@ -2,13 +2,12 @@ package com.minelittlepony.unicopia.ability.magic.spell.attribute;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.minelittlepony.unicopia.Unicopia;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import com.minelittlepony.unicopia.Unicopia;
 
-public record SpellAttributeType(Identifier id, Text name) {
+public record SpellAttributeType(Identifier id, Component name) {
     public static final List<SpellAttributeType> REGISTRY = new ArrayList<>();
 
     @Deprecated
@@ -49,7 +48,7 @@ public record SpellAttributeType(Identifier id, Text name) {
     public static final SpellAttributeType NEGATES_FALL_DAMAGE = register("negates_fall_damage");
 
     public SpellAttributeType(Identifier id) {
-        this(id, Text.translatable(Util.createTranslationKey("spell_attribute", id)));
+        this(id, Component.translatable(Util.makeDescriptionId("spell_attribute", id)));
     }
 
     public static SpellAttributeType register(String name) {

@@ -4,29 +4,28 @@ import com.minelittlepony.unicopia.server.world.UnicopiaWorldProperties;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
 
 class SkyAngleCommand {
-    static LiteralArgumentBuilder<ServerCommandSource> create() {
-        return CommandManager.literal("skyangle").requires(s -> s.hasPermissionLevel(2))
+    static LiteralArgumentBuilder<CommandSourceStack> create() {
+        return Commands.literal("skyangle").requires(s -> s.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
                     .executes(context -> get(context.getSource()))
-            .then(CommandManager.literal("set")
+            .then(Commands.literal("set")
                     .executes(context -> set(context.getSource(), 0))
-                    .then(CommandManager.argument("angle", FloatArgumentType.floatArg(0, 360))
+                    .then(Commands.argument("angle", FloatArgumentType.floatArg(0, 360))
                             .executes(context -> set(context.getSource(), FloatArgumentType.getFloat(context, "angle")))));
     }
 
-    static int get(ServerCommandSource source) throws CommandSyntaxException {
-        source.sendFeedback(() -> Text.translatable("commands.skyangle.get", UnicopiaWorldProperties.forWorld(source.getWorld()).getTangentalSkyAngle()), true);
+    static int get(CommandSourceStack source) throws CommandSyntaxException {
+        source.sendSuccess(() -> Component.translatable("commands.skyangle.get", UnicopiaWorldProperties.forWorld(source.getLevel()).getTangentalSkyAngle()), true);
         return 0;
     }
 
-    static int set(ServerCommandSource source, float newAngle) {
-        UnicopiaWorldProperties.forWorld(source.getWorld()).setTangentalSkyAngle(source.getWorld(), newAngle);
-        source.sendFeedback(() -> Text.translatable("commands.skyangle.set", newAngle), true);
+    static int set(CommandSourceStack source, float newAngle) {
+        UnicopiaWorldProperties.forWorld(source.getLevel()).setTangentalSkyAngle(newAngle);
+        source.sendSuccess(() -> Component.translatable("commands.skyangle.set", newAngle), true);
         return 0;
     }
 

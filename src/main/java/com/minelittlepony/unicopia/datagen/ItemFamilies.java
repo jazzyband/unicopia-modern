@@ -1,8 +1,7 @@
 package com.minelittlepony.unicopia.datagen;
 
 import com.minelittlepony.unicopia.item.UItems;
-
-import net.minecraft.item.Item;
+import net.minecraft.world.item.Item;
 
 public interface ItemFamilies {
     Item[] MUSIC_DISCS = {

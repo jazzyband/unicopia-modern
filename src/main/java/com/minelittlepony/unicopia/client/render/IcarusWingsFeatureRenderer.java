@@ -4,21 +4,21 @@ import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.state.BipedEntityRenderState;
-import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.resources.Identifier;
 
-public class IcarusWingsFeatureRenderer<S extends BipedEntityRenderState> extends WingsFeatureRenderer<S> {
+public class IcarusWingsFeatureRenderer<S extends HumanoidRenderState> extends WingsFeatureRenderer<S> {
     private static final Identifier ICARUS_WINGS = Unicopia.id("textures/models/wings/icarus.png");
     private static final Identifier ICARUS_WINGS_CORRUPTED = Unicopia.id("textures/models/wings/icarus_corrupted.png");
 
-    public IcarusWingsFeatureRenderer(FeatureRendererContext<S, ? extends BipedEntityModel<S>> context) {
+    public IcarusWingsFeatureRenderer(RenderLayerParent<S, ? extends HumanoidModel<S>> context) {
         super(context);
     }
 
@@ -28,8 +28,8 @@ public class IcarusWingsFeatureRenderer<S extends BipedEntityRenderState> extend
     }
 
     @Override
-    protected VertexConsumer getBuffer(VertexConsumerProvider vertices, Identifier texture) {
-        return ItemRenderer.getArmorGlintConsumer(vertices, RenderLayer.getEntityTranslucent(texture), true);
+    protected RenderType getLayer(Identifier texture) {
+        return RenderTypes.entityTranslucent(texture);
     }
 
     @Override

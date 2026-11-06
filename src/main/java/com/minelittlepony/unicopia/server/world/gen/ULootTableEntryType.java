@@ -5,22 +5,22 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 public interface ULootTableEntryType {
     static void bootstrap() {
         Map<Identifier, Identifier> extentionTableIds = new HashMap<>();
         LootTableEvents.MODIFY.register((key, supplier, source, registries) -> {
-            Identifier id = key.getValue();
+            Identifier id = key.identifier();
 
             if ("unicopiamc".equalsIgnoreCase(id.getNamespace())) {
-                extentionTableIds.put(Identifier.ofVanilla(id.getPath()), id);
+                extentionTableIds.put(Identifier.withDefaultNamespace(id.getPath()), id);
             }
         });
         LootTableEvents.ALL_LOADED.register((resourceManager, registry) -> {
             extentionTableIds.forEach((base, extra) -> {
-                registry.getOptionalValue(base).ifPresent(table -> {
-                    registry.getOptionalValue(extra).ifPresent(extraTable -> {
+                registry.getOptional(base).ifPresent(table -> {
+                    registry.getOptional(extra).ifPresent(extraTable -> {
                         if (table.pools.isEmpty() || extraTable.pools.size() > 1 || (base.getPath().indexOf("gameplay") == -1 && base.getPath().indexOf("archaeology") == -1)) {
                             table.pools = Stream.concat(table.pools.stream(), extraTable.pools.stream()).toList();
                         } else {

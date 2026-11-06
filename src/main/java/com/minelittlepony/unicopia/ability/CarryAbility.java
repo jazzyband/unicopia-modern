@@ -4,19 +4,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.TraceHelper;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.world.World;
 
 /**
  * Pegasi ability to pick up and carry other players
@@ -43,14 +41,14 @@ public class CarryAbility implements Ability<Hit> {
         return Hit.INSTANCE;
     }
 
-    protected LivingEntity findRider(PlayerEntity player, World w) {
+    protected LivingEntity findRider(Player player, Level w) {
         return TraceHelper.<LivingEntity>findEntity(player, 10, 1, hit -> {
-            return EquinePredicates.VALID_LIVING_AND_NOT_MAGIC_IMMUNE.test(hit) && !player.isConnectedThroughVehicle(hit);
+            return EquinePredicates.VALID_LIVING_AND_NOT_MAGIC_IMMUNE.test(hit) && !player.isPassengerOfSameVehicle(hit);
         }).orElse(null);
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -58,7 +56,7 @@ public class CarryAbility implements Ability<Hit> {
     public boolean onQuickAction(Pony player, ActivationType type, Optional<Hit> data) {
 
         if (type == ActivationType.TAP && player.getPhysics().isFlying()) {
-            player.getPhysics().dashForward((float)player.asWorld().random.nextTriangular(1, 0.3F));
+            player.getPhysics().dashForward((float)player.asWorld().getRandom().triangle(1, 0.3F));
             return true;
         }
 
@@ -72,13 +70,13 @@ public class CarryAbility implements Ability<Hit> {
 
     @Override
     public boolean apply(Pony iplayer, Hit data) {
-        PlayerEntity player = iplayer.asEntity();
+        Player player = iplayer.asEntity();
         LivingEntity rider = findRider(player, iplayer.asWorld());
 
         dropAllPassengers(player);
 
         if (rider != null) {
-            rider.startRiding(player, true);
+            rider.startRiding(player, true, true);
             Living.getOrEmpty(rider).ifPresent(living -> living.setCarrier(player));
         }
 
@@ -86,12 +84,12 @@ public class CarryAbility implements Ability<Hit> {
         return true;
     }
 
-    protected void dropAllPassengers(PlayerEntity player) {
-        if (player.hasPassengers()) {
-            List<Entity> passengers = StreamSupport.stream(player.getPassengersDeep().spliterator(), false).toList();
-            player.removeAllPassengers();
+    protected void dropAllPassengers(Player player) {
+        if (player.isVehicle()) {
+            List<Entity> passengers = StreamSupport.stream(player.getIndirectPassengers().spliterator(), false).toList();
+            player.ejectPassengers();
             for (Entity passenger : passengers) {
-                passenger.refreshPositionAfterTeleport(player.getPos());
+                passenger.snapTo(player.position());
                 Living<?> l = Living.living(passenger);
                 if (l != null) {
                     l.setCarrier((UUID)null);

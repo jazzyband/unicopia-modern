@@ -1,13 +1,14 @@
 package com.minelittlepony.unicopia.entity.ai;
 
+import net.minecraft.world.phys.Vec3;
+
 import com.minelittlepony.unicopia.entity.mob.ArenaCombatant;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.OcelotAttackGoal;
+import net.minecraft.world.level.pathfinder.Path;
 
-import net.minecraft.entity.ai.goal.AttackGoal;
-import net.minecraft.entity.ai.pathing.Path;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.util.math.BlockPos;
-
-public class ArenaAttackGoal<E extends MobEntity & ArenaCombatant> extends AttackGoal {
+public class ArenaAttackGoal<E extends Mob & ArenaCombatant> extends OcelotAttackGoal {
 
     private final E combatant;
 
@@ -17,17 +18,17 @@ public class ArenaAttackGoal<E extends MobEntity & ArenaCombatant> extends Attac
     }
 
     @Override
-    public boolean canStart() {
-        return combatant.getHomePos().isPresent() && super.canStart();
+    public boolean canUse() {
+        return combatant.getHomePos().isPresent() && super.canUse();
     }
 
     @Override
-    public boolean shouldContinue() {
-        return combatant.getHomePos().filter(this::isInArena).isPresent() && super.shouldContinue();
+    public boolean canContinueToUse() {
+        return combatant.getHomePos().filter(this::isInArena).isPresent() && super.canContinueToUse();
     }
 
     private boolean isInArena(BlockPos homePos) {
-        return combatant.getBlockPos().isWithinDistance(homePos, combatant.getAreaRadius());
+        return combatant.blockPosition().closerThan(homePos, combatant.getAreaRadius());
     }
 
     @Override
@@ -35,13 +36,13 @@ public class ArenaAttackGoal<E extends MobEntity & ArenaCombatant> extends Attac
         super.stop();
         combatant.getHomePos().ifPresent(home -> {
             if (!isInArena(home)) {
-                Path path = combatant.getNavigation().findPathTo(home, 2, (int)combatant.getAreaRadius() * 2);
+                Path path = combatant.getNavigation().createPath(home, 2, (int)combatant.getAreaRadius() * 2);
                 if (path != null) {
-                    combatant.getNavigation().startMovingAlong(path, combatant.getMovementSpeed() * 2F);
+                    combatant.getNavigation().moveTo(path, combatant.getSpeed() * 2F);
                 } else {
-                    var destination = home.toCenterPos();
+                    var destination = Vec3.atCenterOf(home);
                     combatant.teleportTo(destination);
-                    combatant.setPosition(destination);
+                    combatant.setPos(destination);
                 }
             }
         });

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "unicopia:item/spectral_clock_fruiting_20"
+  }
+}

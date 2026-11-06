@@ -6,8 +6,7 @@ import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.entity.duck.LavaAffine;
-
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 public class ChillingBreathSpell extends AbstractSpell implements HomingSpell {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()

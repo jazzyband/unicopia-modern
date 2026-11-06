@@ -1,0 +1,30 @@
+{
+  "parent": "unicopia:unicorn/tempted",
+  "criteria": {
+    "light_altar": {
+      "conditions": {
+        "event": "light_altar",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.hello_darkness_my_old_friend.description"
+    },
+    "icon": {
+      "id": "minecraft:crying_obsidian"
+    },
+    "title": {
+      "translate": "advancements.unicopia.hello_darkness_my_old_friend.title"
+    }
+  },
+  "requirements": [
+    [
+      "light_altar"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

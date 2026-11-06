@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud"
+  ],
+  "result": {
+    "count": 4,
+    "id": "unicopia:dense_cloud"
+  }
+}

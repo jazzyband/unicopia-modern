@@ -1,0 +1,20 @@
+{
+    "type":  "minecraft:brewing",
+    "input":  {
+                  "item":  "minecraft:potion",
+                  "potion_contents":  {
+                                          "potions":  "minecraft:water_breathing"
+                                      }
+              },
+    "output":  {
+                   "components":  {
+                                      "minecraft:potion_contents":  {
+                                                                        "potion":  "unicopia:short_morph_hippogriff"
+                                                                    }
+                                  },
+                   "id":  "minecraft:potion"
+               },
+    "reagent":  {
+                    "item":  "unicopia:turret_shell"
+                }
+}

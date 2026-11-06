@@ -1,0 +1,25 @@
+{
+  "drops": [
+    {
+      "item": "unicopia:rotten_apple",
+      "weight": 1
+    },
+    {
+      "tag": "c:foods/acorn",
+      "weight": 2
+    },
+    {
+      "tag": "c:rods/wooden",
+      "weight": 3
+    }
+  ],
+  "leaves": [
+    "minecraft:oak_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:oak_log",
+    "minecraft:oak_wood"
+  ],
+  "rarity": 3
+}

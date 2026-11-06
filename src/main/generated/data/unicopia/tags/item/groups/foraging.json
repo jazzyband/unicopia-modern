@@ -1,0 +1,15 @@
+{
+  "values": [
+    "#unicopia:forage/blinding",
+    "#unicopia:forage/dangerous",
+    "#unicopia:forage/filling",
+    "#unicopia:forage/safe",
+    "#unicopia:forage/nauseating",
+    "#unicopia:forage/prickly",
+    "#unicopia:forage/glowing",
+    "#unicopia:forage/risky",
+    "#unicopia:forage/strengthening",
+    "#unicopia:forage/severe/nauseating",
+    "#unicopia:forage/severe/prickly"
+  ]
+}

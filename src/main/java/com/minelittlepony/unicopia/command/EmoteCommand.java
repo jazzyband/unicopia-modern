@@ -5,26 +5,25 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 
 public class EmoteCommand {
-    static LiteralArgumentBuilder<ServerCommandSource> create() {
-        return CommandManager
+    static LiteralArgumentBuilder<CommandSourceStack> create() {
+        return Commands
                 .literal("emote")
-                .then(CommandManager.argument("animation", Animation.argument()).executes(source -> apply(
+                .then(Commands.argument("animation", Animation.argument()).executes(source -> apply(
                         source.getSource(),
                         source.getArgument("animation", Animation.class),
                         Animation.Recipient.ANYONE
                     )
-                ).then(CommandManager.argument("duration", IntegerArgumentType.integer(1, 99)).executes(source -> apply(
+                ).then(Commands.argument("duration", IntegerArgumentType.integer(1, 99)).executes(source -> apply(
                         source.getSource(),
                         source.getArgument("animation", Animation.class),
                         Animation.Recipient.ANYONE,
                         IntegerArgumentType.getInteger(source, "duration")
                     )
-                ).then(CommandManager.argument("recipient_type", Animation.Recipient.argument()).executes(source -> apply(
+                ).then(Commands.argument("recipient_type", Animation.Recipient.argument()).executes(source -> apply(
                         source.getSource(),
                         source.getArgument("animation", Animation.class),
                         source.getArgument("recipient_type", Animation.Recipient.class),
@@ -34,11 +33,11 @@ public class EmoteCommand {
         ));
     }
 
-    static int apply(ServerCommandSource source, Animation animation, Animation.Recipient recipient) throws CommandSyntaxException {
+    static int apply(CommandSourceStack source, Animation animation, Animation.Recipient recipient) throws CommandSyntaxException {
         return apply(source, animation, recipient, animation.getDuration());
     }
 
-    static int apply(ServerCommandSource source, Animation animation, Animation.Recipient recipient, int duration) throws CommandSyntaxException {
+    static int apply(CommandSourceStack source, Animation animation, Animation.Recipient recipient, int duration) throws CommandSyntaxException {
         Pony.of(source.getPlayer()).setAnimation(animation, recipient, duration);
         return 0;
     }

@@ -1,20 +1,19 @@
 package com.minelittlepony.unicopia.diet;
 
 import java.util.function.Function;
-
+import net.minecraft.util.Util;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import com.minelittlepony.unicopia.Debug;
 import com.minelittlepony.unicopia.Unicopia;
 import com.mojang.serialization.Codec;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 
 public interface FoodGroupKey {
     Function<Identifier, FoodGroupKey> LOOKUP = Util.memoize(id -> {
@@ -46,19 +45,19 @@ public interface FoodGroupKey {
             private boolean check;
             @Override
             public Identifier id() {
-                return tag.id();
+                return tag.location();
             }
 
             @Override
             public boolean contains(ItemStack stack) {
                 if (Debug.CHECK_GAME_VALUES && !check) {
                     check = true;
-                    if (Registries.ITEM.getOptional(tag).isEmpty()) {
-                        Unicopia.LOGGER.info("Tag is empty: " + tag.id());
+                    if (BuiltInRegistries.ITEM.get(tag).isEmpty()) {
+                        Unicopia.LOGGER.info("Tag is empty: " + tag.location());
                     }
                 }
 
-                return stack.isIn(tag);
+                return stack.is(tag);
             }
 
             @Override
@@ -72,13 +71,13 @@ public interface FoodGroupKey {
             }
         };
     });
-    Function<Identifier, FoodGroupKey> TAG_ID_LOOKUP = id -> TAG_LOOKUP.apply(TagKey.of(RegistryKeys.ITEM, id));
+    Function<Identifier, FoodGroupKey> TAG_ID_LOOKUP = id -> TAG_LOOKUP.apply(TagKey.create(Registries.ITEM, id));
 
     Codec<FoodGroupKey> CODEC = Identifier.CODEC.xmap(LOOKUP, FoodGroupKey::id);
-    Codec<FoodGroupKey> TAG_CODEC = TagKey.unprefixedCodec(RegistryKeys.ITEM).xmap(TAG_LOOKUP, k -> TagKey.of(RegistryKeys.ITEM, k.id()));
+    Codec<FoodGroupKey> TAG_CODEC = TagKey.codec(Registries.ITEM).xmap(TAG_LOOKUP, k -> TagKey.create(Registries.ITEM, k.id()));
 
-    PacketCodec<ByteBuf, FoodGroupKey> PACKET_CODEC = Identifier.PACKET_CODEC.xmap(LOOKUP, FoodGroupKey::id);
-    PacketCodec<ByteBuf, FoodGroupKey> TAG_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(id -> TAG_LOOKUP.apply(TagKey.of(RegistryKeys.ITEM, id)), FoodGroupKey::id);
+    StreamCodec<ByteBuf, FoodGroupKey> PACKET_CODEC = Identifier.STREAM_CODEC.map(LOOKUP, FoodGroupKey::id);
+    StreamCodec<ByteBuf, FoodGroupKey> TAG_PACKET_CODEC = Identifier.STREAM_CODEC.map(id -> TAG_LOOKUP.apply(TagKey.create(Registries.ITEM, id)), FoodGroupKey::id);
 
     Identifier id();
 

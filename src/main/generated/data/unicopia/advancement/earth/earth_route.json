@@ -1,0 +1,28 @@
+{
+  "parent": "unicopia:root",
+  "criteria": {
+    "be_earth": {
+      "conditions": {
+        "race": "unicopia:earth"
+      },
+      "trigger": "unicopia:player_change_race"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.earth_route.description"
+    },
+    "icon": {
+      "id": "unicopia:earth_badge"
+    },
+    "title": {
+      "translate": "advancements.unicopia.earth_route.title"
+    }
+  },
+  "requirements": [
+    [
+      "be_earth"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

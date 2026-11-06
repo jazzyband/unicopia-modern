@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    "unicopia:chitin"
+  ],
+  "result": {
+    "count": 9,
+    "id": "unicopia:carapace"
+  }
+}

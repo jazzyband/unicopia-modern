@@ -1,0 +1,18 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:stored_spell": "unicopia:transformation"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:chaos": 4.0,
+    "unicopia:knowledge": 10.0,
+    "unicopia:life": 10.0
+  }
+}

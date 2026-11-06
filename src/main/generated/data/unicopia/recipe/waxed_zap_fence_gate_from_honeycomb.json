@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "group": "waxed_zap_fence_gate",
+  "ingredients": [
+    "minecraft:honeycomb",
+    "unicopia:zap_fence_gate"
+  ],
+  "result": {
+    "id": "unicopia:waxed_zap_fence_gate"
+  }
+}

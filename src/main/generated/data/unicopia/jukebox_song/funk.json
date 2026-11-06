@@ -1,0 +1,8 @@
+{
+  "comparator_output": 4,
+  "description": {
+    "translate": "jukebox_song.unicopia.funk"
+  },
+  "length_in_seconds": 91.0,
+  "sound_event": "unicopia:music_disc.funk"
+}

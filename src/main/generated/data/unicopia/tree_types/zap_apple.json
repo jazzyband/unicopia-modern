@@ -1,0 +1,13 @@
+{
+  "drops": [],
+  "leaves": [
+    "unicopia:zap_leaves",
+    "unicopia:zap_leaves_placeholder",
+    "unicopia:flowering_zap_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "unicopia:zap_wood",
+    "unicopia:zap_log"
+  ]
+}

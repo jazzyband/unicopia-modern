@@ -7,90 +7,79 @@ import com.minelittlepony.unicopia.block.FancyBedBlock;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCollisionHandler;
-import net.minecraft.entity.ai.pathing.NavigationType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.EmptyBlockView;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class CloudBedBlock extends FancyBedBlock implements CloudLike {
-    private static final MapCodec<CloudBedBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.fieldOf("base").forGetter(b -> b.base),
-            BlockState.CODEC.fieldOf("base_state").forGetter(b -> b.baseState),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, CloudBedBlock::new));
 
     private final BlockState baseState;
     private final CloudBlock baseBlock;
 
-    public CloudBedBlock(String base, BlockState baseState, Settings settings) {
+    public CloudBedBlock(String base, BlockState baseState, Properties settings) {
         super(base, CloudLike.applyCloudProperties(settings));
         this.baseState = baseState;
         this.baseBlock = (CloudBlock)baseState.getBlock();
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    @Override
-    public MapCodec<BedBlock> getCodec() {
-        return (MapCodec)CODEC;
-    }
 
     @Override
-    protected final VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+    protected final VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
         if (!baseBlock.canInteract(baseState, world, pos, EquineContext.of(context))) {
-            return VoxelShapes.empty();
+            return Shapes.empty();
         }
-        return super.getOutlineShape(state, world, pos, context);
+        return super.getShape(state, world, pos, context);
     }
 
     @Override
-    protected final VoxelShape getCullingShape(BlockState state) {
-        return super.getOutlineShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
+    protected final VoxelShape getOcclusionShape(BlockState state) {
+        return super.getShape(state, EmptyBlockGetter.INSTANCE, BlockPos.ZERO, CollisionContext.empty());
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return this.collidable ? state.getOutlineShape(world, pos, context) : VoxelShapes.empty();
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return this.hasCollision ? state.getShape(world, pos, context) : Shapes.empty();
     }
 
     @Override
     @Nullable
-    public final BlockState getPlacementState(ItemPlacementContext context) {
-        if (!baseBlock.canInteract(baseState, context.getWorld(), context.getBlockPos(), EquineContext.of(context))) {
+    public final BlockState getStateForPlacement(BlockPlaceContext context) {
+        if (!baseBlock.canInteract(baseState, context.getLevel(), context.getClickedPos(), EquineContext.of(context))) {
             return null;
         }
-        return super.getPlacementState(context);
+        return super.getStateForPlacement(context);
     }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!baseBlock.canInteract(baseState, world, pos, EquineContext.of(player))) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
-        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
+        return super.useItemOn(stack, state, world, pos, player, hand, hit);
     }
 
     @Override
-    protected void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity, EntityCollisionHandler handler) {
-        baseState.onEntityCollision(world, pos, entity, handler);
+    protected void entityInside(BlockState state, Level world, BlockPos pos, Entity entity, InsideBlockEffectApplier handler, boolean isMoving) {
+        baseState.entityInside(world, pos, entity, handler, isMoving);
     }
 
     @Override
-    protected boolean canPathfindThrough(BlockState state, NavigationType type) {
-        return baseState.canPathfindThrough(type);
+    protected boolean isPathfindable(BlockState state, PathComputationType type) {
+        return baseState.isPathfindable(type);
     }
 }

@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:hurricane",
+  "author": {
+    "translate": "painting.unicopia.hurricane.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.hurricane.title"
+  },
+  "width": 2
+}

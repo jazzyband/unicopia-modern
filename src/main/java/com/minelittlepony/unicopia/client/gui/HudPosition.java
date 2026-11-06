@@ -1,6 +1,6 @@
 package com.minelittlepony.unicopia.client.gui;
 
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 public enum HudPosition {
     MAIN_HAND(Alignment.UNSET, Alignment.UNSET),
@@ -65,7 +65,7 @@ public enum HudPosition {
             return switch(this) {
                 case UNSET -> unset;
                 case START -> start;
-                case MIDDLE -> MathHelper.lerp(0.5F, start, end);
+                case MIDDLE -> Mth.lerpInt(0.5F, start, end);
                 case END -> end;
             };
         }

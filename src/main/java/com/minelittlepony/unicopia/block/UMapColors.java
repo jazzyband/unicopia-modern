@@ -1,15 +1,15 @@
 package com.minelittlepony.unicopia.block;
 
-import net.minecraft.block.MapColor;
+import net.minecraft.world.level.material.MapColor;
 
 public interface UMapColors {
-    MapColor ZAP_LEAVES = MapColor.MAGENTA;
-    MapColor ZAP_PLANKS = MapColor.MAGENTA;
-    MapColor ZAP_LOG_SIDE = MapColor.PURPLE;
-    MapColor ZAP_LOG_END = MapColor.MAGENTA;
-    MapColor STRIPPED_ZAP_LOG_SIDE = MapColor.PURPLE;
-    MapColor PALM_PLANKS = MapColor.OFF_WHITE;
-    MapColor PALM_LOG_END = MapColor.OFF_WHITE;
-    MapColor PALM_LOG_SIDE = MapColor.SPRUCE_BROWN;
-    MapColor STRIPPED_PALM_LOG_SIDE = MapColor.OFF_WHITE;
+    MapColor ZAP_LEAVES = MapColor.COLOR_MAGENTA;
+    MapColor ZAP_PLANKS = MapColor.COLOR_MAGENTA;
+    MapColor ZAP_LOG_SIDE = MapColor.COLOR_PURPLE;
+    MapColor ZAP_LOG_END = MapColor.COLOR_MAGENTA;
+    MapColor STRIPPED_ZAP_LOG_SIDE = MapColor.COLOR_PURPLE;
+    MapColor PALM_PLANKS = MapColor.QUARTZ;
+    MapColor PALM_LOG_END = MapColor.QUARTZ;
+    MapColor PALM_LOG_SIDE = MapColor.PODZOL;
+    MapColor STRIPPED_PALM_LOG_SIDE = MapColor.QUARTZ;
 }

@@ -1,25 +1,23 @@
 package com.minelittlepony.unicopia.datagen.providers;
 
 import java.util.Optional;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.worldgen.BootstrapContext;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.PaintingVariantTags;
+import net.minecraft.world.entity.decoration.painting.PaintingVariant;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.datagen.DataGenRegistryProvider;
 
-import net.minecraft.entity.decoration.painting.PaintingVariant;
-import net.minecraft.registry.Registerable;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.tag.PaintingVariantTags;
-import net.minecraft.text.Text;
-
 public class UPaintingVariantProvider extends DataGenRegistryProvider<PaintingVariant> {
     public UPaintingVariantProvider() {
-        super(RegistryKeys.PAINTING_VARIANT);
+        super(Registries.PAINTING_VARIANT);
     }
 
     @Override
-    public void run(Registerable<PaintingVariant> registerable) {
+    public void run(BootstrapContext<PaintingVariant> registerable) {
         register(registerable, "bloom", 2, 1);
         register(registerable, "chicken", 2, 1);
         register(registerable, "bells", 2, 1);
@@ -40,18 +38,18 @@ public class UPaintingVariantProvider extends DataGenRegistryProvider<PaintingVa
         register(registerable, "shadow", 2, 3);
     }
 
-    private void register(Registerable<PaintingVariant> registerable, String name, int width, int height) {
-        RegistryKey<PaintingVariant> key = RegistryKey.of(RegistryKeys.PAINTING_VARIANT, Unicopia.id(name));
+    private void register(BootstrapContext<PaintingVariant> registerable, String name, int width, int height) {
+        ResourceKey<PaintingVariant> key = ResourceKey.create(Registries.PAINTING_VARIANT, Unicopia.id(name));
         registerable.register(key, new PaintingVariant(
                 width, height,
-                key.getValue(),
-                Optional.of(Text.translatable(key.getValue().toTranslationKey("painting", "title"))),
-                Optional.of(Text.translatable(key.getValue().toTranslationKey("painting", "author")))
+                key.identifier(),
+                Optional.of(Component.translatable(key.identifier().toLanguageKey("painting", "title"))),
+                Optional.of(Component.translatable(key.identifier().toLanguageKey("painting", "author")))
         ));
     }
 
     @Override
-    protected void configureTags(TagProvider tagProvider, WrapperLookup lookup) {
-        tagProvider.getOrCreateTagBuilder(PaintingVariantTags.PLACEABLE).add(getKeys());
+    protected void configureTags(TagProvider tagProvider, Provider lookup) {
+        tagProvider.tag(PaintingVariantTags.PLACEABLE).addAll(getKeys());
     }
 }

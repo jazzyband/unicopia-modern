@@ -1,0 +1,239 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "cases": [
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_arrow",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "arrow"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_brush",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "brush"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_cross",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "cross"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_donut",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "donut"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_flame",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "flame"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_ice",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "ice"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_lambda",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "lambda"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_ring",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "ring"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_rocket",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "rocket"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_round",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "round"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_shield",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "shield"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_skull",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "skull"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_splint",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "splint"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_star",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "star"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_triangle",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "triangle"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_vortex",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "vortex"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/gemstone_wave",
+          "tints": [
+            {
+              "type": "unicopia:spell",
+              "default": -1
+            }
+          ]
+        },
+        "when": "wave"
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "unicopia:item/gemstone",
+      "tints": [
+        {
+          "type": "unicopia:spell",
+          "default": -1
+        }
+      ]
+    },
+    "property": "unicopia:gem_shape"
+  }
+}

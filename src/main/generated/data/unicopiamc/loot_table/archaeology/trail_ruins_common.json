@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:meadowbrooks_staff",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:botched_gem",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:pegasus_feather"
+        }
+      ],
+      "rolls": {
+        "type": "minecraft:uniform",
+        "max": 4,
+        "min": 1
+      }
+    }
+  ]
+}

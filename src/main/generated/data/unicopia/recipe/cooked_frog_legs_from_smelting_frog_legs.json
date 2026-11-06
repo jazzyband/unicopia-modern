@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 10,
+  "experience": 2.2,
+  "group": "frog_legs",
+  "ingredient": "unicopia:frog_legs",
+  "result": {
+    "id": "unicopia:cooked_frog_legs"
+  }
+}

@@ -2,19 +2,19 @@ package com.minelittlepony.unicopia.container;
 
 import com.minelittlepony.unicopia.Unicopia;
 
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.registry.Registry;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
-import net.minecraft.registry.Registries;
+import net.fabricmc.fabric.api.menu.v1.ExtendedMenuType;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 
 public interface UScreenHandlers {
-    ScreenHandlerType<SpellbookScreenHandler> SPELL_BOOK = register("spell_book", new ExtendedScreenHandlerType<>(SpellbookScreenHandler::new, SpellbookState.PACKET_CODEC));
-    ScreenHandlerType<ShapingBenchScreenHandler> SHAPING_BENCH = register("shaping_bench", new ScreenHandlerType<>(ShapingBenchScreenHandler::new, FeatureFlags.VANILLA_FEATURES));
+    MenuType<SpellbookScreenHandler> SPELL_BOOK = register("spell_book", new ExtendedMenuType<>(SpellbookScreenHandler::new, SpellbookState.PACKET_CODEC));
+    MenuType<ShapingBenchScreenHandler> SHAPING_BENCH = register("shaping_bench", new MenuType<>(ShapingBenchScreenHandler::new, FeatureFlags.VANILLA_SET));
 
-    static <T extends ScreenHandler> ScreenHandlerType<T> register(String name, ScreenHandlerType<T> type) {
-        return Registry.register(Registries.SCREEN_HANDLER, Unicopia.id(name), type);
+    static <T extends AbstractContainerMenu> MenuType<T> register(String name, MenuType<T> type) {
+        return Registry.register(BuiltInRegistries.MENU, Unicopia.id(name), type);
     }
 
     static void bootstrap() { }

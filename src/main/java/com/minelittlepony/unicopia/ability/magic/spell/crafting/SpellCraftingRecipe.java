@@ -2,6 +2,15 @@ package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.item.EnchantableItem;
 import com.minelittlepony.unicopia.recipe.URecipes;
@@ -9,23 +18,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.display.RecipeDisplay;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.world.World;
-
 /**
  * A recipe for creating a new spell from input traits and items.
  */
 public class SpellCraftingRecipe implements SpellbookRecipe {
-    private static final Codec<ItemStack> RESULT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ItemStack.MAP_CODEC.forGetter(stack -> stack),
-            SpellType.REGISTRY.getCodec().optionalFieldOf("spell").forGetter(stack -> EnchantableItem.getSpellKey(stack).toOptional())
-    ).apply(i, (stack, spell) -> spell.map(s -> EnchantableItem.enchant(stack, s)).orElse(stack)));
+    private static final Codec<ItemStackTemplate> RESULT_CODEC = ItemStackTemplate.CODEC;
 
     public static final MapCodec<SpellCraftingRecipe> CODEC = RecordCodecBuilder.<SpellCraftingRecipe>mapCodec(instance -> instance.group(
             IngredientWithSpell.CODEC.fieldOf("material").forGetter(recipe -> recipe.material),
@@ -33,11 +30,11 @@ public class SpellCraftingRecipe implements SpellbookRecipe {
             IngredientWithSpell.CODEC.listOf().fieldOf("ingredients").forGetter(recipe -> recipe.requiredItems),
             RESULT_CODEC.fieldOf("result").forGetter(recipe -> recipe.output)
     ).apply(instance, SpellCraftingRecipe::new));
-    public static final PacketCodec<RegistryByteBuf, SpellCraftingRecipe> PACKET_CODEC = PacketCodec.tuple(
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpellCraftingRecipe> PACKET_CODEC = StreamCodec.composite(
             IngredientWithSpell.PACKET_CODEC, recipe -> recipe.material,
             TraitIngredient.PACKET_CODEC, recipe -> recipe.requiredTraits,
-            IngredientWithSpell.PACKET_CODEC.collect(PacketCodecs.toList()), recipe -> recipe.requiredItems,
-            ItemStack.PACKET_CODEC, recipe -> recipe.output,
+            IngredientWithSpell.PACKET_CODEC.apply(ByteBufCodecs.list()), recipe -> recipe.requiredItems,
+            ItemStackTemplate.STREAM_CODEC, recipe -> recipe.output,
             SpellCraftingRecipe::new
     );
 
@@ -59,17 +56,21 @@ public class SpellCraftingRecipe implements SpellbookRecipe {
     /**
      * The resulting item
      */
-    final ItemStack output;
+    final ItemStackTemplate output;
 
-    public SpellCraftingRecipe(IngredientWithSpell material, TraitIngredient requiredTraits, List<IngredientWithSpell> requiredItems, ItemStack output) {
+    public SpellCraftingRecipe(IngredientWithSpell material, TraitIngredient requiredTraits, List<IngredientWithSpell> requiredItems, ItemStackTemplate output) {
         this.material = material;
         this.requiredTraits = requiredTraits;
         this.requiredItems = requiredItems;
         this.output = output;
     }
 
+    public SpellCraftingRecipe(IngredientWithSpell material, TraitIngredient requiredTraits, List<IngredientWithSpell> requiredItems, ItemStack output) {
+        this(material, requiredTraits, requiredItems, ItemStackTemplate.fromNonEmptyStack(output));
+    }
+
     @Override
-    public List<RecipeDisplay> getDisplays() {
+    public List<RecipeDisplay> display() {
         return List.of(SpellbookRecipeDisplay.of(builder -> {
             builder.input(material.getMatchingStacks());
             for (var ingredient : requiredItems) {
@@ -78,7 +79,7 @@ public class SpellCraftingRecipe implements SpellbookRecipe {
             requiredTraits.min().ifPresent(min -> {
                 min.forEach(e -> builder.input(e.getKey(), e.getValue()));
             });
-            builder.result(output);
+            builder.result(output.create());
         }));
     }
 
@@ -88,7 +89,7 @@ public class SpellCraftingRecipe implements SpellbookRecipe {
     }
 
     @Override
-    public boolean matches(Input inventory, World world) {
+    public boolean matches(Input inventory, Level world) {
 
         if (!material.test(inventory.stackToModify()) || !requiredTraits.test(inventory.traits())) {
             return false;
@@ -111,8 +112,8 @@ public class SpellCraftingRecipe implements SpellbookRecipe {
     }
 
     @Override
-    public ItemStack craft(Input inventory, WrapperLookup registries) {
-        return output.copy();
+    public ItemStack craft(Input inventory, Provider registries) {
+        return output.create();
     }
 
     @Override

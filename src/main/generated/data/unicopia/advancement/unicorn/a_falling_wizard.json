@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:unicorn/unicorn_route",
+  "criteria": {
+    "teleport_above_world": {
+      "conditions": {
+        "event": "teleport_above_world",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.a_falling_wizard.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:pegasus_amulet"
+    },
+    "title": {
+      "translate": "advancements.unicopia.a_falling_wizard.title"
+    }
+  },
+  "requirements": [
+    [
+      "teleport_above_world"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "sends_telemetry_event": true
+}

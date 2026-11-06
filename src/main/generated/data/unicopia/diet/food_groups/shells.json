@@ -1,0 +1,16 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:empty"
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 3,
+      "saturation": 9.0
+    }
+  },
+  "tags": [
+    "unicopia:shells"
+  ]
+}

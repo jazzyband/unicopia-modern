@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "shape=cap": {
+      "model": "unicopia:block/slime_pustule_cap"
+    },
+    "shape=drip": {
+      "model": "unicopia:block/slime_pustule_drip"
+    },
+    "shape=pod": {
+      "model": "unicopia:block/slime_pustule_pod"
+    },
+    "shape=string": {
+      "model": "unicopia:block/slime_pustule_string"
+    }
+  }
+}

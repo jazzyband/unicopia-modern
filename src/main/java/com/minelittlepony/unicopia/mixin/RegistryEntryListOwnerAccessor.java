@@ -1,21 +1,20 @@
 package com.minelittlepony.unicopia.mixin;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderOwner;
+import net.minecraft.core.HolderSet;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.registry.entry.RegistryEntryOwner;
-
-@Mixin(value = { RegistryEntryList.Named.class })
+@Mixin(value = { HolderSet.Named.class })
 public interface RegistryEntryListOwnerAccessor<T> {
     @Accessor("owner")
-    RegistryEntryOwner<T> getOwner();
+    HolderOwner<T> getOwner();
 }
 
-@Mixin(value = { RegistryEntry.Reference.class })
+@Mixin(value = { Holder.Reference.class })
 abstract class MixinRegistryEntryReference<T> implements RegistryEntryListOwnerAccessor<T> {
     @Override
     @Accessor("owner")
-    public abstract RegistryEntryOwner<T> getOwner();
+    public abstract HolderOwner<T> getOwner();
 }

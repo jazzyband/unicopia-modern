@@ -6,17 +6,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import com.minelittlepony.unicopia.util.Untyped;
 
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.DynamicRegistryManager;
 
 public class DataTracker {
     private final List<Pair<?>> codecs = new ObjectArrayList<>();
@@ -75,13 +74,13 @@ public class DataTracker {
         }
     }
 
-    synchronized Optional<MsgTrackedValues.TrackerEntries> getInitialPairs(DynamicRegistryManager lookup) {
+    synchronized Optional<MsgTrackedValues.TrackerEntries> getInitialPairs(RegistryAccess lookup) {
         initial = false;
         dirtyIndices = new IntOpenHashSet();
         return Optional.of(new MsgTrackedValues.TrackerEntries(id, true, codecs, Untyped.cast(writePersistentObjects(lookup, true))));
     }
 
-    public synchronized Optional<MsgTrackedValues.TrackerEntries> getDirtyPairs(DynamicRegistryManager lookup) {
+    public synchronized Optional<MsgTrackedValues.TrackerEntries> getDirtyPairs(RegistryAccess lookup) {
         if (initial) {
             return getInitialPairs(lookup);
         }
@@ -101,7 +100,7 @@ public class DataTracker {
         return Optional.of(new MsgTrackedValues.TrackerEntries(id, false, pairs, updates));
     }
 
-    private Map<Integer, byte[]> writePersistentObjects(DynamicRegistryManager lookup, boolean initial) {
+    private Map<Integer, byte[]> writePersistentObjects(RegistryAccess lookup, boolean initial) {
         Map<Integer, byte[]> updates = new HashMap<>();
         for (int i = 0; i < persistentObjects.size(); i++) {
             TrackableObject<?> o = persistentObjects.get(i);
@@ -112,7 +111,7 @@ public class DataTracker {
         return updates;
     }
 
-    public synchronized void load(MsgTrackedValues.TrackerEntries values, DynamicRegistryManager lookup) {
+    public synchronized void load(MsgTrackedValues.TrackerEntries values, RegistryAccess lookup) {
         if (values.wipe()) {
             codecs.clear();
             codecs.addAll(values.values());
@@ -129,7 +128,7 @@ public class DataTracker {
         for (var entry : values.objects().entrySet()) {
             TrackableObject<?> o = persistentObjects.get(entry.getKey());
             if (o != null) {
-                o.read(new RegistryByteBuf(Unpooled.wrappedBuffer(entry.getValue()), lookup));
+                o.read(new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(entry.getValue()), lookup));
             }
         }
     }
@@ -151,8 +150,8 @@ public class DataTracker {
 
     record Pair<T> (int id, TrackableDataType.TypedValue<T> value) {
         @SuppressWarnings("unchecked")
-        public static final PacketCodec<RegistryByteBuf, Pair<?>> PACKET_CODEC = PacketCodec.tuple(
-                PacketCodecs.INTEGER, Pair::id,
+        public static final StreamCodec<RegistryFriendlyByteBuf, Pair<?>> PACKET_CODEC = StreamCodec.composite(
+                ByteBufCodecs.INT, Pair::id,
                 TrackableDataType.PACKET_CODEC, Pair::value,
                 Pair::new
         );

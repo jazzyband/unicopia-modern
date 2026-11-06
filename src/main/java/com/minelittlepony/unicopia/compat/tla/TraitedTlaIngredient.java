@@ -2,7 +2,8 @@ package com.minelittlepony.unicopia.compat.tla;
 
 import java.util.List;
 import java.util.Optional;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.client.gui.ItemTraitsTooltipRenderer;
@@ -10,8 +11,6 @@ import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookScreen;
 import com.minelittlepony.unicopia.container.inventory.HexagonalCraftingGrid;
 import io.github.mattidragon.tlaapi.api.gui.GuiBuilder;
 import io.github.mattidragon.tlaapi.api.recipe.TlaIngredient;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
 
 public record TraitedTlaIngredient(Optional<TraitEntry> trait, TlaIngredient ingredient) {
 
@@ -35,14 +34,14 @@ public record TraitedTlaIngredient(Optional<TraitEntry> trait, TlaIngredient ing
 
     public void buildGui(TlaIngredient ingredientOverride, HexagonalCraftingGrid.Slot slot, GuiBuilder builder) {
         builder.addCustomWidget(slot.left() - 7, slot.top() - 7, 32, 32, (context, mouseX, mouseY, delta) -> {
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.SLOT, 0, 0, 0, 0, 0, 32, 32, 32, 32);
+            context.blit(RenderType::guiTextured, SpellbookScreen.SLOT, 0, 0, 0, 0, 0, 32, 32, 32, 32);
         });
         builder.addSlot(ingredientOverride, slot.left(), slot.top()).disableBackground();
         trait.ifPresent(traitEntry -> {
             builder.addCustomWidget(slot.left(), slot.top(), 16, 16, (context, mouseX, mouseY, delta) -> {
-                int tick = (MinecraftClient.getInstance().player.age / 12) % traitEntry.traits().size();
+                int tick = (Minecraft.getInstance().player.tickCount / 12) % traitEntry.traits().size();
                 Trait currentDisplayedTrait = traitEntry.traits().get(tick);
-                if (currentDisplayedTrait.getItems().isEmpty() || MinecraftClient.getInstance().player == null) {
+                if (currentDisplayedTrait.getItems().isEmpty() || Minecraft.getInstance().player == null) {
                     ItemTraitsTooltipRenderer.renderTraitIcon(currentDisplayedTrait, traitEntry.amount(), context, 0, 0, true);
                 } else {
                     ItemTraitsTooltipRenderer.renderStackSingleTrait(currentDisplayedTrait, traitEntry.amount(), context, 0, 0, 1, delta, 0, true);

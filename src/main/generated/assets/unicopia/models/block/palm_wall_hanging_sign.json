@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_wall_hanging_sign",
+  "textures": {
+    "all": "unicopia:block/palm_hanging_sign",
+    "particle": "unicopia:block/stripped_palm_log"
+  }
+}

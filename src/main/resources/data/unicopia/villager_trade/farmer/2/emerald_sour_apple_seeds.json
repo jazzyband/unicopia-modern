@@ -1,0 +1,13 @@
+{
+  "wants": {
+    "id": "minecraft:emerald",
+    "count": 4
+  },
+  "gives": {
+    "id": "unicopia:sour_apple_seeds",
+    "count": 2
+  },
+  "max_uses": 20,
+  "xp": 1,
+  "reputation_discount": 0.05
+}

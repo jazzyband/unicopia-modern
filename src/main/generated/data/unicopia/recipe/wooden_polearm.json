@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "group": "polearm",
+  "key": {
+    "#": "#c:rods/wooden",
+    "o": "#minecraft:planks",
+    "s": "#c:strings"
+  },
+  "pattern": [
+    "  o",
+    " #s",
+    "#  "
+  ],
+  "result": {
+    "id": "unicopia:wooden_polearm"
+  }
+}

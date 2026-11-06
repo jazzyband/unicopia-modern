@@ -1,0 +1,31 @@
+{
+  "values": [
+    "unicopia:carapace",
+    "unicopia:surface_chitin",
+    "unicopia:chitin",
+    "unicopia:chiselled_chitin",
+    "unicopia:polished_chitin",
+    "unicopia:chiselled_chitin_wall",
+    "unicopia:chiselled_chitin_stairs",
+    "unicopia:chiselled_chitin_slab",
+    "unicopia:polished_chitin",
+    "unicopia:polished_chitin_wall",
+    "unicopia:polished_chitin_stairs",
+    "unicopia:polished_chitin_slab",
+    "unicopia:chiselled_chitin_hull",
+    "unicopia:polished_chitin_hull",
+    "unicopia:chitin_spikes",
+    "unicopia:slime_pustule",
+    "unicopia:mysterious_egg",
+    "unicopia:green_fried_egg",
+    "unicopia:hive",
+    "unicopia:slime",
+    "#c:foods/raw_meat",
+    "#c:foods/cooked_meat",
+    "#c:foods/rotten_meat",
+    "#c:foods/raw_insect",
+    "#c:foods/cooked_insect",
+    "#c:foods/rotten_insect",
+    "#unicopia:container_with_love"
+  ]
+}

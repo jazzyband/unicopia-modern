@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:cloud_lump_from_cloud_jars"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_unicopia:cloud_jars": {
+      "conditions": {
+        "items": [
+          {
+            "items": "#unicopia:cloud_jars"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_unicopia:cloud_jars"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cloud_lump_from_cloud_jars"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "traits": "order:-2 kindness:1 strength:3",
+  "items": [
+    "minecraft:shears",
+    "#minecraft:tools",
+    "#c:tools"
+  ]
+}

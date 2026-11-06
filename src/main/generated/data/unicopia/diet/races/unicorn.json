@@ -1,0 +1,101 @@
+{
+  "default_multiplier": 1.1,
+  "effects": [],
+  "foraging_multiplier": 1.0,
+  "multipliers": [
+    {
+      "hunger": 1.0,
+      "saturation": 1.0,
+      "tags": [
+        "unicopia:baked_goods"
+      ]
+    },
+    {
+      "hunger": 0.9,
+      "saturation": 0.9,
+      "tags": [
+        "unicopia:pinecone"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:special_shells",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:shells"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:love"
+      ]
+    },
+    {
+      "hunger": 0.3,
+      "saturation": 0.2,
+      "tags": [
+        "unicopia:fish/cooked"
+      ]
+    },
+    {
+      "hunger": 0.4,
+      "saturation": 0.4,
+      "tags": [
+        "unicopia:meat/cooked"
+      ]
+    },
+    {
+      "hunger": 0.1,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:insect/cooked"
+      ]
+    },
+    {
+      "hunger": 0.25,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:fish/raw"
+      ]
+    },
+    {
+      "hunger": 0.3,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:meat/raw"
+      ]
+    },
+    {
+      "hunger": 0.15,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:insect/raw"
+      ]
+    },
+    {
+      "hunger": 0.1,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:fish/rotten"
+      ]
+    },
+    {
+      "hunger": 0.1,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:meat/rotten"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.1,
+      "tags": [
+        "unicopia:insect/rotten"
+      ]
+    }
+  ]
+}

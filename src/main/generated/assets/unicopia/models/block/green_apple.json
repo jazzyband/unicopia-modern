@@ -1,0 +1,6 @@
+{
+  "parent": "unicopia:block/fruit",
+  "textures": {
+    "cross": "unicopia:block/green_apple"
+  }
+}

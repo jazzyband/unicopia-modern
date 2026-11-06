@@ -17,14 +17,13 @@ import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.TypedActionResult;
 import com.minelittlepony.unicopia.util.VecHelper;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Casts magic onto the user directly, or uses the item in the main hand slot.
@@ -45,7 +44,7 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
         TypedActionResult<CustomisedSpellType<?>> spell = player.getCharms().getSpellInHand(false);
         return Hit.of(player.canCast()
                 && player.getMagicalReserves().getMana().get() >= getCostEstimate(player)
-                && (!spell.result().isAccepted() || canCast(spell.value().type()))
+                && (!spell.result().consumesAction() || canCast(spell.value().type()))
         );
     }
 
@@ -53,7 +52,7 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
     public double getCostEstimate(Pony player) {
         TypedActionResult<ItemStack> amulet = getAmulet(player);
 
-        if (amulet.result().isAccepted()) {
+        if (amulet.result().consumesAction()) {
             float manaLevel = player.getMagicalReserves().getMana().get();
 
             return Math.min(manaLevel, Charges.of(amulet.value()).energy());
@@ -61,13 +60,13 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
 
         TypedActionResult<CustomisedSpellType<?>> spell = player.getCharms().getSpellInHand(false);
 
-        return !spell.result().isAccepted() || spell.value().isOn(player) ? 2 : 4;
+        return !spell.result().consumesAction() || spell.value().isOn(player) ? 2 : 4;
     }
 
     @Override
     public int getColor(Pony player) {
         TypedActionResult<ItemStack> amulet = getAmulet(player);
-        if (amulet.result().isAccepted()) {
+        if (amulet.result().consumesAction()) {
             return 0x000000;
         }
 
@@ -82,7 +81,7 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
 
         TypedActionResult<ItemStack> amulet = getAmulet(player);
 
-        if (amulet.result().isAccepted()) {
+        if (amulet.result().consumesAction()) {
             ItemStack stack = amulet.value();
             if (Charges.of(stack).canHoldCharge()) {
                 int amount = -(int)Math.min(player.getMagicalReserves().getMana().get(), Charges.of(stack).energy());
@@ -90,15 +89,15 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
                 if (amount < 0) {
                     Charges.discharge(stack, amount);
                     player.getMagicalReserves().getMana().add(amount);
-                    player.asWorld().playSoundFromEntity(null, player.asEntity(), USounds.ITEM_AMULET_RECHARGE, SoundCategory.PLAYERS, 1, 1);
+                    player.asWorld().playSound(null, player.asEntity(), USounds.ITEM_AMULET_RECHARGE, SoundSource.PLAYERS, 1, 1);
                 }
             }
         } else {
             TypedActionResult<CustomisedSpellType<?>> newSpell = player.getCharms().getSpellInHand(true);
 
-            if (newSpell.result() != ActionResult.FAIL && canCast(newSpell.value().type())) {
+            if (newSpell.result() != InteractionResult.FAIL && canCast(newSpell.value().type())) {
                 CustomisedSpellType<?> spell = newSpell.value();
-                if (newSpell.result() == ActionResult.CONSUME) {
+                if (newSpell.result() == InteractionResult.CONSUME) {
                     CustomisedSpellType<?> equippedType = player.getCharms().getEquippedSpell(player.getCharms().getHand());
                     if (equippedType.type() == spell.type()) {
                         player.getCharms().equipSpell(player.getCharms().getHand(), spell);
@@ -139,7 +138,7 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
 
     private TypedActionResult<ItemStack> getAmulet(Pony player) {
 
-        ItemStack stack = player.asEntity().getStackInHand(Hand.MAIN_HAND);
+        ItemStack stack = player.asEntity().getItemInHand(InteractionHand.MAIN_HAND);
 
         if (stack.getItem() instanceof AmuletItem) {
             if (Charges.of(stack).canHoldCharge()) {
@@ -156,12 +155,12 @@ public class UnicornCastingAbility extends AbstractSpellCastingAbility {
     public void warmUp(Pony player, AbilitySlot slot) {
         player.getMagicalReserves().getExhaustion().multiply(3.3F);
 
-        if (getAmulet(player).result() == ActionResult.CONSUME) {
-            Vec3d eyes = player.asEntity().getCameraPosVec(1);
+        if (getAmulet(player).result() == InteractionResult.CONSUME) {
+            Vec3 eyes = player.asEntity().getEyePosition(1);
 
             float i = player.getAbilities().getStat(slot).getFillProgress();
 
-            Random rng = player.asWorld().random;
+            RandomSource rng = player.asWorld().getRandom();
             player.addParticle(i > 0.5F ? ParticleTypes.LARGE_SMOKE : ParticleTypes.CLOUD, eyes, VecHelper.supply(() -> (rng.nextGaussian() - 0.5) * 0.1));
             player.playSound(USounds.ITEM_AMULET_CHARGING, 1, i / 20);
         } else {

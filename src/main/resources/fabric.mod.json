@@ -30,9 +30,6 @@
     "modmenu": [
       "com.minelittlepony.unicopia.modmenu.UMenuFactory"
     ],
-    "tla-api": [
-      "com.minelittlepony.unicopia.compat.tla.Main"
-    ],
     "minelittlepony": [
       "com.minelittlepony.unicopia.client.minelittlepony.Main"
     ]
@@ -40,7 +37,7 @@
   "depends": {
     "minecraft": "${minecraftVersion}",
     "fabricloader": "${loaderVersion}",
-    "java": ">=17",
+    "java": ">=25",
     "fabric-api": "${fabricVersion}",
     "kirin": "${kirinVersion}"
   },

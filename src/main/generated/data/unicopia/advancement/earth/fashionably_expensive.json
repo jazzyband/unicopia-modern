@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/change_of_shoes",
+  "criteria": {
+    "has_gold_horseshoe": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:golden_horse_shoe"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.fashionably_expensive.description"
+    },
+    "icon": {
+      "id": "unicopia:golden_horse_shoe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.fashionably_expensive.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_gold_horseshoe"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

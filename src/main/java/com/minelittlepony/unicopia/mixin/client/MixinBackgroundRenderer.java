@@ -1,19 +1,21 @@
 package com.minelittlepony.unicopia.mixin.client;
 
-import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.minelittlepony.unicopia.client.render.WorldRenderDelegate;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.fog.FogData;
+import net.minecraft.client.renderer.fog.FogRenderer;
 
-import net.minecraft.client.render.BackgroundRenderer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Fog;
-
-@Mixin(BackgroundRenderer.class)
+@Mixin(FogRenderer.class)
 abstract class MixinBackgroundRenderer {
-    @ModifyReturnValue(method = "applyFog", at = @At("RETURN"))
-    private static Fog onApplyFog(Fog fog, Camera camera, BackgroundRenderer.FogType fogType, Vector4f color, float viewDistance, boolean thickenFog, float tickProgress) {
-        return WorldRenderDelegate.INSTANCE.applyFog(fog, camera, fogType, viewDistance, thickenFog, tickProgress);
+    @Inject(method = "setupFog", at = @At("RETURN"))
+    private void unicopia_adjustFog(Camera camera, int renderDistance, DeltaTracker delta,
+            float fogDistance, ClientLevel level, CallbackInfoReturnable<FogData> info) {
+        WorldRenderDelegate.INSTANCE.applyFog(camera, info.getReturnValue());
     }
 }

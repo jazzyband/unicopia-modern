@@ -2,7 +2,17 @@ package com.minelittlepony.unicopia.entity.player.dummy;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,48 +20,36 @@ import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.Owned;
 import com.mojang.authlib.GameProfile;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerModelPart;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.GameMode;
+public class DummyClientPlayerEntity extends AbstractClientPlayer implements Owned<Player>, Owned.Mutable<Player> {
 
-public class DummyClientPlayerEntity extends AbstractClientPlayerEntity implements Owned<PlayerEntity>, Owned.Mutable<PlayerEntity> {
+    private PlayerInfo playerInfo;
 
-    private PlayerListEntry playerInfo;
+    private Player owner;
 
-    private PlayerEntity owner;
-
-    public DummyClientPlayerEntity(ClientWorld world, GameProfile profile) {
+    public DummyClientPlayerEntity(ClientLevel world, GameProfile profile) {
         super(world, profile);
     }
 
     @Override
     public boolean isSpectator() {
-        return getPlayerListEntry().getGameMode() == GameMode.SPECTATOR;
+        return getPlayerInfo().getGameMode() == GameType.SPECTATOR;
     }
 
     @Override
     public boolean isCreative() {
-        return getPlayerListEntry().getGameMode() == GameMode.CREATIVE;
+        return getPlayerInfo().getGameMode() == GameType.CREATIVE;
     }
 
     @Override
     @NotNull
-    protected PlayerListEntry getPlayerListEntry() {
+    protected PlayerInfo getPlayerInfo() {
         if (playerInfo == null) {
-            ClientPlayNetworkHandler connection = MinecraftClient.getInstance().getNetworkHandler();
+            ClientPacketListener connection = Minecraft.getInstance().getConnection();
 
-            playerInfo = connection.getPlayerListEntry(getGameProfile().getId());
+            playerInfo = connection.getPlayerInfo(getGameProfile().id());
 
             if (playerInfo == null) {
-                playerInfo = new PlayerListEntry(getGameProfile(), false);
+                playerInfo = new PlayerInfo(getGameProfile(), false);
             }
         }
 
@@ -59,33 +57,33 @@ public class DummyClientPlayerEntity extends AbstractClientPlayerEntity implemen
     }
 
     @Override
-    public void onEquipStack(EquipmentSlot slot, ItemStack oldStack, ItemStack newStack) {
+    public void onEquipItem(EquipmentSlot slot, ItemStack oldStack, ItemStack newStack) {
         /*noop*/
     }
 
     @Override
-    public boolean shouldRenderName() {
+    public boolean shouldShowName() {
         return !InteractionManager.getInstance().isClientPlayer(getMaster());
     }
 
     @Override
-    public boolean isPartVisible(PlayerModelPart modelPart) {
-        return owner == null ? super.isPartVisible(modelPart) : owner.isPartVisible(modelPart);
+    public boolean isModelPartShown(PlayerModelPart modelPart) {
+        return owner == null ? super.isModelPartShown(modelPart) : owner.isModelPartShown(modelPart);
     }
 
     @Override
     @Nullable
-    public PlayerEntity getMaster() {
+    public Player getMaster() {
         return owner;
     }
 
     @Override
-    public void setMaster(PlayerEntity owner) {
+    public void setMaster(Player owner) {
         this.owner = owner;
     }
 
     @Override
     public Optional<UUID> getMasterId() {
-        return Optional.ofNullable(owner).map(Entity::getUuid);
+        return Optional.ofNullable(owner).map(Entity::getUUID);
     }
 }

@@ -2,31 +2,30 @@ package com.minelittlepony.unicopia.client.particle;
 
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.particle.SimpleParticleType;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.world.phys.Vec3;
 
 public class CloudsEscapingParticle extends GroundPoundParticle {
 
-    public CloudsEscapingParticle(SimpleParticleType effect, ClientWorld world, double x, double y, double z, double dX, double dY, double dZ) {
+    public CloudsEscapingParticle(SimpleParticleType effect, ClientLevel world, double x, double y, double z, double dX, double dY, double dZ) {
         super(effect, world, x, y, z, dX, dY, dZ);
-        maxAge = 200;
-        collidesWithWorld = false;
+        lifetime = 200;
+        hasPhysics = false;
     }
 
     @Override
     public void spawnChildParticles() {
-        this.velocityY += 0.125;
+        this.yd += 0.125;
 
-        Vec3d center = getPos();
+        Vec3 center = getPos();
 
-        double variance = age / maxAge;
-        Vec3d vel = new Vec3d(
-                (world.random.nextFloat() - 0.5) * (0.125 + variance),
-                velocityY * 0.2,
-                (world.random.nextFloat() - 0.5) * (0.125 + variance)
+        double variance = age / lifetime;
+        Vec3 vel = new Vec3(
+                (level.getRandom().nextFloat() - 0.5) * (0.125 + variance),
+                yd * 0.2,
+                (level.getRandom().nextFloat() - 0.5) * (0.125 + variance)
         );
 
         double columnHeight = 1 + age / 30;
@@ -34,7 +33,7 @@ public class CloudsEscapingParticle extends GroundPoundParticle {
             .translate(center)
             .randomPoints(random)
             .forEach(point -> {
-                ParticleUtils.spawnParticle(world, ParticleTypes.CLOUD, point, vel);
+                ParticleUtils.spawnParticle(level, ParticleTypes.CLOUD, point, vel);
         });
     }
 }

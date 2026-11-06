@@ -14,75 +14,62 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.fabricmc.fabric.api.registry.FlammableBlockRegistry;
-import net.minecraft.block.*;
-import net.minecraft.block.piston.PistonBehavior;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.*;
-import net.minecraft.world.tick.ScheduledTickView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.PushReaction;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class FruitBlock extends Block implements Buckable {
     public static final int DEFAULT_FRUIT_SIZE = 5;
     public static final double DEFAULT_STEM_OFFSET = 2.6F;
     public static final VoxelShape DEFAULT_SHAPE = createFruitShape(DEFAULT_STEM_OFFSET, DEFAULT_FRUIT_SIZE);
-    private static final MapCodec<FruitBlock> CODEC = createCodec(FruitBlock::new);
 
     protected final Direction attachmentFace;
     protected final Set<Block> stem;
     protected final VoxelShape shape;
-    protected final RegistryKey<Item> fruitKey;
+    protected final ResourceKey<Item> fruitKey;
 
     @Nullable
     private Item cachedItem;
-
-    public static <T extends FruitBlock> MapCodec<T> createCodec(Function6<Direction, Set<Block>, RegistryKey<Item>, VoxelShape, Boolean, Settings, T> constructor) {
-        return RecordCodecBuilder.mapCodec(instance -> instance.group(
-                Direction.CODEC.fieldOf("attachment_face").forGetter(b -> b.attachmentFace),
-                CodecUtils.setOf(Registries.BLOCK.getCodec()).fieldOf("stem").forGetter(b -> b.stem),
-                RegistryKey.createCodec(RegistryKeys.ITEM).fieldOf("fruit_item").forGetter(b -> b.fruitKey),
-                RecordCodecBuilder.<VoxelShape>create(i -> i.group(
-                        Codec.DOUBLE.fieldOf("stem_offset").forGetter(b -> (double)0),
-                        Codec.DOUBLE.fieldOf("fruit_offset").forGetter(b -> (double)0)
-                ).apply(i, FruitBlock::createFruitShape)).fieldOf("shape").forGetter(b -> b.shape),
-                Codec.BOOL.fieldOf("flammable").forGetter(b -> false),
-                BedBlock.createSettingsCodec()
-        ).apply(instance, constructor));
-    }
 
     public static VoxelShape createFruitShape(double stemOffset, double fruitSize) {
         final double min = (16 - fruitSize) * 0.5;
         final double max = 16 - min;
         final double top = 16 - stemOffset;
-        return createCuboidShape(min, top - fruitSize, min, max, top, max);
+        return box(min, top - fruitSize, min, max, top, max);
     }
 
-    @Override
-    public MapCodec<? extends FruitBlock> getCodec() {
-        return CODEC;
+
+    public FruitBlock(Direction attachmentFace, Block stem, ResourceKey<Item> fruitKey, VoxelShape shape, Properties settings) {
+        this(attachmentFace, Set.of(stem), fruitKey, shape, true, settings.sound(SoundType.WOOD).pushReaction(PushReaction.POPPED));
     }
 
-    public FruitBlock(Direction attachmentFace, Block stem, RegistryKey<Item> fruitKey, VoxelShape shape, Settings settings) {
-        this(attachmentFace, Set.of(stem), fruitKey, shape, true, settings.sounds(BlockSoundGroup.WOOD).pistonBehavior(PistonBehavior.DESTROY));
-    }
-
-    public FruitBlock(Direction attachmentFace, Block stem, RegistryKey<Item> fruitKey, VoxelShape shape, boolean flammable, Settings settings) {
+    public FruitBlock(Direction attachmentFace, Block stem, ResourceKey<Item> fruitKey, VoxelShape shape, boolean flammable, Properties settings) {
         this(attachmentFace, Set.of(stem), fruitKey, shape, flammable, settings);
     }
 
-    public FruitBlock(Direction attachmentFace, Set<Block> stem, RegistryKey<Item> fruitKey, VoxelShape shape, Settings settings) {
-        this(attachmentFace, stem, fruitKey, shape, true, settings.sounds(BlockSoundGroup.WOOD).pistonBehavior(PistonBehavior.DESTROY));
+    public FruitBlock(Direction attachmentFace, Set<Block> stem, ResourceKey<Item> fruitKey, VoxelShape shape, Properties settings) {
+        this(attachmentFace, stem, fruitKey, shape, true, settings.sound(SoundType.WOOD).pushReaction(PushReaction.POPPED));
     }
 
-    public FruitBlock(Direction attachmentFace, Set<Block> stem, RegistryKey<Item> fruitKey, VoxelShape shape, boolean flammable, Settings settings) {
-        super(settings.nonOpaque().suffocates(BlockConstructionUtils::never).blockVision(BlockConstructionUtils::never));
+    public FruitBlock(Direction attachmentFace, Set<Block> stem, ResourceKey<Item> fruitKey, VoxelShape shape, boolean flammable, Properties settings) {
+        super(settings.noOcclusion().isSuffocating(BlockConstructionUtils::never).isViewBlocking(BlockConstructionUtils::never));
         this.attachmentFace = attachmentFace;
         this.stem = stem;
         this.fruitKey = fruitKey;
@@ -96,46 +83,46 @@ public class FruitBlock extends Block implements Buckable {
     @Override
     public Item asItem() {
         if (cachedItem == null) {
-            cachedItem = Registries.ITEM.get(fruitKey);
+            cachedItem = BuiltInRegistries.ITEM.getValue(fruitKey);
         }
 
         return cachedItem;
     }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+    protected VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
         return shape;
     }
 
     @Override
-    protected boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        BlockPos attachedPos = pos.offset(attachmentFace.getOpposite());
+    protected boolean canSurvive(BlockState state, LevelReader world, BlockPos pos) {
+        BlockPos attachedPos = pos.relative(attachmentFace.getOpposite());
         BlockState attachedState = world.getBlockState(attachedPos);
         return canAttachTo(attachedState);
     }
 
     @Override
-    protected BlockState getStateForNeighborUpdate(BlockState state, WorldView world, ScheduledTickView tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, Random random) {
-        if (!state.canPlaceAt(world, pos)) {
-            return Blocks.AIR.getDefaultState();
+    protected BlockState updateShape(BlockState state, LevelReader world, ScheduledTickAccess tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        if (!state.canSurvive(world, pos)) {
+            return Blocks.AIR.defaultBlockState();
         }
-        return super.getStateForNeighborUpdate(state, world, tickView, pos, direction, neighborPos, neighborState, random);
+        return super.updateShape(state, world, tickView, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
-    protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (!state.canPlaceAt(world, pos)) {
-            world.breakBlock(pos, true);
+    protected void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        if (!state.canSurvive(world, pos)) {
+            world.destroyBlock(pos, true);
         }
     }
 
     @Override
-    protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
-        super.onStateReplaced(state, world, pos, moved);
-        if (!state.isOf(world.getBlockState(pos).getBlock())) {
-            BlockState leaves = world.getBlockState(pos.up());
-            if (leaves.contains(FruitBearingBlock.STAGE)) {
-                world.setBlockState(pos.up(), leaves.withIfExists(FruitBearingBlock.AGE, 0).with(FruitBearingBlock.STAGE, FruitBearingBlock.Stage.IDLE));
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+        super.affectNeighborsAfterRemoval(state, world, pos, moved);
+        if (!state.is(world.getBlockState(pos).getBlock())) {
+            BlockState leaves = world.getBlockState(pos.above());
+            if (leaves.hasProperty(FruitBearingBlock.STAGE)) {
+                world.setBlockAndUpdate(pos.above(), leaves.trySetValue(FruitBearingBlock.AGE, 0).setValue(FruitBearingBlock.STAGE, FruitBearingBlock.Stage.IDLE));
             }
         }
     }
@@ -145,9 +132,9 @@ public class FruitBlock extends Block implements Buckable {
     }
 
     @Override
-    public List<ItemStack> onBucked(ServerWorld world, BlockState state, BlockPos pos) {
-        List<ItemStack> stacks = Block.getDroppedStacks(state, world, pos, null);
-        world.breakBlock(pos, false);
+    public List<ItemStack> onBucked(ServerLevel world, BlockState state, BlockPos pos) {
+        List<ItemStack> stacks = Block.getDrops(state, world, pos, null);
+        world.destroyBlock(pos, false);
         return stacks;
     }
 }

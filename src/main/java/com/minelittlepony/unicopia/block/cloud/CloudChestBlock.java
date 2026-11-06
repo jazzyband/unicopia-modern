@@ -1,7 +1,35 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.Optional;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.CompoundContainer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.DoubleBlockCombiner;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquineContext;
@@ -10,149 +38,111 @@ import com.minelittlepony.unicopia.block.UBlockEntities;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.DoubleBlockProperties;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.StairsBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCollisionHandler;
-import net.minecraft.entity.ai.pathing.NavigationType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.DoubleInventory;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.EmptyBlockView;
-import net.minecraft.world.World;
-
 public class CloudChestBlock extends ChestBlock implements CloudLike {
-    private static final MapCodec<CloudChestBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockState.CODEC.fieldOf("base_state").forGetter(block -> block.baseState),
-            StairsBlock.createSettingsCodec()
-    ).apply(instance, CloudChestBlock::new));
     private final BlockState baseState;
     private final CloudBlock baseBlock;
 
-    private static final DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Optional<NamedScreenHandlerFactory>> NAME_RETRIEVER = new DoubleBlockProperties.PropertyRetriever<>(){
+    private static final DoubleBlockCombiner.Combiner<ChestBlockEntity, Optional<MenuProvider>> NAME_RETRIEVER = new DoubleBlockCombiner.Combiner<>(){
         @Override
-        public Optional<NamedScreenHandlerFactory> getFromBoth(final ChestBlockEntity first, final ChestBlockEntity second) {
-            final DoubleInventory inventory = new DoubleInventory(first, second);
-            return Optional.of(new NamedScreenHandlerFactory(){
+        public Optional<MenuProvider> acceptDouble(final ChestBlockEntity first, final ChestBlockEntity second) {
+            final CompoundContainer inventory = new CompoundContainer(first, second);
+            return Optional.of(new MenuProvider(){
                 @Override
                 @Nullable
-                public ScreenHandler createMenu(int i, PlayerInventory playerInventory, PlayerEntity player) {
-                    if (first.checkUnlocked(player) && second.checkUnlocked(player)) {
-                        first.generateLoot(playerInventory.player);
-                        second.generateLoot(playerInventory.player);
-                        return GenericContainerScreenHandler.createGeneric9x6(i, playerInventory, inventory);
+                public AbstractContainerMenu createMenu(int i, Inventory playerInventory, Player player) {
+                    if (first.canOpen(player) && second.canOpen(player)) {
+                        first.unpackLootTable(playerInventory.player);
+                        second.unpackLootTable(playerInventory.player);
+                        return ChestMenu.sixRows(i, playerInventory, inventory);
                     }
                     return null;
                 }
 
                 @Override
-                public Text getDisplayName() {
+                public Component getDisplayName() {
                     if (first.hasCustomName()) {
                         return first.getDisplayName();
                     }
                     if (second.hasCustomName()) {
                         return second.getDisplayName();
                     }
-                    return Text.translatable(first.getCachedState().getBlock().getTranslationKey() + ".double");
+                    return Component.translatable(first.getBlockState().getBlock().getDescriptionId() + ".double");
                 }
             });
         }
 
         @Override
-        public Optional<NamedScreenHandlerFactory> getFrom(ChestBlockEntity chest) {
+        public Optional<MenuProvider> acceptSingle(ChestBlockEntity chest) {
             return Optional.of(chest);
         }
 
         @Override
-        public Optional<NamedScreenHandlerFactory> getFallback() {
+        public Optional<MenuProvider> acceptNone() {
             return Optional.empty();
         }
     };
 
-    public CloudChestBlock(BlockState baseState, Settings settings) {
-        super(() -> UBlockEntities.CLOUD_CHEST, CloudLike.applyCloudProperties(settings));
+    public CloudChestBlock(BlockState baseState, Properties settings) {
+        super(() -> UBlockEntities.CLOUD_CHEST, net.minecraft.sounds.SoundEvents.CHEST_OPEN, net.minecraft.sounds.SoundEvents.CHEST_CLOSE, CloudLike.applyCloudProperties(settings));
         this.baseState = baseState;
         this.baseBlock = (CloudBlock)baseState.getBlock();
     }
 
-    @Override
-    public MapCodec<? extends ChestBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileData(pos, state);
     }
 
     @Override
     @Nullable
-    public NamedScreenHandlerFactory createScreenHandlerFactory(BlockState state, World world, BlockPos pos) {
-        return getBlockEntitySource(state, world, pos, false).apply(NAME_RETRIEVER).orElse(null);
+    public MenuProvider getMenuProvider(BlockState state, Level world, BlockPos pos) {
+        return combine(state, world, pos, false).apply(NAME_RETRIEVER).orElse(null);
     }
 
     @Override
-    protected final VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+    protected final VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
         if (!baseBlock.canInteract(baseState, world, pos, EquineContext.of(context))) {
-            return VoxelShapes.empty();
+            return Shapes.empty();
         }
-        return super.getOutlineShape(state, world, pos, context);
+        return super.getShape(state, world, pos, context);
     }
 
     @Override
-    protected final VoxelShape getCullingShape(BlockState state) {
-        return super.getOutlineShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
+    protected final VoxelShape getOcclusionShape(BlockState state) {
+        return super.getShape(state, EmptyBlockGetter.INSTANCE, BlockPos.ZERO, CollisionContext.empty());
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return this.collidable ? state.getOutlineShape(world, pos, context) : VoxelShapes.empty();
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return this.hasCollision ? state.getShape(world, pos, context) : Shapes.empty();
     }
 
     @Override
     @Nullable
-    public final BlockState getPlacementState(ItemPlacementContext context) {
-        if (!baseBlock.canInteract(baseState, context.getWorld(), context.getBlockPos(), EquineContext.of(context))) {
+    public final BlockState getStateForPlacement(BlockPlaceContext context) {
+        if (!baseBlock.canInteract(baseState, context.getLevel(), context.getClickedPos(), EquineContext.of(context))) {
             return null;
         }
-        return super.getPlacementState(context);
+        return super.getStateForPlacement(context);
     }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!baseBlock.canInteract(baseState, world, pos, EquineContext.of(player))) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
-        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
+        return super.useItemOn(stack, state, world, pos, player, hand, hit);
     }
 
     @Override
-    protected void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity, EntityCollisionHandler handler) {
-        baseState.onEntityCollision(world, pos, entity, handler);
+    protected void entityInside(BlockState state, Level world, BlockPos pos, Entity entity, InsideBlockEffectApplier handler, boolean isMoving) {
+        baseState.entityInside(world, pos, entity, handler, isMoving);
     }
 
     @Override
-    protected boolean canPathfindThrough(BlockState state, NavigationType type) {
-        return type != NavigationType.LAND || !InteractionManager.getInstance().getPathingEquineContext().collidesWithClouds();
+    protected boolean isPathfindable(BlockState state, PathComputationType type) {
+        return type != PathComputationType.LAND || !InteractionManager.getInstance().getPathingEquineContext().collidesWithClouds();
     }
 
     public static class TileData extends ChestBlockEntity {
@@ -165,8 +155,8 @@ public class CloudChestBlock extends ChestBlock implements CloudLike {
         }
 
         @Override
-        protected Text getContainerName() {
-            return getCachedState().getBlock().getName();
+        protected Component getDefaultName() {
+            return getBlockState().getBlock().getName();
         }
     }
 }

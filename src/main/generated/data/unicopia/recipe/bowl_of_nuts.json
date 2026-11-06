@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "unicopia:acorn",
+    "unicopia:acorn",
+    "unicopia:acorn",
+    "minecraft:bowl"
+  ],
+  "result": {
+    "id": "unicopia:bowl_of_nuts"
+  }
+}

@@ -1,9 +1,33 @@
 package com.minelittlepony.unicopia.projectile;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
+import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquinePredicates;
@@ -13,35 +37,11 @@ import com.minelittlepony.unicopia.entity.EntityReference;
 import com.minelittlepony.unicopia.entity.mob.UEntities;
 import com.minelittlepony.unicopia.item.UItems;
 
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ItemStackParticleEffect;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-
 /**
  * A generalised version of Mojang's projectile entity class with added support for a custom appearance and water phobia.
  */
-public class MagicProjectileEntity extends ThrownItemEntity implements WeaklyOwned.Mutable<LivingEntity> {
-    private static final TrackedData<Float> DAMAGE = DataTracker.registerData(MagicProjectileEntity.class, TrackedDataHandlerRegistry.FLOAT);
+public class MagicProjectileEntity extends ThrowableItemProjectile implements WeaklyOwned.Mutable<LivingEntity> {
+    private static final EntityDataAccessor<Float> DAMAGE = SynchedEntityData.defineId(MagicProjectileEntity.class, EntityDataSerializers.FLOAT);
 
     public static final byte PROJECTILE_COLLISSION = 3;
 
@@ -50,31 +50,31 @@ public class MagicProjectileEntity extends ThrownItemEntity implements WeaklyOwn
 
     private int maxAge = 90;
 
-    public MagicProjectileEntity(EntityType<? extends MagicProjectileEntity> type, World world) {
+    public MagicProjectileEntity(EntityType<? extends MagicProjectileEntity> type, Level world) {
         super(type, world);
     }
 
-    public MagicProjectileEntity(World world) {
+    public MagicProjectileEntity(Level world) {
         this(UEntities.THROWN_ITEM, world);
     }
 
-    public MagicProjectileEntity(World world, LivingEntity thrower) {
-        super(UEntities.THROWN_ITEM, thrower, world, UItems.GEMSTONE.getDefaultStack());
+    public MagicProjectileEntity(Level world, LivingEntity thrower) {
+        super(UEntities.THROWN_ITEM, thrower, world, UItems.GEMSTONE.getDefaultInstance());
     }
 
-    protected MagicProjectileEntity(EntityType<? extends MagicProjectileEntity> type, World world, LivingEntity thrower) {
-        super(type, thrower, world, UItems.GEMSTONE.getDefaultStack());
-    }
-
-    @Override
-    protected void initDataTracker(DataTracker.Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(DAMAGE, 0F);
+    protected MagicProjectileEntity(EntityType<? extends MagicProjectileEntity> type, Level world, LivingEntity thrower) {
+        super(type, thrower, world, UItems.GEMSTONE.getDefaultInstance());
     }
 
     @Override
-    public World asWorld() {
-        return getWorld();
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DAMAGE, 0F);
+    }
+
+    @Override
+    public Level asWorld() {
+        return level();
     }
 
     @Override
@@ -118,11 +118,11 @@ public class MagicProjectileEntity extends ThrownItemEntity implements WeaklyOwn
     }
 
     public void setThrowDamage(float damage) {
-        getDataTracker().set(DAMAGE, Math.max(0, damage));
+        getEntityData().set(DAMAGE, Math.max(0, damage));
     }
 
     public float getThrowDamage() {
-        return getDataTracker().get(DAMAGE);
+        return getEntityData().get(DAMAGE);
     }
 
     public void setMaxAge(int maxAge) {
@@ -131,83 +131,83 @@ public class MagicProjectileEntity extends ThrownItemEntity implements WeaklyOwn
 
     @Override
     public void tick() {
-        if (maxAge > 0 && !getWorld().isClient() && homingTarget.getOrEmpty(asWorld()).isEmpty() && (getVelocity().length() < 0.1 || age > maxAge)) {
+        if (maxAge > 0 && !level().isClientSide() && homingTarget.getOrEmpty(asWorld()).isEmpty() && (getDeltaMovement().length() < 0.1 || tickCount > maxAge)) {
             discard();
         }
 
         super.tick();
 
-        homingTarget.ifPresent(getWorld(), e -> {
+        homingTarget.ifPresent(level(), e -> {
             setNoGravity(true);
-            noClip = true;
-            setVelocity(getVelocity().add(e.getPos().subtract(getPos()).normalize().multiply(0.2)).multiply(0.6, 0.6, 0.6));
+            noPhysics = true;
+            setDeltaMovement(getDeltaMovement().add(e.position().subtract(position()).normalize().scale(0.2)).multiply(0.6, 0.6, 0.6));
         });
     }
 
-    private ParticleEffect getParticleParameters() {
-       ItemStack stack = getStack();
+    private ParticleOptions getParticleParameters() {
+       ItemStack stack = getItem();
 
        if (stack.isEmpty()) {
            return ParticleTypes.ITEM_SNOWBALL;
        }
 
-       if (stack.isOf(UItems.FILLED_JAR)) {
-           stack = UItems.EMPTY_JAR.getDefaultStack();
+       if (stack.is(UItems.FILLED_JAR)) {
+           stack = UItems.EMPTY_JAR.getDefaultInstance();
        }
 
-       return new ItemStackParticleEffect(ParticleTypes.ITEM, stack);
+       return new ItemParticleOption(ParticleTypes.ITEM, net.minecraft.world.item.ItemStackTemplate.fromStack(stack));
     }
 
     @Override
-    public void handleStatus(byte id) {
+    public void handleEntityEvent(byte id) {
        if (id == PROJECTILE_COLLISSION) {
-          ParticleEffect effect = getParticleParameters();
+          ParticleOptions effect = getParticleParameters();
 
           for(int i = 0; i < 8; i++) {
-             getWorld().addParticleClient(effect, getX(), getY(), getZ(), 0, 0, 0);
+             level().addParticle(effect, getX(), getY(), getZ(), 0, 0, 0);
           }
        } else {
-           super.handleStatus(id);
+           super.handleEntityEvent(id);
        }
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound compound) {
-        super.readCustomDataFromNbt(compound);
-        homingTarget.fromNBT(compound.getCompoundOrEmpty("homingTarget"), getRegistryManager());
-        getMasterReference().fromNBT(compound.getCompoundOrEmpty("owner"), getRegistryManager());
+    public void readAdditionalSaveData(ValueInput compound) {
+        super.readAdditionalSaveData(compound);
+        homingTarget.fromNBT(compound.read("homingTarget", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new), registryAccess());
+        getMasterReference().fromNBT(compound.read("owner", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new), registryAccess());
         maxAge = compound.getInt("maxAge").orElse(maxAge);
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound compound) {
-        super.writeCustomDataToNbt(compound);
-        compound.put("homingTarget", homingTarget.toNBT(getRegistryManager()));
-        compound.put("owner", getMasterReference().toNBT(getRegistryManager()));
+    public void addAdditionalSaveData(ValueOutput compound) {
+        super.addAdditionalSaveData(compound);
+        compound.store("homingTarget", net.minecraft.nbt.CompoundTag.CODEC, homingTarget.toNBT(registryAccess()));
+        compound.store("owner", net.minecraft.nbt.CompoundTag.CODEC, getMasterReference().toNBT(registryAccess()));
         compound.putInt("maxAge", maxAge);
     }
 
     @Override
-    protected void onCollision(HitResult result) {
+    protected void onHit(HitResult result) {
         if (!isRemoved()) {
-            super.onCollision(result);
+            super.onHit(result);
 
-            if (!getWorld().isClient()) {
-                getWorld().sendEntityStatus(this, PROJECTILE_COLLISSION);
+            if (!level().isClientSide()) {
+                level().broadcastEntityEvent(this, PROJECTILE_COLLISSION);
                 discard();
             }
         }
     }
 
     @Override
-    protected void onBlockHit(BlockHitResult hit) {
-        super.onBlockHit(hit);
+    protected void onHitBlock(BlockHitResult hit) {
+        super.onHitBlock(hit);
 
         forEachDelegates(effect -> effect.onImpact(this, hit), ProjectileDelegate.BlockHitListener.PREDICATE);
     }
 
     @Override
-    protected void onEntityHit(EntityHitResult hit) {
+    protected void onHitEntity(EntityHitResult hit) {
         Entity entity = hit.getEntity();
 
         if (!(entity instanceof FallingBlockEntity) && EquinePredicates.IS_MAGIC_IMMUNE.test(entity)) {
@@ -217,8 +217,8 @@ public class MagicProjectileEntity extends ThrownItemEntity implements WeaklyOwn
         if (entity != null) {
             float damage = getThrowDamage();
 
-            if (damage > 0 && !getWorld().isClient) {
-                entity.damage((ServerWorld)getWorld(), getDamageSources().thrown(this, getOwner()), getThrowDamage());
+            if (damage > 0 && !level().isClientSide()) {
+                entity.hurtServer((ServerLevel)level(), damageSources().thrown(this, getOwner()), getThrowDamage());
             }
 
             forEachDelegates(effect -> effect.onImpact(this, hit), ProjectileDelegate.EntityHitListener.PREDICATE);
@@ -226,19 +226,19 @@ public class MagicProjectileEntity extends ThrownItemEntity implements WeaklyOwn
     }
 
     public void knockback(LivingEntity target, DamageSource source, ItemStack weapon) {
-        double d = weapon != null && getWorld() instanceof ServerWorld serverWorld ? EnchantmentHelper.modifyKnockback(serverWorld, weapon, target, source, 0) : 0;
+        double d = weapon != null && level() instanceof ServerLevel serverWorld ? EnchantmentHelper.modifyKnockback(serverWorld, weapon, target, source, 0) : 0;
         if (d > 0) {
-            double e = Math.max(0, 1 - target.getAttributeValue(EntityAttributes.KNOCKBACK_RESISTANCE));
-            Vec3d vec3d = this.getVelocity().multiply(1, 0, 1).normalize().multiply(d * 0.6 * e);
-            if (vec3d.lengthSquared() > 0) {
-                target.addVelocity(vec3d.x, 0.1, vec3d.z);
+            double e = Math.max(0, 1 - target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
+            Vec3 vec3d = this.getDeltaMovement().multiply(1, 0, 1).normalize().scale(d * 0.6 * e);
+            if (vec3d.lengthSqr() > 0) {
+                target.push(vec3d.x, 0.1, vec3d.z);
             }
         }
     }
 
     protected <T extends ProjectileDelegate> void forEachDelegates(Consumer<T> consumer, Function<Object, T> predicate) {
         try {
-            Optional.ofNullable(predicate.apply(getStack().getItem())).ifPresent(consumer);
+            Optional.ofNullable(predicate.apply(getItem().getItem())).ifPresent(consumer);
         } catch (Throwable t) {
             Unicopia.LOGGER.error("Error whilst ticking spell on entity {}", getMasterReference(), t);
         }

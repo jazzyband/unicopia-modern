@@ -2,29 +2,29 @@ package com.minelittlepony.unicopia.datagen;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.concurrent.CompletableFuture;
 
-import com.mojang.serialization.Lifecycle;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator.Pack;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
-import net.minecraft.registry.Registerable;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryBuilder.BootstrapFunction;
-import net.minecraft.registry.RegistryEntryLookup;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.entry.RegistryEntry.Reference;
-import net.minecraft.registry.tag.TagKey;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagsProvider;
+import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.SingleRegistryBootstrap;
+import net.minecraft.data.worldgen.BootstrapContext;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
 
-public abstract class DataGenRegistryProvider<T> implements BootstrapFunction<T> {
+public abstract class DataGenRegistryProvider<T> implements SingleRegistryBootstrap<T> {
 
-    private final RegistryKey<Registry<T>> registryRef;
-    private final List<RegistryKey<T>> keys = new ArrayList<>();
+    private final ResourceKey<Registry<T>> registryRef;
+    private final List<ResourceKey<T>> keys = new ArrayList<>();
 
-    public DataGenRegistryProvider(RegistryKey<Registry<T>> registryRef) {
+    public DataGenRegistryProvider(ResourceKey<Registry<T>> registryRef) {
         this.registryRef = registryRef;
     }
 
@@ -33,54 +33,59 @@ public abstract class DataGenRegistryProvider<T> implements BootstrapFunction<T>
         pack.addProvider(this::createTagProvider);
     }
 
-    protected List<RegistryKey<T>> getKeys() {
+    protected List<ResourceKey<T>> getKeys() {
         return keys;
     }
 
-    protected abstract void configureTags(TagProvider tagProvider, WrapperLookup lookup);
+    protected abstract void configureTags(TagProvider tagProvider, Provider lookup);
 
-    public FabricDynamicRegistryProvider createDataGenerator(FabricDataOutput output, CompletableFuture<WrapperLookup> registriesFuture) {
+    public FabricDynamicRegistryProvider createDataGenerator(FabricPackOutput output, CompletableFuture<Provider> registriesFuture) {
         return new FabricDynamicRegistryProvider(output, registriesFuture) {
             @Override
             public String getName() {
-                return "Unicopia Registry Data Gen " + registryRef.getValue();
+                return "Unicopia Registry Data Gen " + registryRef.identifier();
             }
 
             @Override
-            protected void configure(WrapperLookup registries, Entries entries) {
-                DataGenRegistryProvider.this.run(new Registerable<T>() {
+            protected void configure(Provider registries, Entries entries) {
+                DataGenRegistryProvider.this.run(new BootstrapContext<T>() {
                     @Override
-                    public Reference<T> register(RegistryKey<T> key, T value, Lifecycle lifecycle) {
+                    public Reference<T> register(ResourceKey<T> key, T value) {
                         keys.add(key);
                         entries.add(key, value);
                         return null;
                     }
 
                     @Override
-                    public <S> RegistryEntryLookup<S> getRegistryLookup(RegistryKey<? extends Registry<? extends S>> registryRef) {
-                        return registries.getOrThrow(registryRef);
+                    public <S> HolderGetter<S> lookup(ResourceKey<? extends Registry<? extends S>> registryRef) {
+                        return registries.lookupOrThrow(registryRef);
+                    }
+
+                    @Override
+                    public <S> Stream<Reference<S>> listContextElements(ResourceKey<? extends Registry<? extends S>> registryRef) {
+                        return registries.lookupOrThrow(registryRef).listElements();
                     }
                 });
             }
         };
     }
 
-    public FabricTagProvider<T> createTagProvider(FabricDataOutput output, CompletableFuture<WrapperLookup> registriesFuture) {
+    public FabricTagsProvider<T> createTagProvider(FabricPackOutput output, CompletableFuture<Provider> registriesFuture) {
         return new TagProvider(output, registriesFuture);
     }
 
-    protected class TagProvider extends FabricTagProvider<T> {
-        public TagProvider(FabricDataOutput output, CompletableFuture<WrapperLookup> registriesFuture) {
+    protected class TagProvider extends FabricTagsProvider<T> {
+        public TagProvider(FabricPackOutput output, CompletableFuture<Provider> registriesFuture) {
             super(output, DataGenRegistryProvider.this.registryRef, registriesFuture);
         }
 
         @Override
-        public FabricTagBuilder getOrCreateTagBuilder(TagKey<T> tag) {
-            return super.getOrCreateTagBuilder(tag);
+        public net.minecraft.data.tags.TagAppender<T> tag(TagKey<T> tag) {
+            return super.tag(tag);
         }
 
         @Override
-        protected void configure(WrapperLookup lookup) {
+        protected void addTags(Provider lookup) {
             DataGenRegistryProvider.this.configureTags(this, lookup);
         }
     }

@@ -1,185 +1,176 @@
 package com.minelittlepony.unicopia.client.render.entity;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-
-import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
-
+import java.util.List;
 import com.minelittlepony.unicopia.block.ItemJarBlock;
+import com.minelittlepony.unicopia.block.jar.EntityJarContents;
+import com.minelittlepony.unicopia.block.jar.FakeFluidJarContents;
 import com.minelittlepony.unicopia.block.ItemJarBlock.FluidJarContents;
 import com.minelittlepony.unicopia.block.jar.ItemsJarContents;
-import com.minelittlepony.unicopia.block.jar.FakeFluidJarContents;
-import com.minelittlepony.unicopia.block.jar.EntityJarContents;
 import com.minelittlepony.unicopia.client.render.model.CubeModel;
 import com.minelittlepony.unicopia.util.FluidHelper;
 import com.minelittlepony.unicopia.util.PosHelper;
-
-import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
-import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.command.argument.EntityAnchorArgumentType.EntityAnchor;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.commands.arguments.EntityAnchorArgument.Anchor;
+import net.minecraft.core.Direction;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.Vec3;
 
-public class ItemJarBlockEntityRenderer implements BlockEntityRenderer<ItemJarBlock.TileData> {
+public class ItemJarBlockEntityRenderer implements BlockEntityRenderer<ItemJarBlock.TileData, ItemJarBlockEntityRenderer.State> {
     private static final Direction[] GLASS_SIDES = Arrays.stream(PosHelper.ALL).filter(i -> i != Direction.UP).toArray(Direction[]::new);
-    private final ItemRenderer itemRenderer;
+    private final ItemModelResolver itemResolver;
     private final EntityRenderDispatcher dispatcher;
 
-    public ItemJarBlockEntityRenderer(BlockEntityRendererFactory.Context ctx) {
-        itemRenderer = ctx.getItemRenderer();
-        dispatcher = ctx.getEntityRenderDispatcher();
+    public ItemJarBlockEntityRenderer(BlockEntityRendererProvider.Context ctx) {
+        itemResolver = Minecraft.getInstance().getItemModelResolver();
+        dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+    }
+
+    public static class State extends BlockEntityRenderState {
+        public final List<ItemStackRenderState> items = new ArrayList<>();
+        public EntityRenderState containedEntity;
+        public float entityScale;
+        public float entityEyePos;
+        public float tick;
+        public TextureAtlasSprite topSprite;
+        public TextureAtlasSprite sideSprite;
+        public float fluidHeight;
+        public int fluidColor;
     }
 
     @Override
-    public void render(ItemJarBlock.TileData data, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertices, int light, int overlay, Vec3d cameraPos) {
+    public State createRenderState() {
+        return new State();
+    }
 
-        ItemsJarContents items = data.getItems();
-        if (items != null) {
-            renderItemStacks(data, items, tickDelta, matrices, vertices, light, overlay);
+    @Override
+    public void extractRenderState(ItemJarBlock.TileData data, State state, float tickDelta, Vec3 cameraPos,
+            ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(data, state, tickDelta, cameraPos, breakProgress);
+        state.items.clear();
+        state.containedEntity = null;
+        state.topSprite = null;
+        state.sideSprite = null;
+        state.tick = tickDelta;
+
+        ItemsJarContents contents = data.getItems();
+        if (contents != null) {
+            for (ItemStack stack : contents.stacks()) {
+                ItemStackRenderState item = new ItemStackRenderState();
+                itemResolver.updateForTopItem(item, stack, ItemDisplayContext.FIXED, data.getLevel(), null, 0);
+                state.items.add(item);
+            }
         }
 
         EntityJarContents entity = data.getEntity();
         if (entity != null) {
-            renderEntity(data, entity, tickDelta, matrices, vertices, light, overlay);
+            Entity e = entity.entity().get();
+            if (e != null) {
+                Player player = Minecraft.getInstance().player;
+                float size = Math.max(e.getBbWidth(), e.getBbHeight());
+                state.entityScale = 0.25F / Math.max(size, 0.01F);
+                state.entityEyePos = e.getEyeHeight(e.getPose()) * state.entityScale;
+                if (player != null) {
+                    e.setPos(Vec3.atCenterOf(data.getBlockPos()));
+                    e.lookAt(Anchor.FEET, Minecraft.getInstance().gameRenderer.mainCamera().position());
+                }
+                state.containedEntity = dispatcher.extractEntity(e, tickDelta);
+            }
         }
 
         FluidJarContents fluid = data.getFluid();
-        if (fluid != null) {
-            renderFluid(data, fluid, tickDelta, matrices, vertices, light, overlay);
-        }
-
         FakeFluidJarContents milk = data.getFakeFluid();
-        if (milk != null) {
-            renderFluid(data, Fluids.WATER.getDefaultState(), milk.color(), FluidConstants.BUCKET, tickDelta, matrices, vertices, light, overlay);
+        if (fluid != null) {
+            loadFluid(state, FluidHelper.getFullFluidState(fluid.fluid()), fluid.amount(), 0, data);
+        } else if (milk != null) {
+            loadFluid(state, Fluids.WATER.defaultFluidState(), FluidConstants.BUCKET, milk.color(), data);
         }
     }
 
-    private void renderItemStacks(ItemJarBlock.TileData data, ItemsJarContents items, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertices, int light, int overlay) {
-        float itemScale = 0.35F;
-        Quaternionf rotation = new Quaternionf();
-
-        matrices.push();
-        matrices.translate(0.5, 0, 0.5);
-        matrices.multiply(rotation.rotationX(MathHelper.HALF_PI));
-        matrices.scale(itemScale, itemScale, itemScale);
-
-        Random rng = Random.create(data.getPos().asLong());
-
-        float y = 0;
-        for (ItemStack stack : items.stacks()) {
-            matrices.push();
-
-            matrices.translate((rng.nextFloat() - 0.5F) * 0.5F, (rng.nextFloat() - 0.5F) * 0.8F, -0.05 + y);
-            matrices.multiply(rotation.rotationXYZ((rng.nextFloat() * MathHelper.TAU) - MathHelper.PI, 0, (rng.nextFloat() * MathHelper.TAU) - MathHelper.PI));
-            y -= 0.1F;
-            itemRenderer.renderItem(stack, ItemDisplayContext.FIXED, light, overlay, matrices, vertices, data.getWorld(), 0);
-            matrices.pop();
-        }
-        matrices.pop();
+    private void loadFluid(State state, FluidState fluid, long amount, int colorOverride, ItemJarBlock.TileData data) {
+        FluidModel model = Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluid);
+        state.topSprite = model.stillMaterial().sprite();
+        state.sideSprite = model.flowingMaterial().sprite();
+        state.fluidHeight = 0.6F * amount / (float)FluidConstants.BUCKET;
+        state.fluidColor = colorOverride != 0 ? colorOverride : model.tintSource() == null
+                ? CommonColors.WHITE : data.getLevel() instanceof net.minecraft.client.renderer.block.BlockAndTintGetter view
+                        ? model.tintSource().colorInWorld(fluid.createLegacyBlock(), view, data.getBlockPos())
+                        : model.tintSource().color(fluid.createLegacyBlock());
     }
 
-    private void renderEntity(ItemJarBlock.TileData data, EntityJarContents entity, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertices, int light, int overlay) {
-        Entity e = entity.entity().get();
-        if (e != null) {
-
-            PlayerEntity player = MinecraftClient.getInstance().player;
-            int age = player == null ? 0 : player.age;
-
-            float fullTick = age + tickDelta;
-
-            float size = Math.max(e.getWidth(), e.getHeight());
-            float desiredSize = 0.25F;
-            float scale = desiredSize / size;
-            float eyePos = (e.getEyeHeight(e.getPose())) * scale;
-
-            if (player != null) {
-                Vec3d center = data.getPos().toCenterPos();
-                Vec3d observerPos = MinecraftClient.getInstance().gameRenderer.getCamera().getPos();
-                e.setPosition(center);
-                e.lookAt(EntityAnchor.FEET, observerPos);
+    @Override
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertices, CameraRenderState camera) {
+        if (!state.items.isEmpty()) {
+            matrices.pushPose();
+            matrices.translate(0.5, 0, 0.5);
+            matrices.rotate(Axis.XP.rotationDegrees(90));
+            matrices.scale(0.35F, 0.35F, 0.35F);
+            RandomSource rng = RandomSource.create(state.blockPos.asLong());
+            float y = 0;
+            for (ItemStackRenderState item : state.items) {
+                matrices.pushPose();
+                matrices.translate((rng.nextFloat() - 0.5F) * 0.5F, (rng.nextFloat() - 0.5F) * 0.8F, -0.05 + y);
+                matrices.rotate(Axis.XP.rotationDegrees(rng.nextFloat() * 360 - 180));
+                matrices.rotate(Axis.ZP.rotationDegrees(rng.nextFloat() * 360 - 180));
+                item.submit(matrices, vertices, state.lightCoords, 0, CommonColors.WHITE);
+                matrices.popPose();
+                y -= 0.1F;
             }
+            matrices.popPose();
+        }
 
-            matrices.push();
-            matrices.translate(0.5, 0.48 + MathHelper.sin(fullTick / 19F) * 0.02F - eyePos, 0.5);
-            matrices.scale(scale, scale, scale);
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(10 * MathHelper.sin(fullTick / 19F)));
-            dispatcher.render(e, 0, 0, 0, tickDelta, matrices, vertices, light);
-            matrices.pop();
+        if (state.containedEntity != null) {
+            matrices.pushPose();
+            matrices.translate(0.5, 0.48 + Mth.sin(state.tick / 19F) * 0.02F - state.entityEyePos, 0.5);
+            matrices.scale(state.entityScale, state.entityScale, state.entityScale);
+            matrices.rotate(Axis.XP.rotationDegrees(10 * Mth.sin(state.tick / 19F)));
+            dispatcher.submit(state.containedEntity, camera, 0, 0, 0, matrices, vertices);
+            matrices.popPose();
+        }
+
+        if (state.topSprite != null && state.sideSprite != null) {
+            submitFluidFace(vertices, matrices, state.topSprite, state, new Direction[] {Direction.UP});
+            submitFluidFace(vertices, matrices, state.sideSprite, state, GLASS_SIDES);
         }
     }
 
-    private void renderFluid(ItemJarBlock.TileData data, FluidJarContents fluid, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertices, int light, int overlay) {
-        FluidState state = FluidHelper.getFullFluidState(fluid.fluid());
-        int color = getFluidColor(data.getWorld(), data.getPos(), state);
-        renderFluid(data, state, color, fluid.amount(), tickDelta, matrices, vertices, light, overlay);
-    }
-
-    private void renderFluid(ItemJarBlock.TileData data, FluidState state, int color, long amount, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertices, int light, int overlay) {
-        Sprite[] sprite = getFluidSprite(data.getWorld(), data.getPos(), state);
-        matrices.push();
-        Sprite topSprite = sprite[0];
-        float height = 0.6F * (amount / (float)FluidConstants.BUCKET);
-        boolean opaque = ColorHelper.getAlphaFloat(color) >= 1;
-        CubeModel.render(
-                matrices,
-                vertices.getBuffer(opaque ? RenderLayer.getEntitySolid(topSprite.getAtlasId()) : RenderLayer.getEntityTranslucent(topSprite.getAtlasId())),
-                topSprite.getMinU(), topSprite.getMinV(),
-                topSprite.getMaxU(), topSprite.getMaxV(),
-                0.28F, 0.01F, 0.28F,
-                0.73F, 0.01F + height, 0.73F,
-                color | 0xFF000000,
-                light, overlay, Direction.UP
-        );
-        Sprite sideSprite = sprite[sprite.length - 1];
-        CubeModel.render(
-                matrices,
-                vertices.getBuffer(opaque ? RenderLayer.getEntitySolid(sideSprite.getAtlasId()) : RenderLayer.getEntityTranslucent(sideSprite.getAtlasId())),
-                sideSprite.getMinU(), sideSprite.getMinV(),
-                sideSprite.getMaxU(), sideSprite.getMaxV(),
-                0.28F, 0.01F, 0.28F,
-                0.73F, 0.01F + height, 0.73F,
-                color | 0xFF000000,
-                light, overlay, GLASS_SIDES
-        );
-        matrices.pop();
-    }
-
-    private int getFluidColor(World world, BlockPos pos, FluidState state) {
-        return getFluidHandler(state.getFluid()).getFluidColor(world, pos, state);
-    }
-
-    private Sprite[] getFluidSprite(@Nullable World world, BlockPos pos, FluidState state) {
-        return getFluidHandler(state.getFluid()).getFluidSprites(world, pos, state);
-    }
-
-    private FluidRenderHandler getFluidHandler(Fluid fluid) {
-        FluidRenderHandler handler = FluidRenderHandlerRegistry.INSTANCE.get(fluid);
-        if (handler == null) {
-            return FluidRenderHandlerRegistry.INSTANCE.get(Fluids.WATER);
-        }
-        return handler;
+    private void submitFluidFace(SubmitNodeCollector vertices, PoseStack matrices, TextureAtlasSprite sprite,
+            State state, Direction[] sides) {
+        RenderType layer = ARGB.alphaFloat(state.fluidColor) >= 1
+                ? RenderTypes.entitySolid(sprite.atlasLocation()) : RenderTypes.entityTranslucent(sprite.atlasLocation());
+        vertices.submitCustomGeometry(matrices, layer, (pose, buffer) -> {
+            PoseStack stack = new PoseStack();
+            stack.mulPose(pose.pose());
+            CubeModel.render(stack, buffer, sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1(),
+                    0.28F, 0.01F, 0.28F, 0.73F, 0.01F + state.fluidHeight, 0.73F,
+                    state.fluidColor | 0xFF000000, state.lightCoords, 0, sides);
+        });
     }
 }

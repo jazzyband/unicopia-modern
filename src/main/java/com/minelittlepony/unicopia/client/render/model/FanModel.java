@@ -1,41 +1,39 @@
 package com.minelittlepony.unicopia.client.render.model;
 
-import org.joml.Quaternionf;
-
 import com.minelittlepony.unicopia.client.render.RenderUtil;
-
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 public class FanModel extends BakedModel {
 
-    public FanModel(Sprite sprite) {
+    public FanModel(TextureAtlasSprite sprite) {
         RenderUtil.Vertex[] dorito = createDorito(sprite);
-        MatrixStack matrices = new MatrixStack();
-        Quaternionf rotation = new Quaternionf();
-        float baseAngle = 15 * MathHelper.RADIANS_PER_DEGREE;
+        PoseStack matrices = new PoseStack();
         for (int d = 0; d < 12; d++) {
-            matrices.push();
-            matrices.multiply(rotation.rotationZ(30 * d * MathHelper.RADIANS_PER_DEGREE).rotateXYZ(baseAngle, baseAngle * d, 0));
+            matrices.pushPose();
+
+            matrices.rotate(Axis.ZP.rotationDegrees(30 * d));
+            matrices.rotate(Axis.XP.rotationDegrees(15));
+            matrices.rotate(Axis.YP.rotationDegrees(15 * d));
             matrices.translate(2.9F, 0, 0);
             for (RenderUtil.Vertex corner : dorito) {
-                var position = corner.position(matrices.peek().getPositionMatrix());
+                var position = corner.position(matrices.last().pose());
                 addVertex(position.x, position.y(), position.z(), corner.texture().x, corner.texture().y);
             }
-            matrices.pop();
+            matrices.popPose();
         }
     }
 
-    static RenderUtil.Vertex[] createDorito(Sprite sprite) {
+    static RenderUtil.Vertex[] createDorito(TextureAtlasSprite sprite) {
         float chunkSize = 1F;
         float baseLength = 0.8F;
-        float uLength = sprite.getMaxU() - sprite.getMinU();
+        float uLength = sprite.getU1() - sprite.getU0();
         return new RenderUtil.Vertex[]{
-                new RenderUtil.Vertex(-chunkSize, -chunkSize * baseLength, 0, sprite.getMinU() + uLength * baseLength, sprite.getMinV()),
-                new RenderUtil.Vertex( chunkSize,  0, 0, sprite.getMaxU(), sprite.getMaxV()),
-                new RenderUtil.Vertex(-chunkSize,  chunkSize * baseLength, 0, sprite.getMinU(), sprite.getMinV()),
-                new RenderUtil.Vertex(-chunkSize * 3, 0, 0, sprite.getMinU(), sprite.getMaxV())
+                new RenderUtil.Vertex(-chunkSize, -chunkSize * baseLength, 0, sprite.getU0() + uLength * baseLength, sprite.getV0()),
+                new RenderUtil.Vertex( chunkSize,  0, 0, sprite.getU1(), sprite.getV1()),
+                new RenderUtil.Vertex(-chunkSize,  chunkSize * baseLength, 0, sprite.getU0(), sprite.getV0()),
+                new RenderUtil.Vertex(-chunkSize * 3, 0, 0, sprite.getU0(), sprite.getV1())
         };
     }
 }

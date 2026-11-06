@@ -1,27 +1,26 @@
 package com.minelittlepony.unicopia.item;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.TypedEntityData;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 import com.google.common.base.Suppliers;
 import com.minelittlepony.unicopia.block.FancyBedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.item.BedItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
 
-public class FancyBedItem extends BedItem implements Supplier<BlockEntity> {
+public class FancyBedItem extends BlockItem implements Supplier<BlockEntity> {
 
     private final Supplier<BlockEntity> renderEntity;
 
-    public FancyBedItem(Block block, Settings settings) {
+    public FancyBedItem(Block block, Properties settings) {
         super(block, settings);
-        this.renderEntity = Suppliers.memoize(() -> ((BlockEntityProvider)block).createBlockEntity(BlockPos.ORIGIN, block.getDefaultState()));
+        this.renderEntity = Suppliers.memoize(() -> ((EntityBlock)block).newBlockEntity(BlockPos.ZERO, block.defaultBlockState()));
     }
 
     @Override
@@ -32,10 +31,10 @@ public class FancyBedItem extends BedItem implements Supplier<BlockEntity> {
     @SuppressWarnings("deprecation")
     public static FancyBedBlock.SheetPattern getPattern(ItemStack stack) {
         @Nullable
-        NbtComponent blockEntityNbt = stack.getOrDefault(DataComponentTypes.BLOCK_ENTITY_DATA, NbtComponent.DEFAULT);
+        TypedEntityData<?> blockEntityNbt = stack.get(DataComponents.BLOCK_ENTITY_DATA);
         if (blockEntityNbt == null) {
             return FancyBedBlock.SheetPattern.NONE;
         }
-        return blockEntityNbt.getNbt().get("pattern", FancyBedBlock.SheetPattern.CODEC).orElse(FancyBedBlock.SheetPattern.NONE);
+        return blockEntityNbt.getUnsafe().read("pattern", FancyBedBlock.SheetPattern.CODEC).orElse(FancyBedBlock.SheetPattern.NONE);
     }
 }

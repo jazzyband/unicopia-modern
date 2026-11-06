@@ -5,35 +5,34 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
-import com.minelittlepony.unicopia.RaceKeys;
+import com.minelittlepony.unicopia.Race;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 
-import net.minecraft.command.CommandSource;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.util.Identifier;
-
 public class UCommandSuggestion {
-    public static final SuggestionProvider<ServerCommandSource> ALL_RACE_SUGGESTIONS = suggestFromRegistry(RaceKeys.REGISTRY);
-    public static final SuggestionProvider<ServerCommandSource> ALLOWED_RACE_SUGGESTIONS = suggestFromRegistry(RaceKeys.REGISTRY, (context, race) -> race.availability().isGrantable() && race.isPermitted(context.getSource().getPlayer()));
+    public static final SuggestionProvider<CommandSourceStack> ALL_RACE_SUGGESTIONS = suggestFromRegistry(Race.REGISTRY_KEY);
+    public static final SuggestionProvider<CommandSourceStack> ALLOWED_RACE_SUGGESTIONS = suggestFromRegistry(Race.REGISTRY_KEY, (context, race) -> race.availability().isGrantable() && race.isPermitted(context.getSource().getPlayer()));
 
-    public static <T> SuggestionProvider<ServerCommandSource> suggestFromRegistry(RegistryKey<? extends Registry<T>> registryKey, @Nullable BiPredicate<CommandContext<ServerCommandSource>, T> filter) {
+    public static <T> SuggestionProvider<CommandSourceStack> suggestFromRegistry(ResourceKey<? extends Registry<T>> registryKey, @Nullable BiPredicate<CommandContext<CommandSourceStack>, T> filter) {
         return (context, builder) -> {
-            Registry<T> registry = context.getSource().getRegistryManager().getOrThrow(registryKey);
+            Registry<T> registry = context.getSource().registryAccess().lookupOrThrow(registryKey);
             return suggestIdentifiers(
                     filter == null ? registry : registry.stream().filter(v -> filter.test(context, v))::iterator,
-                    registry::getId,
-                    builder, registryKey.getValue().getNamespace());
+                    registry::getKey,
+                    builder, registryKey.identifier().getNamespace());
         };
     }
 
-    public static <T> SuggestionProvider<ServerCommandSource> suggestFromRegistry(RegistryKey<? extends Registry<T>> registryKey) {
+    public static <T> SuggestionProvider<CommandSourceStack> suggestFromRegistry(ResourceKey<? extends Registry<T>> registryKey) {
         return suggestFromRegistry(registryKey, null);
     }
 
@@ -47,12 +46,12 @@ public class UCommandSuggestion {
         for (T object : candidates) {
             final Identifier id = idFunc.apply(object);
             if (hasNamespaceDelimiter) {
-                if (CommandSource.shouldSuggest(input, id.toString())) {
+                if (SharedSuggestionProvider.matchesSubStr(input, id.toString())) {
                     consumer.accept(object);
                 }
             } else {
-                if (CommandSource.shouldSuggest(input, id.getNamespace())
-                    || (id.getNamespace().equals(defaultNamespace) && CommandSource.shouldSuggest(input, id.getPath()))
+                if (SharedSuggestionProvider.matchesSubStr(input, id.getNamespace())
+                    || (id.getNamespace().equals(defaultNamespace) && SharedSuggestionProvider.matchesSubStr(input, id.getPath()))
                 ) {
                     consumer.accept(object);
                 }

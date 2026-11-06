@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:pearl_necklace"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:shelly",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:tag",
+          "expand": true,
+          "items": "#unicopia:shells",
+          "weight": 8
+        },
+        {
+          "type": "minecraft:tag",
+          "expand": true,
+          "items": "#c:foods/rotten_fish"
+        }
+      ],
+      "rolls": {
+        "type": "minecraft:uniform",
+        "max": 2,
+        "min": 1
+      }
+    }
+  ]
+}

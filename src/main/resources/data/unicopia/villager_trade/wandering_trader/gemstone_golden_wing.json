@@ -1,0 +1,15 @@
+{
+  "wants": {
+    "id": "unicopia:gemstone",
+    "count": 30
+  },
+  "gives": {
+    "id": "unicopia:golden_wing"
+  },
+  "max_uses": 30,
+  "xp": 2,
+  "reputation_discount": 0.05,
+  "additional_wants": {
+    "id": "unicopia:golden_feather"
+  }
+}

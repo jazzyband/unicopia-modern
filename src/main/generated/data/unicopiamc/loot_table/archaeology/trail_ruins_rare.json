@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:broken_sunglasses",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:empty_jar",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:music_disc_crusade"
+        }
+      ],
+      "rolls": {
+        "type": "minecraft:uniform",
+        "max": 4,
+        "min": 1
+      }
+    }
+  ]
+}

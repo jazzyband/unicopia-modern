@@ -1,32 +1,33 @@
 package com.minelittlepony.unicopia.client.render.entity;
 
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
 
 import com.minelittlepony.unicopia.entity.mob.LevitatingItemEntity;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.item.ItemModelManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory.Context;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.render.item.ItemRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.util.CommonColors;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 
 public class LevitatingItemEntityRenderer extends EntityRenderer<LevitatingItemEntity, LevitatingItemEntityRenderer.State> {
 
-    private final ItemModelManager itemModelManager;
+    private final ItemModelResolver itemModelManager;
 
     public LevitatingItemEntityRenderer(Context ctx) {
         super(ctx);
-        itemModelManager = ctx.getItemModelManager();
+        itemModelManager = ctx.getItemModelResolver();
     }
 
     @Override
@@ -35,33 +36,35 @@ public class LevitatingItemEntityRenderer extends EntityRenderer<LevitatingItemE
     }
 
     @Override
-    public void updateRenderState(LevitatingItemEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+    public void extractRenderState(LevitatingItemEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
+        state.yaw = entity.getViewYRot(tickDelta);
         state.miningPos = entity.getMiningPos().orElse(null);
-        state.rotation.rotationY(entity.getYaw(tickDelta) * MathHelper.RADIANS_PER_DEGREE);
-        if (state.miningPos != null) {
-            state.rotation.rotateY(MathHelper.HALF_PI).rotateZ(MathHelper.HALF_PI * MathHelper.sin(state.age)).rotateX(MathHelper.HALF_PI / 9 * MathHelper.sin(state.age));
-        }
-
         state.miningFace = entity.getMiningFace();
         state.stack = entity.getStack();
-        state.yOffset = MathHelper.sin(state.age / 20F) * 0.02F;
-        itemModelManager.clearAndUpdate(state.stackState, state.stack, ItemDisplayContext.GROUND, entity.getWorld(), null, 0);
+        state.yOffset = Mth.sin(state.ageInTicks / 20F) * 0.02F;
+        itemModelManager.updateForTopItem(state.stackState, state.stack, ItemDisplayContext.GROUND, entity.level(), null, 0);
     }
 
     @Override
-    public void render(State state, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        super.render(state, matrices, vertices, light);
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertices, CameraRenderState camera) {
+        super.submit(state, matrices, vertices, camera);
 
         if (!state.stack.isEmpty()) {
             float scale = 1.4F;
-            matrices.push();
+            matrices.pushPose();
             matrices.translate(0, state.yOffset, 0);
             matrices.scale(scale, scale, scale);
-            matrices.multiply(state.rotation);
-            state.stackState.render(matrices, vertices, light, OverlayTexture.DEFAULT_UV);
+            matrices.rotate(Axis.YP.rotationDegrees(state.yaw));
 
-            // TODO: Magic glow effect
+            if (state.miningPos != null) {
+                matrices.rotate(Axis.YP.rotationDegrees(90));
+                matrices.rotate(Axis.ZP.rotationDegrees(90 * Mth.sin(state.ageInTicks)));
+                matrices.rotate(Axis.XP.rotationDegrees(10 * Mth.sin(state.ageInTicks)));
+            }
+
+            state.stackState.submit(matrices, vertices, state.lightCoords, OverlayTexture.NO_OVERLAY, CommonColors.WHITE);
+
             /*matrices.scale(1.2F, 1.2F, 1.2F);
 
             itemRenderer.renderItem(state.stack, ModelTransformationMode.GROUND, false, matrices, layer -> {
@@ -70,15 +73,9 @@ public class LevitatingItemEntityRenderer extends EntityRenderer<LevitatingItemE
                         .orElse(RenderLayers.getMagicColored()));
             }, light, OverlayTexture.DEFAULT_UV, state.stackModel);*/
 
-            matrices.pop();
+            matrices.popPose();
 
 
-            if (state.miningPos != null) {
-                MinecraftClient client = MinecraftClient.getInstance();
-                if (System.currentTimeMillis() % 5 == 0 && !client.isPaused()) {
-                    client.particleManager.addBlockBreakingParticles(state.miningPos, state.miningFace);
-                }
-            }
         }
     }
 
@@ -87,8 +84,8 @@ public class LevitatingItemEntityRenderer extends EntityRenderer<LevitatingItemE
         public BlockPos miningPos;
         public Direction miningFace = Direction.UP;
         public ItemStack stack = ItemStack.EMPTY;
-        public final ItemRenderState stackState = new ItemRenderState();
-        public final Quaternionf rotation = new Quaternionf();
+        public final ItemStackRenderState stackState = new ItemStackRenderState();
+        public float yaw;
         public float yOffset;
     }
 }

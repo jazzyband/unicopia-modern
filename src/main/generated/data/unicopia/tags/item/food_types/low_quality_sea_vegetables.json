@@ -1,0 +1,14 @@
+{
+  "values": [
+    "minecraft:kelp",
+    "minecraft:dried_kelp",
+    "minecraft:seagrass",
+    "minecraft:sea_pickle",
+    "#c:corals",
+    "#c:coral_fans",
+    {
+      "id": "farmersdelight:kelp_roll_slice",
+      "required": false
+    }
+  ]
+}

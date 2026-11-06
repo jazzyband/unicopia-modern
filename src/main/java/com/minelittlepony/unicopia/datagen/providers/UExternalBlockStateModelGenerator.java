@@ -1,38 +1,36 @@
 package com.minelittlepony.unicopia.datagen.providers;
 
-import static net.minecraft.client.data.TextureKey.SIDE;
-import static net.minecraft.client.data.TextureKey.TOP;
+import static net.minecraft.client.data.models.model.TextureSlot.SIDE;
+import static net.minecraft.client.data.models.model.TextureSlot.TOP;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-
+import net.minecraft.client.data.models.BlockModelGenerators;
+import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
+import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
+import com.minelittlepony.unicopia.util.Tuple;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.block.EdibleBlock;
 import com.minelittlepony.unicopia.datagen.IndirectionUtils;
 import com.minelittlepony.unicopia.datagen.IndirectionUtils.IndirectMultipartBlockStateSupplier;
 
-import net.minecraft.client.data.BlockModelDefinitionCreator;
-import net.minecraft.client.data.BlockStateModelGenerator;
-import net.minecraft.client.data.TextureMap;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.Direction;
-
-import static net.minecraft.util.math.AxisRotation.*;
+import static com.mojang.math.Quadrant.*;
 
 public class UExternalBlockStateModelGenerator extends UBlockStateModelGenerator {
-    public UExternalBlockStateModelGenerator(BlockStateModelGenerator modelGenerator, Consumer<BlockModelDefinitionCreator> blockStateCollector) {
-        super(blockStateCollector, modelGenerator.itemModelOutput, modelGenerator.modelCollector);
+    public UExternalBlockStateModelGenerator(BlockModelGenerators modelGenerator, Consumer<BlockModelDefinitionGenerator> blockStateCollector) {
+        super(blockStateCollector, modelGenerator.itemModelOutput, modelGenerator.modelOutput);
     }
 
     @Override
-    public void register() {
+    public void run() {
         // bales
-        registerAll((g, block) -> registerBale(Unicopia.id(block.getLeft().getPath().replace("bale", "block")), block.getLeft(), block.getRight()),
-                new Pair<>(Identifier.ofVanilla("hay_block"), "_top"),
-                new Pair<>(Identifier.of("farmersdelight", "rice_bale"), "_top"),
-                new Pair<>(Identifier.of("farmersdelight", "straw_bale"), "_end")
+        registerAll((g, block) -> registerBale(Unicopia.id(block.getA().getPath().replace("bale", "block")), block.getA(), block.getB()),
+                new Tuple<>(Identifier.withDefaultNamespace("hay_block"), "_top"),
+                new Tuple<>(Identifier.fromNamespaceAndPath("farmersdelight", "rice_bale"), "_top"),
+                new Tuple<>(Identifier.fromNamespaceAndPath("farmersdelight", "straw_bale"), "_end")
         );
     }
 
@@ -40,7 +38,7 @@ public class UExternalBlockStateModelGenerator extends UBlockStateModelGenerator
     public void registerBale(Identifier blockId, Identifier baseBlockId, String endSuffex) {
         Identifier top = baseBlockId.withPath(p -> "block/" + p + endSuffex);
         Identifier side = baseBlockId.withPath(p -> "block/" + p + "_side");
-        TextureMap textures = new TextureMap().put(TOP, top).put(SIDE, side);
+        TextureMapping textures = new TextureMapping().put(TOP, new net.minecraft.client.resources.model.sprite.Material(top)).put(SIDE, new net.minecraft.client.resources.model.sprite.Material(side));
 
         IndirectMultipartBlockStateSupplier supplier = IndirectionUtils.multipartBlockStateSupplier(blockId);
         Map<Integer, Identifier> uploadedModels = new HashMap<>();
@@ -60,15 +58,15 @@ public class UExternalBlockStateModelGenerator extends UBlockStateModelGenerator
 
                 BooleanProperty segment = EdibleBlock.SEGMENTS[index];
 
-                supplier.with(createMultipartConditionBuilder().put(EdibleBlock.AXIS, axis).put(segment, true), createWeightedVariant(createModelVariant(uploadedModels.computeIfAbsent(i, ii -> {
-                            return BlockModels.BALE_MODELS[ii].getLeft().upload(blockId.withPath(p -> "block/" + p + BlockModels.BALE_MODELS[ii].getRight()), textures, modelCollector);
+                supplier.with(condition().term(EdibleBlock.AXIS, axis).term(segment, true), variant(plainModel(uploadedModels.computeIfAbsent(i, ii -> {
+                            return BlockModels.BALE_MODELS[ii].getA().create(blockId.withPath(p -> "block/" + p + BlockModels.BALE_MODELS[ii].getB()), textures, modelOutput);
                         }))
-                        .withRotationX(axis == Direction.Axis.Y ? R0 : axis == Direction.Axis.X ? R90 : R90)
-                        .withRotationY(axis == Direction.Axis.Y ? R0 : axis == Direction.Axis.X ? R90 : R0))
+                        .withXRot(axis == Direction.Axis.Y ? R0 : axis == Direction.Axis.X ? R90 : R90)
+                        .withYRot(axis == Direction.Axis.Y ? R0 : axis == Direction.Axis.X ? R90 : R0))
                 );
             }
         }
 
-        blockStateCollector.accept(supplier);
+        blockStateOutput.accept(supplier);
     }
 }

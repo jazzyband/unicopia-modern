@@ -1,0 +1,34 @@
+{
+  "parent": "unicopia:unicorn/hello_darkness_my_old_friend",
+  "criteria": {
+    "defeat_sombra": {
+      "conditions": {
+        "event": "defeat_sombra",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.save_the_day.description"
+    },
+    "frame": "goal",
+    "icon": {
+      "id": "unicopia:broken_alicorn_amulet"
+    },
+    "title": {
+      "translate": "advancements.unicopia.save_the_day.title"
+    }
+  },
+  "requirements": [
+    [
+      "defeat_sombra"
+    ]
+  ],
+  "rewards": {
+    "experience": 2000
+  },
+  "sends_telemetry_event": true
+}

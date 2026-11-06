@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:blossom",
+  "author": {
+    "translate": "painting.unicopia.blossom.author"
+  },
+  "height": 3,
+  "title": {
+    "translate": "painting.unicopia.blossom.title"
+  },
+  "width": 2
+}

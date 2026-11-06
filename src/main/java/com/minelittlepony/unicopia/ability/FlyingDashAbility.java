@@ -1,14 +1,12 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
 
 /**
  * Dashing ability for flying creatures.
@@ -32,7 +30,7 @@ public class FlyingDashAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -45,7 +43,7 @@ public class FlyingDashAbility implements Ability<Hit> {
     public boolean onQuickAction(Pony player, ActivationType type, Optional<Hit> data) {
 
         if (type == ActivationType.TAP && !player.getMotion().isRainbooming() && player.getPhysics().isFlying() && player.getMagicalReserves().getMana().get() > 40) {
-            player.getPhysics().dashForward((float)player.asWorld().random.nextTriangular(2.5F, 0.3F));
+            player.getPhysics().dashForward((float)player.asWorld().getRandom().triangle(2.5F, 0.3F));
             return true;
         }
 
@@ -59,7 +57,7 @@ public class FlyingDashAbility implements Ability<Hit> {
 
     @Override
     public boolean apply(Pony player, Hit data) {
-        player.getPhysics().dashForward((float)player.asWorld().random.nextTriangular(2.5F, 0.3F));
+        player.getPhysics().dashForward((float)player.asWorld().getRandom().triangle(2.5F, 0.3F));
         player.subtractEnergyCost(2);
         return true;
     }
@@ -73,6 +71,6 @@ public class FlyingDashAbility implements Ability<Hit> {
     public void coolDown(Pony player, AbilitySlot slot) {
         float velocityScale = player.getAbilities().getStat(slot).getCooldown();
         float multiplier = 1 + (0.02F * velocityScale);
-        player.asEntity().getVelocity().multiply(multiplier, 1, multiplier);
+        player.asEntity().getDeltaMovement().multiply(multiplier, 1, multiplier);
     }
 }

@@ -4,7 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Affinity;
@@ -26,25 +36,13 @@ import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.util.VecHelper;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-
 /**
  * A spell that pulls health from other entities and delivers it to the caster.
  */
 public class SiphoningSpell extends AbstractAreaEffectSpell {
     static final int ANGER_TICKS = 100;
     static final int PASSIVE_TICKS = -20;
-    static final Predicate<Entity> TARGET_PREDICATE = EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR.and(EntityPredicates.VALID_LIVING_ENTITY);
+    static final Predicate<Entity> TARGET_PREDICATE = EntitySelector.NO_CREATIVE_OR_SPECTATOR.and(EntitySelector.LIVING_ENTITY_STILL_ALIVE);
 
     static final SpellAttribute<Boolean> INVERTED = SpellAttribute.createConditional(SpellAttributeType.INVERTED, Trait.DARKNESS, darkness -> darkness > 0);
     static final TooltipFactory TOOLTIP = TooltipFactory.of(RANGE, INVERTED);
@@ -69,11 +67,11 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
             int direction = isFriendlyTogether(source) ? 1 : -1;
 
             source.spawnParticles(new Sphere(true, radius, 1, 0, 1), 1, pos -> {
-                if (source.asWorld().isAir(BlockPos.ofFloored(pos))) {
+                if (source.asWorld().isEmptyBlock(BlockPos.containing(pos))) {
                     pos = pos.add(0, -1.5, 0);
 
                     double dist = pos.distanceTo(source.getOriginVector());
-                    Vec3d velocity = pos.subtract(source.getOriginVector()).normalize().multiply(direction * dist);
+                    Vec3 velocity = pos.subtract(source.getOriginVector()).normalize().scale(direction * dist);
 
                     source.addParticle(direction == 1 && upset.get() ? ParticleTypes.ANGRY_VILLAGER : ParticleTypes.HEART, pos, velocity);
                 }
@@ -84,7 +82,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
                 ticksUpset = PASSIVE_TICKS;
             }
 
-            if (source.asWorld().getTime() % 10 != 0) {
+            if (source.asWorld().getGameTime() % 10 != 0) {
                 return true;
             }
 
@@ -127,22 +125,22 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
                 setDead();
             }
 
-            if (e instanceof HostileEntity) {
+            if (e instanceof Monster) {
                 collectedHealth[0] += e.getHealth() / 4F;
                 if (!source.isClient()) {
-                    e.damage(source.asServerWorld(), damage, e.getHealth() / 4F);
+                    e.hurtServer(source.asServerWorld(), damage, e.getHealth() / 4F);
                 }
-                source.addParticle(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, e, 0.2F), source.getOriginVector(), Vec3d.ZERO);
+                source.addParticle(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, e, 0.2F), source.getOriginVector(), Vec3.ZERO);
             } else {
                 if (ticksUpset > 0 || maxHealthGain <= 0) {
-                    if (source.asWorld().random.nextInt(3000) == 0) {
+                    if (source.asWorld().getRandom().nextInt(3000) == 0) {
                         setDead();
                     } else {
                         if (++ticksUpset >= 0) {
                             ticksUpset = ANGER_TICKS;
                             upset.set(true);
                             if (!source.isClient()) {
-                                e.damage(source.asServerWorld(), damage, e.getHealth() / 4);
+                                e.hurtServer(source.asServerWorld(), damage, e.getHealth() / 4);
                             }
                         }
                     }
@@ -156,7 +154,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
         float perTargetHealth = collectedHealth[0] / recipients.size();
         recipients.forEach(recipient -> {
             recipient.heal(perTargetHealth);
-            source.addParticle(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, recipient, 0.2F), source.getOriginVector(), Vec3d.ZERO);
+            source.addParticle(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, recipient, 0.2F), source.getOriginVector(), Vec3.ZERO);
         });
     }
 
@@ -190,7 +188,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
         for (LivingEntity e : targets) {
             float dealt = Math.min(e.getHealth(), attackAmount);
 
-            if (e instanceof PlayerEntity p) {
+            if (e instanceof Player p) {
                 Pony player = Pony.of(p);
 
                 Race.Composite race = player.getCompositeRace();
@@ -204,7 +202,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
             }
 
             if (!source.isClient()) {
-                e.damage(source.asServerWorld(), damage, dealt);
+                e.hurtServer(source.asServerWorld(), damage, dealt);
             }
             ParticleUtils.spawnParticles(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, owner, 0.2F), e, 1);
 
@@ -215,15 +213,15 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.putInt("upset", ticksUpset);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        ticksUpset = compound.getInt("upset", 0);
+        ticksUpset = compound.getIntOr("upset", 0);
         upset.set(ticksUpset > 0);
     }
 }

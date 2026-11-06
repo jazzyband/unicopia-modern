@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "#unicopia:fresh_apples"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.apple_route.description"
+    },
+    "icon": {
+      "id": "unicopia:green_apple"
+    },
+    "title": {
+      "translate": "advancements.unicopia.apple_route.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_apple"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

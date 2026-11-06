@@ -1,0 +1,33 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_golden_oak_log": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:golden_oak_log"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_golden_oak_log"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cutting/stripped_golden_oak_log_from_golden_oak_log"
+    ]
+  }
+}

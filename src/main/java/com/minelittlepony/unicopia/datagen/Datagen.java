@@ -28,13 +28,12 @@ import com.minelittlepony.unicopia.datagen.providers.tag.UDimensionTypeTagProvid
 import com.minelittlepony.unicopia.datagen.providers.tag.UEntityTypeTagProvider;
 import com.minelittlepony.unicopia.datagen.providers.tag.UItemTagProvider;
 import com.minelittlepony.unicopia.datagen.providers.tag.UStatusEffectTagProvider;
-import com.minelittlepony.unicopia.datagen.providers.traits.TraitsProvider;
 import com.minelittlepony.unicopia.entity.damage.UDamageTypes;
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.registry.RegistryBuilder;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.damagesource.DamageType;
 
 public class Datagen implements DataGeneratorEntrypoint {
     public static final Logger LOGGER = LogManager.getLogger();
@@ -72,23 +71,19 @@ public class Datagen implements DataGeneratorEntrypoint {
         pack.addProvider(TreeTypeProvider::new);
         pack.addProvider(StateMapProvider::new);
         pack.addProvider(UAdvancementsProvider::new);
-        pack.addProvider((output, registries) -> new TraitsProvider(output, registries, itemTags.getTagRegistry().getTagsFuture()));
     }
 
     @Override
-    public void buildRegistry(RegistryBuilder builder) {
-        builder.addRegistry(RegistryKeys.DAMAGE_TYPE, registerable -> {
-            UDamageTypes.REGISTRY.forEach(key -> registerable.register(key, new DamageType(key.getValue().getNamespace() + "." + key.getValue().getPath(), 0)));
+    public void buildRegistry(RegistrySetBuilder builder) {
+        builder.add(Registries.DAMAGE_TYPE, registerable -> {
+            UDamageTypes.REGISTRY.forEach(key -> registerable.register(key, new DamageType(key.identifier().getNamespace() + "." + key.identifier().getPath(), 0)));
         });
-        builder.addRegistry(RegistryKeys.CONFIGURED_CARVER, registerable -> UWorldGenFeatures.bootstrapConfiguredCarvers(registerable));
-        builder.addRegistry(RegistryKeys.CONFIGURED_FEATURE, registerable -> UWorldGenFeatures.bootstrapConfiguredFeatures(registerable));
-        builder.addRegistry(RegistryKeys.PLACED_FEATURE, UWorldGenFeatures::bootstrapPlacedFeatures);
-        builder.addRegistry(RegistryKeys.BIOME, UWorldGenFeatures::bootstrapBiomes);
-        builder.addRegistry(RegistryKeys.PAINTING_VARIANT, paintingVariants);
-        builder.addRegistry(RegistryKeys.ENCHANTMENT, enchantments);
-        builder.addRegistry(RegistryKeys.TEMPLATE_POOL, CustomStructurePools::bootstrapPools);
-        builder.addRegistry(RegistryKeys.PROCESSOR_LIST, CustomStructurePools::bootstrapProcessors);
-        builder.addRegistry(RegistryKeys.STRUCTURE, CustomStructures::bootstrap);
-        builder.addRegistry(RegistryKeys.STRUCTURE_SET, CustomStructures::bootstrapSets);
+        builder.add(Registries.FEATURE, registerable -> UWorldGenFeatures.bootstrapConfiguredFeatures(registerable));
+        builder.add(Registries.PLACED_FEATURE, UWorldGenFeatures::bootstrapPlacedFeatures);
+        builder.add(Registries.BIOME, UWorldGenFeatures::bootstrapBiomes);
+        builder.add(Registries.PAINTING_VARIANT, paintingVariants);
+        builder.add(Registries.ENCHANTMENT, enchantments);
+        builder.add(Registries.TEMPLATE_POOL, CustomStructurePools::bootstrapPools);
+        builder.add(Registries.PROCESSOR_LIST, CustomStructurePools::bootstrapProcessors);
     }
 }

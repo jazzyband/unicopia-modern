@@ -1,8 +1,73 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
+import net.minecraft.util.TimeUtil;
+import net.minecraft.util.valueproviders.UniformInt;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.ConversionParams;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityEvent;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.PanicGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.SitWhenOrderedToGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.ResetUniversalAngerTargetGoal;
+import net.minecraft.world.entity.animal.feline.Cat;
+import net.minecraft.world.entity.animal.feline.Ocelot;
+import net.minecraft.world.entity.animal.goat.Goat;
+import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.pathfinder.PathType;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.entity.Creature;
@@ -10,75 +75,11 @@ import com.minelittlepony.unicopia.entity.Equine;
 import com.minelittlepony.unicopia.entity.ai.FleeExplosionGoal;
 import com.minelittlepony.unicopia.entity.behaviour.Guest;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.AreaEffectCloudEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityStatuses;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.ActiveTargetGoal;
-import net.minecraft.entity.ai.goal.AttackWithOwnerGoal;
-import net.minecraft.entity.ai.goal.EscapeDangerGoal;
-import net.minecraft.entity.ai.goal.FleeEntityGoal;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.LookAroundGoal;
-import net.minecraft.entity.ai.goal.LookAtEntityGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.RevengeGoal;
-import net.minecraft.entity.ai.goal.SitGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.ai.goal.TrackOwnerAttackerGoal;
-import net.minecraft.entity.ai.goal.UniversalAngerGoal;
-import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
-import net.minecraft.entity.ai.pathing.PathNodeType;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.conversion.EntityConversionContext;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.mob.AbstractSkeletonEntity;
-import net.minecraft.entity.mob.Angerable;
-import net.minecraft.entity.mob.CreeperEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.passive.CatEntity;
-import net.minecraft.entity.passive.GoatEntity;
-import net.minecraft.entity.passive.OcelotEntity;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.passive.WolfEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TimeHelper;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.intprovider.UniformIntProvider;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
-import net.minecraft.world.explosion.Explosion;
-
-public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
-    private static final TrackedData<Integer> FUSE_SPEED = DataTracker.registerData(FriendlyCreeperEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Boolean> CHARGED = DataTracker.registerData(FriendlyCreeperEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final TrackedData<Boolean> IGNITED = DataTracker.registerData(FriendlyCreeperEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final TrackedData<Integer> ANGER_TIME = DataTracker.registerData(FriendlyCreeperEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
+public class FriendlyCreeperEntity extends TamableAnimal implements NeutralMob {
+    private static final EntityDataAccessor<Integer> FUSE_SPEED = SynchedEntityData.defineId(FriendlyCreeperEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> CHARGED = SynchedEntityData.defineId(FriendlyCreeperEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> IGNITED = SynchedEntityData.defineId(FriendlyCreeperEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final UniformInt ANGER_TIME_RANGE = TimeUtil.rangeOfSeconds(20, 39);
 
     private int lastFuseTime;
     private int currentFuseTime;
@@ -89,60 +90,59 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
     private short lastHugTime;
 
     @Nullable
-    private UUID angerTarget;
+    private net.minecraft.world.entity.EntityReference<LivingEntity> angerTarget;
+    private long angerEndTime;
 
-    protected FriendlyCreeperEntity(EntityType<? extends FriendlyCreeperEntity> type, World world) {
+    protected FriendlyCreeperEntity(EntityType<? extends FriendlyCreeperEntity> type, Level world) {
         super(type, world);
-        setTamed(false, true);
-        setPathfindingPenalty(PathNodeType.POWDER_SNOW, -1);
-        setPathfindingPenalty(PathNodeType.DANGER_POWDER_SNOW, -1);
+        setTame(false, true);
+        setPathfindingMalus(PathType.POWDER_SNOW, -1);
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(FUSE_SPEED, -1);
-        builder.add(CHARGED, false);
-        builder.add(IGNITED, false);
-        builder.add(ANGER_TIME, 0);
+    protected void defineSynchedData(Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(FUSE_SPEED, -1);
+        builder.define(CHARGED, false);
+        builder.define(IGNITED, false);
     }
 
     @Override
-    protected void initGoals() {
-        goalSelector.add(1, new SwimGoal(this));
-        goalSelector.add(1, new EscapeGoal(1.5));
-        goalSelector.add(2, new SitGoal(this));
-        goalSelector.add(3, new IgniteGoal());
-        goalSelector.add(4, new FleeEntityGoal<>(this, OcelotEntity.class, 6, 1, 1.2));
-        goalSelector.add(4, new FleeEntityGoal<>(this, CatEntity.class, 6, 1, 1.2));
-        goalSelector.add(5, new MeleeAttackGoal(this, 1, false));
-        goalSelector.add(6, new WanderAroundFarGoal(this, 0.8));
-        goalSelector.add(7, new LookAtEntityGoal(this, PlayerEntity.class, 8));
-        goalSelector.add(7, new LookAroundGoal(this));
-        targetSelector.add(1, new TrackOwnerAttackerGoal(this));
-        targetSelector.add(2, new AttackWithOwnerGoal(this));
-        targetSelector.add(3, new RevengeGoal(this).setGroupRevenge(WolfEntity.class));
-        targetSelector.add(7, new ActiveTargetGoal<>(this, AbstractSkeletonEntity.class, false));
-        targetSelector.add(8, new UniversalAngerGoal<>(this, true));
+    protected void registerGoals() {
+        goalSelector.addGoal(1, new FloatGoal(this));
+        goalSelector.addGoal(1, new EscapeGoal(1.5));
+        goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
+        goalSelector.addGoal(3, new IgniteGoal());
+        goalSelector.addGoal(4, new AvoidEntityGoal<>(this, Ocelot.class, 6, 1, 1.2));
+        goalSelector.addGoal(4, new AvoidEntityGoal<>(this, Cat.class, 6, 1, 1.2));
+        goalSelector.addGoal(5, new MeleeAttackGoal(this, 1, false));
+        goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8));
+        goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8));
+        goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
+        targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
+        targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers(Wolf.class));
+        targetSelector.addGoal(7, new NearestAttackableTargetGoal<>(this, AbstractSkeleton.class, false));
+        targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
     }
 
-    public static DefaultAttributeContainer.Builder createCreeperAttributes() {
-        return HostileEntity.createHostileAttributes().add(EntityAttributes.MOVEMENT_SPEED, 0.25);
-    }
-
-    @Override
-    protected Text getDefaultName() {
-        return EntityType.CREEPER.getName();
+    public static AttributeSupplier.Builder createCreeperAttributes() {
+        return Monster.createMonsterAttributes().add(Attributes.MOVEMENT_SPEED, 0.25);
     }
 
     @Override
-    public int getSafeFallDistance() {
+    protected Component getTypeName() {
+        return EntityTypes.CREEPER.getDescription();
+    }
+
+    @Override
+    public int getMaxFallDistance() {
         return 3 + (getTarget() == null ? 0 : ((int)(getHealth() - 1)));
     }
 
     @Override
-    public boolean handleFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource) {
-        boolean bl = super.handleFallDamage(fallDistance, damageMultiplier, damageSource);
+    public boolean causeFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource) {
+        boolean bl = super.causeFallDamage(fallDistance, damageMultiplier, damageSource);
         currentFuseTime += (int)(fallDistance * 1.5f);
         if (currentFuseTime > fuseTime - 5) {
             currentFuseTime = fuseTime - 5;
@@ -151,32 +151,34 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound nbt) {
-        super.writeCustomDataToNbt(nbt);
-        if (dataTracker.get(CHARGED).booleanValue()) {
+    public void addAdditionalSaveData(ValueOutput nbt) {
+        super.addAdditionalSaveData(nbt);
+        if (entityData.get(CHARGED).booleanValue()) {
             nbt.putBoolean("powered", true);
         }
         nbt.putShort("Fuse", fuseTime);
         nbt.putShort("Hugged", hugTime);
         nbt.putByte("ExplosionRadius", explosionRadius);
         nbt.putBoolean("ignited", isIgnited());
+        addPersistentAngerSaveData(nbt);
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound nbt) {
-        super.readCustomDataFromNbt(nbt);
-        dataTracker.set(CHARGED, nbt.getBoolean("powered", false));
-        fuseTime = nbt.getShort("Fuse", fuseTime);
-        hugTime = nbt.getShort("Hugged", hugTime);
-        explosionRadius = nbt.getByte("ExplosionRadius", explosionRadius);
-        if (nbt.getBoolean("ignited", false)) {
+    public void readAdditionalSaveData(ValueInput nbt) {
+        super.readAdditionalSaveData(nbt);
+        entityData.set(CHARGED, nbt.getBooleanOr("powered", false));
+        fuseTime = (short)nbt.getShortOr("Fuse", fuseTime);
+        hugTime = (short)nbt.getShortOr("Hugged", hugTime);
+        explosionRadius = nbt.getByteOr("ExplosionRadius", explosionRadius);
+        if (nbt.getBooleanOr("ignited", false)) {
             ignite();
         }
+        readPersistentAngerSaveData(level(), nbt);
     }
 
     @Override
     public void tick() {
-        setSitting(isInSittingPose());
+        setOrderedToSit(isInSittingPose());
 
         if (isAlive()) {
             lastFuseTime = currentFuseTime;
@@ -185,8 +187,8 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
             }
             int fuseSpeed = getFuseSpeed();
             if (fuseSpeed > 0 && currentFuseTime == 0) {
-                playSound(SoundEvents.ENTITY_CREEPER_PRIMED, 1.0f, 0.5f);
-                emitGameEvent(GameEvent.PRIME_FUSE);
+                playSound(SoundEvents.CREEPER_PRIMED, 1.0f, 0.5f);
+                gameEvent(GameEvent.PRIME_FUSE);
             }
             currentFuseTime = Math.max(0, currentFuseTime + fuseSpeed);
             if (currentFuseTime >= fuseTime) {
@@ -196,24 +198,24 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
 
             lastHugTime = hugTime;
 
-            if (!isTamed() && !Guest.of(this).hasHost()) {
+            if (!isTame() && ((Guest)this).getHost() == null) {
                 if (isConverting()) {
                     if (++hugTime >= 100) {
-                        if (!getWorld().isClient) {
-                            setOwner(getCreature().getCarrierId().map(getWorld()::getPlayerByUuid).orElse(null));
-                            getWorld().sendEntityStatus(this, EntityStatuses.ADD_POSITIVE_PLAYER_REACTION_PARTICLES);
+                        if (!level().isClientSide()) {
+                            setOwner(getCreature().getCarrierId().map(level()::getPlayerByUUID).orElse(null));
+                            level().broadcastEntityEvent(this, EntityEvent.TAMING_SUCCEEDED);
                         }
                     }
 
                     if (hugTime % 5 == 0) {
-                        playHurtSound(getDamageSources().generic());
+                        playHurtSound(damageSources().generic());
                     }
                 } else {
                     hugTime = 0;
-                    if (!getWorld().isClient) {
-                        convertTo(EntityType.CREEPER, EntityConversionContext.create(this, true, true), entity -> {
+                    if (!level().isClientSide()) {
+                        convertTo(EntityTypes.CREEPER, ConversionParams.single(this, true, true), entity -> {
                             discard();
-                            getWorld().spawnEntity(entity);
+                            level().addFreshEntity(entity);
                         });
                     }
                 }
@@ -229,16 +231,16 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
     }
 
     @Override
-    public void tickMovement() {
-        super.tickMovement();
+    public void aiStep() {
+        super.aiStep();
 
-        if (!getWorld().isClient) {
-            tickAngerLogic((ServerWorld)getWorld(), true);
+        if (!level().isClientSide()) {
+            updatePersistentAnger((ServerLevel)level(), true);
         }
     }
 
     private void spawnHeart() {
-        getWorld().addParticleClient(ParticleTypes.HEART, random.nextTriangular(getX(), 0.5), getY() + getHeight(), random.nextTriangular(getZ(), 0.5), 0, 0, 0);
+        level().addParticle(ParticleTypes.HEART, random.triangle(getX(), 0.5), getY() + getBbHeight(), random.triangle(getZ(), 0.5), 0, 0, 0);
     }
 
     private Creature getCreature() {
@@ -246,12 +248,12 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
     }
 
     public boolean isConverting() {
-        return !isTamed() && getCreature().isBeingCarried();
+        return !isTame() && getCreature().isBeingCarried();
     }
 
     @Override
     public void setTarget(@Nullable LivingEntity target) {
-        if (target instanceof GoatEntity) {
+        if (target instanceof Goat) {
             return;
         }
         super.setTarget(target);
@@ -259,114 +261,113 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.ENTITY_CREEPER_HURT;
+        return SoundEvents.CREEPER_HURT;
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.ENTITY_CREEPER_DEATH;
+        return SoundEvents.CREEPER_DEATH;
     }
 
     @Override
-    protected void dropEquipment(ServerWorld world, DamageSource source, boolean causedByPlayer) {
-        super.dropEquipment(world, source, causedByPlayer);
-        if (source.getAttacker() instanceof CreeperEntity c && c.shouldDropHead()) {
-            c.onHeadDropped();
-            dropItem(world, Items.CREEPER_HEAD);
+    protected void dropCustomDeathLoot(ServerLevel world, DamageSource source, boolean causedByPlayer) {
+        super.dropCustomDeathLoot(world, source, causedByPlayer);
+        if (source.getEntity() instanceof Creeper c && c.isPowered()) {
+            spawnAtLocation(world, Items.CREEPER_HEAD);
         }
     }
 
     @Override
-    public boolean tryAttack(ServerWorld world, Entity target) {
+    public boolean doHurtTarget(ServerLevel world, Entity target) {
         return true;
     }
 
     public boolean isCharged() {
-        return dataTracker.get(CHARGED);
+        return entityData.get(CHARGED);
     }
 
     public float getClientFuseTime(float timeDelta) {
-        return MathHelper.lerp(timeDelta, (float)lastFuseTime, (float)currentFuseTime) / (fuseTime - 2)
-             + MathHelper.lerp(timeDelta, (float)lastHugTime, (float)hugTime) / 98F;
+        return Mth.lerp(timeDelta, (float)lastFuseTime, (float)currentFuseTime) / (fuseTime - 2)
+             + Mth.lerp(timeDelta, (float)lastHugTime, (float)hugTime) / 98F;
     }
 
     public int getFuseSpeed() {
-        return dataTracker.get(FUSE_SPEED);
+        return entityData.get(FUSE_SPEED);
     }
 
     public void setFuseSpeed(int fuseSpeed) {
-        dataTracker.set(FUSE_SPEED, fuseSpeed);
+        entityData.set(FUSE_SPEED, fuseSpeed);
     }
 
     @Override
-    public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
-        super.onStruckByLightning(world, lightning);
-        dataTracker.set(CHARGED, true);
+    public void thunderHit(ServerLevel world, LightningBolt lightning) {
+        super.thunderHit(world, lightning);
+        entityData.set(CHARGED, true);
     }
 
 
     @Override
-    public boolean isBreedingItem(ItemStack stack) {
-        return stack.isOf(Items.GUNPOWDER);
+    public boolean isFood(ItemStack stack) {
+        return stack.is(Items.GUNPOWDER);
     }
 
     @Override
-    public ActionResult interactMob(PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
 
-        if (stack.isEmpty() && isOwner(player)) {
-            setSitting(!isSitting());
-            setInSittingPose(isSitting());
-            return ActionResult.SUCCESS;
+        if (stack.isEmpty() && isOwnedBy(player)) {
+            setOrderedToSit(!isOrderedToSit());
+            setInSittingPose(isOrderedToSit());
+            return InteractionResult.SUCCESS;
         }
 
-        if (stack.isIn(ItemTags.CREEPER_IGNITERS)) {
-            SoundEvent soundEvent = stack.isOf(Items.FIRE_CHARGE) ? SoundEvents.ITEM_FIRECHARGE_USE : SoundEvents.ITEM_FLINTANDSTEEL_USE;
-            getWorld().playSound(player, getX(), getY(), getZ(), soundEvent, getSoundCategory(), 1, random.nextFloat() * 0.4f + 0.8f);
+        if (stack.is(ItemTags.CREEPER_IGNITERS)) {
+            SoundEvent soundEvent = stack.is(Items.FIRE_CHARGE) ? SoundEvents.FIRECHARGE_USE : SoundEvents.FLINTANDSTEEL_USE;
+            level().playSound(player, getX(), getY(), getZ(), soundEvent, getSoundSource(), 1, random.nextFloat() * 0.4f + 0.8f);
 
-            if (!getWorld().isClient) {
+            if (!level().isClientSide()) {
                 ignite();
-                if (!stack.isDamageable()) {
-                    stack.decrement(1);
+                if (!stack.isDamageableItem()) {
+                    stack.shrink(1);
                 } else {
-                    stack.damage(1, player, getSlotForHand(hand));
+                    stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
                 }
             }
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
 
-        if (stack.isOf(Items.GUNPOWDER) && getHealth() < getMaxHealth()) {
-            getWorld().playSound(player, getX(), getY(), getZ(), SoundEvents.ENTITY_CAT_EAT, getSoundCategory(), 1, random.nextFloat() * 0.4f + 0.8f);
+        if (stack.is(Items.GUNPOWDER) && getHealth() < getMaxHealth()) {
+            level().playSound(player, getX(), getY(), getZ(), SoundEvents.GENERIC_EAT.value(), getSoundSource(), 1, random.nextFloat() * 0.4f + 0.8f);
 
             currentFuseTime = fuseTime - 1;
-            if (!getWorld().isClient) {
+            if (!level().isClientSide()) {
                 heal(3);
-                getWorld().sendEntityStatus(this, EntityStatuses.ADD_POSITIVE_PLAYER_REACTION_PARTICLES);
-                if (!stack.isDamageable()) {
-                    stack.decrement(1);
+                level().broadcastEntityEvent(this, EntityEvent.TAMING_SUCCEEDED);
+                if (!stack.isDamageableItem()) {
+                    stack.shrink(1);
                 } else {
-                    stack.damage(1, player, getSlotForHand(hand));
+                    stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
                 }
             }
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
 
-        return super.interactMob(player, hand);
+        return super.mobInteract(player, hand);
     }
 
     private void explode() {
-        if (!getWorld().isClient) {
+        if (!level().isClientSide()) {
             dead = true;
-            getWorld().createExplosion(this, getX(), getY(), getZ(), getExplosionRadius(), World.ExplosionSourceType.MOB);
+            level().explode(this, getX(), getY(), getZ(), getExplosionRadius(), Level.ExplosionInteraction.MOB);
             discard();
             spawnEffectsCloud();
         }
     }
 
     @Override
-    public boolean canExplosionDestroyBlock(Explosion explosion, BlockView world, BlockPos pos, BlockState state, float explosionPower) {
+    public boolean shouldBlockExplode(Explosion explosion, BlockGetter world, BlockPos pos, BlockState state, float explosionPower) {
         return false;
     }
 
@@ -375,25 +376,25 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
     }
 
     private void spawnEffectsCloud() {
-        Collection<StatusEffectInstance> effects = getStatusEffects();
+        Collection<MobEffectInstance> effects = getActiveEffects();
         if (!effects.isEmpty()) {
-            AreaEffectCloudEntity cloud = new AreaEffectCloudEntity(getWorld(), getX(), getY(), getZ());
+            AreaEffectCloud cloud = new AreaEffectCloud(level(), getX(), getY(), getZ());
             cloud.setRadius(2.5f);
             cloud.setRadiusOnUse(-0.5f);
             cloud.setWaitTime(10);
             cloud.setDuration(cloud.getDuration() / 2);
-            cloud.setRadiusGrowth(-cloud.getRadius() / cloud.getDuration());
-            effects.forEach(effect -> cloud.addEffect(new StatusEffectInstance(effect)));
-            getWorld().spawnEntity(cloud);
+            cloud.setRadiusPerTick(-cloud.getRadius() / cloud.getDuration());
+            effects.forEach(effect -> cloud.addEffect(new MobEffectInstance(effect)));
+            level().addFreshEntity(cloud);
         }
     }
 
     public boolean isIgnited() {
-        return dataTracker.get(IGNITED);
+        return entityData.get(IGNITED);
     }
 
     public void ignite() {
-        dataTracker.set(IGNITED, true);
+        entityData.set(IGNITED, true);
         FleeExplosionGoal.notifySurroundings(this, getExplosionRadius());
     }
 
@@ -406,40 +407,40 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
     }
 
     @Override
-    public PassiveEntity createChild(ServerWorld world, PassiveEntity partner) {
-        FriendlyCreeperEntity child = (FriendlyCreeperEntity)getType().create(world, SpawnReason.BREEDING);
+    public AgeableMob getBreedOffspring(ServerLevel world, AgeableMob partner) {
+        FriendlyCreeperEntity child = (FriendlyCreeperEntity)getType().create(world, EntitySpawnReason.BREEDING);
         var owner = getOwnerReference();
         if (owner != null) {
-            child.setOwner(owner);
-            child.setTamed(true, true);
+            child.setOwnerReference(owner);
+            child.setTame(true, true);
         }
         return child;
     }
 
     @Override
-    public int getAngerTime() {
-        return dataTracker.get(ANGER_TIME);
+    public long getPersistentAngerEndTime() {
+        return angerEndTime;
     }
 
     @Override
-    public void setAngerTime(int time) {
-        dataTracker.set(ANGER_TIME, time);
+    public void setPersistentAngerEndTime(long time) {
+        angerEndTime = time;
     }
 
     @Nullable
     @Override
-    public UUID getAngryAt() {
+    public net.minecraft.world.entity.EntityReference<LivingEntity> getPersistentAngerTarget() {
         return angerTarget;
     }
 
     @Override
-    public void setAngryAt(UUID target) {
+    public void setPersistentAngerTarget(net.minecraft.world.entity.EntityReference<LivingEntity> target) {
         angerTarget = target;
     }
 
     @Override
-    public void chooseRandomAngerTime() {
-        setAngerTime(ANGER_TIME_RANGE.get(random));
+    public void startPersistentAngerTimer() {
+        setTimeToRemainAngry(ANGER_TIME_RANGE.sample(random));
     }
 
     class IgniteGoal extends Goal {
@@ -447,13 +448,13 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
         private LivingEntity target;
 
         public IgniteGoal() {
-            this.setControls(EnumSet.of(Goal.Control.MOVE));
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
         }
 
         @Override
-        public boolean canStart() {
+        public boolean canUse() {
             LivingEntity livingEntity = getTarget();
-            return getFuseSpeed() > 0 || livingEntity != null && squaredDistanceTo(livingEntity) < 9.0;
+            return getFuseSpeed() > 0 || livingEntity != null && distanceToSqr(livingEntity) < 9.0;
         }
 
         @Override
@@ -468,7 +469,7 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
         }
 
         @Override
-        public boolean shouldRunEveryTick() {
+        public boolean requiresUpdateEveryTick() {
             return true;
         }
 
@@ -478,11 +479,11 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
                 setFuseSpeed(-1);
                 return;
             }
-            if (squaredDistanceTo(target) > 49.0) {
+            if (distanceToSqr(target) > 49.0) {
                 setFuseSpeed(-1);
                 return;
             }
-            if (!getVisibilityCache().canSee(target)) {
+            if (!getSensing().hasLineOfSight(target)) {
                 setFuseSpeed(-1);
                 return;
             }
@@ -490,15 +491,15 @@ public class FriendlyCreeperEntity extends TameableEntity implements Angerable {
         }
     }
 
-    class EscapeGoal extends EscapeDangerGoal {
+    class EscapeGoal extends PanicGoal {
 
         public EscapeGoal(double speed) {
             super(FriendlyCreeperEntity.this, speed);
         }
 
         @Override
-        protected boolean isInDanger() {
-            return mob.shouldEscapePowderSnow() || mob.isOnFire();
+        protected boolean shouldPanic() {
+            return mob.isFreezing() || mob.isOnFire();
         }
     }
 }

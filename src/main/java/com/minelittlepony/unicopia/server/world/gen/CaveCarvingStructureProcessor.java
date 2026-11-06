@@ -4,34 +4,33 @@ import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.server.world.UWorldGen;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
-import net.minecraft.structure.StructurePlacementData;
-import net.minecraft.structure.StructureTemplate;
-import net.minecraft.structure.processor.StructureProcessor;
-import net.minecraft.structure.processor.StructureProcessorType;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.WorldView;
-
-public class CaveCarvingStructureProcessor extends StructureProcessor {
+public class CaveCarvingStructureProcessor implements StructureProcessor {
     public static final MapCodec<CaveCarvingStructureProcessor> CODEC = MapCodec.unit(new CaveCarvingStructureProcessor());
 
     @Override
-    protected StructureProcessorType<?> getType() {
-        return UWorldGen.CAVE_CARVING_STRUCTURE_PROCESSOR;
+    public MapCodec<CaveCarvingStructureProcessor> codec() {
+        return CODEC;
     }
 
     @Nullable
     @Override
-    public StructureTemplate.StructureBlockInfo process(
-        WorldView world,
+    public StructureTemplate.StructureBlockInfo processBlock(
+        LevelReader world,
         BlockPos pos,
         BlockPos pivot,
-        StructureTemplate.StructureBlockInfo originalBlockInfo,
+        BlockPos relativePos,
         StructureTemplate.StructureBlockInfo currentBlockInfo,
-        StructurePlacementData data
+        StructurePlaceSettings data
     ) {
-        int topY = world.getTopY(Heightmap.Type.WORLD_SURFACE_WG, currentBlockInfo.pos().getX(), currentBlockInfo.pos().getZ());
-        return currentBlockInfo.pos().getY() > topY && world.isAir(currentBlockInfo.pos()) ? null : currentBlockInfo;
+        int topY = world.getHeight(Heightmap.Types.WORLD_SURFACE_WG, currentBlockInfo.pos().getX(), currentBlockInfo.pos().getZ());
+        return currentBlockInfo.pos().getY() > topY && world.isEmptyBlock(currentBlockInfo.pos()) ? null : currentBlockInfo;
     }
 }

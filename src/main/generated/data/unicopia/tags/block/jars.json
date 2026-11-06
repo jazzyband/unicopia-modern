@@ -1,0 +1,9 @@
+{
+  "values": [
+    "unicopia:jar",
+    "unicopia:cloud_jar",
+    "unicopia:storm_jar",
+    "unicopia:lightning_jar",
+    "unicopia:zap_jar"
+  ]
+}

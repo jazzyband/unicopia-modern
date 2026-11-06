@@ -12,10 +12,10 @@ import com.minelittlepony.unicopia.particle.LightningBoltParticleEffect;
 import com.minelittlepony.unicopia.projectile.MagicBeamEntity;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
-
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 
 public class DispellEvilSpell extends AbstractSpell implements ProjectileDelegate.HitListener {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -36,21 +36,21 @@ public class DispellEvilSpell extends AbstractSpell implements ProjectileDelegat
             return !isDead();
         }
 
-        source.findAllEntitiesInRange(RANGE.get(getTraits()), e -> e.getType() == EntityType.PHANTOM).forEach(entity -> {
+        source.findAllEntitiesInRange(RANGE.get(getTraits()), e -> e.getType() == EntityTypes.PHANTOM).forEach(entity -> {
             if (!source.isClient()) {
-                entity.damage(source.asServerWorld(), entity.getDamageSources().magic(), 50);
+                entity.hurtServer(source.asServerWorld(), entity.damageSources().magic(), 50);
             }
             if (entity instanceof LivingEntity l) {
-                double d = source.getOriginVector().getX() - entity.getX();
-                double e = source.getOriginVector().getZ() - entity.getZ();
+                double d = source.getOriginVector().x() - entity.getX();
+                double e = source.getOriginVector().z() - entity.getZ();
                 while (d * d + e * e < 1.0E-4) {
                     d = (Math.random() - Math.random()) * 0.01;
                     e = (Math.random() - Math.random()) * 0.01;
                 }
-                l.takeKnockback(1, d, e);
+                l.knockback(1, d, e, source.asWorld().damageSources().magic(), 0);
             }
 
-            source.addParticle(LightningBoltParticleEffect.DEFAULT, entity.getPos(), Vec3d.ZERO);
+            source.addParticle(LightningBoltParticleEffect.DEFAULT, entity.position(), Vec3.ZERO);
         });
         source.subtractEnergyCost(100);
 

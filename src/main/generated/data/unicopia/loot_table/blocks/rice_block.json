@@ -1,0 +1,165 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "bottom_north_west": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "bottom_north_east": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "bottom_south_west": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "bottom_south_east": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "top_north_west": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "top_north_east": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "top_south_west": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:dynamic",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:rice_block",
+            "state": {
+              "top_south_east": "true"
+            }
+          },
+          "name": "farmersdelight:rice_panicle"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

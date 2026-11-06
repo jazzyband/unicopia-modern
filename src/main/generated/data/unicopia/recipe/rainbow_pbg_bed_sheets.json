@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet",
+  "key": {
+    "b": "minecraft:light_gray_wool",
+    "g": "minecraft:white_wool",
+    "p": "minecraft:black_wool",
+    "w": "minecraft:purple_wool"
+  },
+  "pattern": [
+    "wgb",
+    "p g",
+    " pw"
+  ],
+  "result": {
+    "id": "unicopia:rainbow_pbg_bed_sheets"
+  }
+}

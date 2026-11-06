@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:unicorn/books",
+  "criteria": {
+    "has_alicorn_amulet": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:alicorn_amulet"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.tempted.description"
+    },
+    "icon": {
+      "id": "unicopia:alicorn_amulet"
+    },
+    "title": {
+      "translate": "advancements.unicopia.tempted.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_alicorn_amulet"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

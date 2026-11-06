@@ -1,0 +1,29 @@
+{
+  "values": [
+    "minecraft:diamond",
+    "minecraft:golden_apple",
+    "minecraft:golden_carrot",
+    "minecraft:golden_helmet",
+    "minecraft:golden_boots",
+    "minecraft:golden_leggings",
+    "minecraft:golden_chestplate",
+    "minecraft:golden_horse_armor",
+    "minecraft:golden_pickaxe",
+    "minecraft:golden_shovel",
+    "minecraft:golden_axe",
+    "minecraft:golden_sword",
+    "minecraft:golden_hoe",
+    "unicopia:golden_horse_shoe",
+    "unicopia:golden_polearm",
+    "unicopia:golden_feather",
+    "unicopia:golden_wing",
+    "unicopia:golden_oak_seeds",
+    "#c:ingots/gold",
+    "#c:raw_materials/gold",
+    "#c:storage_blocks/raw_gold",
+    {
+      "id": "#farmersdelight:golden_knife",
+      "required": false
+    }
+  ]
+}

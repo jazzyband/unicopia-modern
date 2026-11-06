@@ -2,16 +2,14 @@ package com.minelittlepony.unicopia.entity.player;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
 import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.network.track.TrackableDataType;
 import com.minelittlepony.unicopia.util.Copyable;
 import com.minelittlepony.unicopia.util.Tickable;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.MathHelper;
 
 class ManaContainer implements MagicReserves, Tickable, NbtSerialisable, Copyable<ManaContainer> {
     private final Pony pony;
@@ -46,12 +44,12 @@ class ManaContainer implements MagicReserves, Tickable, NbtSerialisable, Copyabl
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         bars.forEach((key, bar) -> compound.put(key, bar.toNBT(lookup)));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         bars.forEach((key, bar) -> bar.fromNBT(compound.getCompoundOrEmpty(key), lookup));
     }
 
@@ -97,15 +95,15 @@ class ManaContainer implements MagicReserves, Tickable, NbtSerialisable, Copyabl
             energy.addPercent(-1);
         }
 
-        if (pony.getCompositeRace().canFly() && !pony.getPhysics().isFlying() && pony.asEntity().isOnGround()) {
+        if (pony.getCompositeRace().canFly() && !pony.getPhysics().isFlying() && pony.asEntity().onGround()) {
             exhaustion.multiply(0.99F);
         } else {
             exhaustion.addPercent(-1);
         }
 
-        if (!pony.getCompositeRace().canFly() || (!pony.getPhysics().isFlying() && pony.asEntity().isOnGround())) {
+        if (!pony.getCompositeRace().canFly() || (!pony.getPhysics().isFlying() && pony.asEntity().onGround())) {
             if (mana.getPercentFill() < 1 && mana.getShadowFill(1) <= mana.getPercentFill(1)) {
-                mana.addPercent(MathHelper.clamp(1 + pony.getLevel().get(), 1, 50) / 4F);
+                mana.addPercent(Mth.clamp(1 + pony.getLevel().get(), 1, 50) / 4F);
             }
         }
 
@@ -175,12 +173,12 @@ class ManaContainer implements MagicReserves, Tickable, NbtSerialisable, Copyabl
 
         @Override
         public float get(float tickDelta) {
-            return MathHelper.lerp(tickDelta, prevValue, get());
+            return Mth.lerp(tickDelta, prevValue, get());
         }
 
         @Override
         public float getShadowFill(float tickDelta) {
-            return MathHelper.lerp(tickDelta, prevTrailingValue, trailingValue);
+            return Mth.lerp(tickDelta, prevTrailingValue, trailingValue);
         }
 
         @Override
@@ -197,11 +195,11 @@ class ManaContainer implements MagicReserves, Tickable, NbtSerialisable, Copyabl
         }
 
         protected float applyLimits(float value) {
-            return MathHelper.clamp(value, 0, getMax());
+            return Mth.clamp(value, 0, getMax());
         }
 
         void resetTo(float value) {
-            trailingValue = MathHelper.clamp(value / getMax(), 0, 1);
+            trailingValue = Mth.clamp(value / getMax(), 0, 1);
             load(value);
         }
 
@@ -229,15 +227,15 @@ class ManaContainer implements MagicReserves, Tickable, NbtSerialisable, Copyabl
         }
 
         @Override
-        public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+        public void toNBT(CompoundTag compound, Provider lookup) {
             compound.putFloat("shadow", trailingValue);
             compound.putFloat("value", get());
         }
 
         @Override
-        public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-            trailingValue = compound.getFloat("shadow", 0);
-            load(compound.getFloat("value", 0));
+        public void fromNBT(CompoundTag compound, Provider lookup) {
+            trailingValue = compound.getFloatOr("shadow", 0);
+            load(compound.getFloatOr("value", 0));
         }
     }
 }

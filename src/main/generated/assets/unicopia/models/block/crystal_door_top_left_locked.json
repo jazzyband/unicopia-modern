@@ -1,0 +1,7 @@
+{
+  "parent": "unicopia:block/door_left",
+  "textures": {
+    "bottom": "unicopia:block/crystal_door_bottom_locked",
+    "top": "unicopia:block/crystal_door_top_locked"
+  }
+}

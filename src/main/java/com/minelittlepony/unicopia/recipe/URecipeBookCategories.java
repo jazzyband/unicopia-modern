@@ -1,16 +1,15 @@
 package com.minelittlepony.unicopia.recipe;
 
 import com.minelittlepony.unicopia.Unicopia;
-
-import net.minecraft.recipe.book.RecipeBookCategory;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
 
 public interface URecipeBookCategories {
     RecipeBookCategory SPELLBOOK = register("spellbook");
 
     private static RecipeBookCategory register(String id) {
-        return Registry.register(Registries.RECIPE_BOOK_CATEGORY, Unicopia.id(id), new RecipeBookCategory());
+        return Registry.register(BuiltInRegistries.RECIPE_BOOK_CATEGORY, Unicopia.id(id), new RecipeBookCategory());
     }
 
 

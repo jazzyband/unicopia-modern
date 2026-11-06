@@ -1,0 +1,11 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "unicopia:item/cloth_bed",
+    "model": {
+      "type": "unicopia:cloud_bed",
+      "texture": "unicopia:textures/entity/bed/cloth.png",
+      "translucent": false
+    }
+  }
+}

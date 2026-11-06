@@ -1,50 +1,49 @@
 package com.minelittlepony.unicopia.datagen.providers.recipe;
 
-import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementRequirements;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.triggers.RecipeUnlockedTrigger;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeBuilder;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapedRecipePattern;
+import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.include.com.google.common.base.Preconditions;
 
 import com.minelittlepony.unicopia.util.Untyped;
 
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementCriterion;
-import net.minecraft.advancement.AdvancementRequirements;
-import net.minecraft.advancement.AdvancementRewards;
-import net.minecraft.data.recipe.CraftingRecipeJsonBuilder;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.RawShapedRecipe;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.book.RecipeCategory;
-import net.minecraft.registry.RegistryEntryLookup;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.tag.TagKey;
-
-public abstract class CustomShapedRecipeBuilder<T extends ShapedRecipe, B extends CustomShapedRecipeBuilder<T, B>> implements CraftingRecipeJsonBuilder {
+public abstract class CustomShapedRecipeBuilder<T extends ShapedRecipe, B extends CustomShapedRecipeBuilder<T, B>> implements RecipeBuilder {
     private final RecipeCategory category;
-    private final RegistryEntryLookup<Item> items;
+    private final HolderGetter<Item> items;
     private final Item output;
     private final int count;
     private final List<String> pattern = new ArrayList<>();
     private final Map<Character, Ingredient> inputs = new LinkedHashMap<>();
-    private final Map<String, AdvancementCriterion<?>> criteria = new LinkedHashMap<>();
+    private final Map<String, Criterion<?>> criteria = new LinkedHashMap<>();
     @Nullable
     private String group;
     private boolean showNotification = true;
 
-    public CustomShapedRecipeBuilder(RegistryEntryLookup<Item> items, RecipeCategory category, ItemConvertible output, int count) {
+    public CustomShapedRecipeBuilder(HolderGetter<Item> items, RecipeCategory category, ItemLike output, int count) {
         this.items = items;
         this.category = category;
         this.output = output.asItem();
@@ -52,11 +51,11 @@ public abstract class CustomShapedRecipeBuilder<T extends ShapedRecipe, B extend
     }
 
     public B input(Character c, TagKey<Item> tag) {
-        return input(c, Ingredient.fromTag(items.getOrThrow(tag)));
+        return input(c, Ingredient.of(items.getOrThrow(tag)));
     }
 
-    public B input(Character c, ItemConvertible itemProvider) {
-        return input(c, Ingredient.ofItems(itemProvider));
+    public B input(Character c, ItemLike itemProvider) {
+        return input(c, Ingredient.of(itemProvider));
     }
 
     public B input(Character c, Ingredient ingredient) {
@@ -73,7 +72,7 @@ public abstract class CustomShapedRecipeBuilder<T extends ShapedRecipe, B extend
     }
 
     @Override
-    public B criterion(String key, AdvancementCriterion<?> criterion) {
+    public B unlockedBy(String key, Criterion<?> criterion) {
         criteria.put(key, criterion);
         return Untyped.cast(this);
     }
@@ -89,27 +88,30 @@ public abstract class CustomShapedRecipeBuilder<T extends ShapedRecipe, B extend
         return Untyped.cast(this);
     }
 
-    @Override
-    public Item getOutputItem() {
+    public Item getResult() {
         return output;
     }
 
     @Override
-    public void offerTo(RecipeExporter exporter, RegistryKey<Recipe<?>> key) {
-        Preconditions.checkState(!criteria.isEmpty(), "No way of obtaining recipe " + key);
-        Advancement.Builder builder = exporter.getAdvancementBuilder()
-            .criterion("has_the_recipe", RecipeUnlockedCriterion.create(key))
-            .rewards(AdvancementRewards.Builder.recipe(key))
-            .criteriaMerger(AdvancementRequirements.CriterionMerger.OR);
-        criteria.forEach(builder::criterion);
-        exporter.accept(key, createRecipe(
-                Objects.requireNonNullElse(group, ""),
-                CraftingRecipeJsonBuilder.toCraftingCategory(category),
-                RawShapedRecipe.create(inputs, pattern),
-                new ItemStack(output, count),
-                showNotification
-            ), builder.build(key.getValue().withPrefixedPath("recipes/" + category.getName() + "/")));
+    public ResourceKey<Recipe<?>> defaultId() {
+        return ResourceKey.create(Registries.RECIPE, BuiltInRegistries.ITEM.getKey(output));
     }
 
-    protected abstract T createRecipe(String group, CraftingRecipeCategory category, RawShapedRecipe shape, ItemStack output, boolean showNotification);
+    @Override
+    public void save(RecipeOutput exporter, ResourceKey<Recipe<?>> key) {
+        Preconditions.checkState(!criteria.isEmpty(), "No way of obtaining recipe " + key);
+        Advancement.Builder builder = exporter.advancement()
+            .rewards(AdvancementRewards.Builder.recipe(key))
+            .requirements(AdvancementRequirements.Strategy.OR);
+        criteria.forEach(builder::addCriterion);
+        exporter.accept(key, createRecipe(
+                Objects.requireNonNullElse(group, ""),
+                RecipeBuilder.determineCraftingBookCategory(category),
+                ShapedRecipePattern.of(inputs, pattern),
+                new ItemStack(output, count),
+                showNotification
+            ), builder.build(key.identifier().withPrefix("recipes/" + category.getFolderName() + "/")));
+    }
+
+    protected abstract T createRecipe(String group, CraftingBookCategory category, ShapedRecipePattern shape, ItemStack output, boolean showNotification);
 }

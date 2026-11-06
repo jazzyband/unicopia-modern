@@ -1,68 +1,59 @@
 package com.minelittlepony.unicopia.client.particle;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Camera;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.client.particle.ParticleTextureSheet;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.Colors;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
 import com.minelittlepony.unicopia.client.render.RenderLayers;
 import com.minelittlepony.unicopia.client.render.model.SphereModel;
 import com.minelittlepony.unicopia.particle.SphereParticleEffect;
 import com.minelittlepony.unicopia.util.ColorHelper;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
-import static net.minecraft.util.math.ColorHelper.*;
+import static net.minecraft.util.ARGB.*;
 
-@Deprecated(forRemoval = true)
-public class SphereParticle extends Particle {
-    @Deprecated(forRemoval = true)
-    static final int TRANSLUCENT_WHITE = withAlpha((int)(0.8F * 255), Colors.WHITE);
+public class SphereParticle extends Particle implements CustomRenderableParticle {
+    static final int TRANSLUCENT_WHITE = color((int)(0.8F * 255), CommonColors.WHITE);
 
-    @Deprecated(forRemoval = true)
     protected float prevRadius;
-    @Deprecated(forRemoval = true)
     protected float radius;
+    protected float rCol;
+    protected float gCol;
+    protected float bCol;
+    protected float alpha;
 
-    @Deprecated(forRemoval = true)
     protected int steps;
-    @Deprecated(forRemoval = true)
     protected float lerpIncrement;
-    @Deprecated(forRemoval = true)
     protected float toRadius;
 
-    @Deprecated(forRemoval = true)
-    public SphereParticle(SphereParticleEffect parameters, ClientWorld w, double x, double y, double z, double vX, double vY, double vZ) {
+    public SphereParticle(SphereParticleEffect parameters, ClientLevel w, double x, double y, double z, double vX, double vY, double vZ) {
         this(parameters, w, x, y, z);
 
-        this.velocityX = vX;
-        this.velocityY = vY;
-        this.velocityZ = vZ;
+        this.xd = vX;
+        this.yd = vY;
+        this.zd = vZ;
     }
 
-    @Deprecated(forRemoval = true)
-    public SphereParticle(SphereParticleEffect parameters, ClientWorld w, double x, double y, double z) {
+    public SphereParticle(SphereParticleEffect parameters, ClientLevel w, double x, double y, double z) {
         super(w, x, y, z);
         this.radius = parameters.radius();
-        this.red = parameters.color().x / 255F;
-        this.green = parameters.color().y / 255F;
-        this.blue = parameters.color().z / 255F;
+        this.rCol = parameters.color().x / 255F;
+        this.gCol = parameters.color().y / 255F;
+        this.bCol = parameters.color().z / 255F;
         this.alpha = parameters.alpha();
 
-        setMaxAge(10);
+        setLifetime(10);
     }
 
-    @Deprecated(forRemoval = true)
     @Override
-    public ParticleTextureSheet getType() {
-        return ParticleTextureSheet.CUSTOM;
+    public ParticleRenderType getGroup() {
+        return CustomParticleGroup.RENDER_TYPE;
     }
 
-    @Deprecated(forRemoval = true)
     @Override
     public void tick() {
         super.tick();
@@ -70,46 +61,39 @@ public class SphereParticle extends Particle {
         radius *= 0.9998281;
     }
 
-    @Deprecated(forRemoval = true)
     @Override
-    public void render(VertexConsumer vertexConsumer, Camera camera, float tickDelta) {
+    public void submitCustomGeometry(SubmitNodeCollector collector, Camera camera, float tickDelta) {
 
         if (alpha <= 0 || radius <= 0) {
             return;
         }
 
-        float[] color = ColorHelper.changeSaturation(red, green, blue, 4);
+        float[] color = ColorHelper.changeSaturation(rCol, gCol, bCol, 4);
 
-        VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumer buffer = immediate.getBuffer(RenderLayers.getMagicColored(net.minecraft.util.math.ColorHelper.fromFloats(color[0], color[1], color[2], alpha / 3F)));
+        PoseStack matrices = new PoseStack();
 
-        MatrixStack matrices = new MatrixStack();
-
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(
-                MathHelper.lerp(tickDelta, lastX, x) - camera.getPos().x,
-                MathHelper.lerp(tickDelta, lastY, y) - camera.getPos().y,
-                MathHelper.lerp(tickDelta, lastZ, z) - camera.getPos().z
+                Mth.lerp(tickDelta, xo, x) - camera.position().x,
+                Mth.lerp(tickDelta, yo, y) - camera.position().y,
+                Mth.lerp(tickDelta, zo, z) - camera.position().z
         );
 
-        float scale = MathHelper.lerp(tickDelta, prevRadius, radius);
+        float scale = Mth.lerp(tickDelta, prevRadius, radius);
 
-        renderModel(matrices, buffer, scale, tickDelta, getBrightness(tickDelta));
-
-        matrices.pop();
-
-        immediate.draw();
+        int light = getLightCoords(tickDelta);
+        collector.submitCustomGeometry(new PoseStack(),
+                RenderLayers.getMagicColored(net.minecraft.util.ARGB.colorFromFloat(color[0], color[1], color[2], alpha / 3F)),
+                (pose, buffer) -> renderModel(matrices, buffer, scale, tickDelta, light));
 
         prevRadius = radius;
 
-        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
-    @Deprecated(forRemoval = true)
-    protected void renderModel(MatrixStack matrices, VertexConsumer buffer, float lerpedRad, float tickDelta, int light) {
+    protected void renderModel(PoseStack matrices, VertexConsumer buffer, float lerpedRad, float tickDelta, int light) {
         float thickness = 0.05F;
         SphereModel.SPHERE.render(matrices, buffer, light, 1, lerpedRad + thickness, TRANSLUCENT_WHITE);
-        SphereModel.SPHERE.render(matrices, buffer, light, 1, lerpedRad - thickness, Colors.WHITE);
+        SphereModel.SPHERE.render(matrices, buffer, light, 1, lerpedRad - thickness, CommonColors.WHITE);
     }
 }
 

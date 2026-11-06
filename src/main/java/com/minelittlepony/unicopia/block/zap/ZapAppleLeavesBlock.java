@@ -3,38 +3,34 @@ package com.minelittlepony.unicopia.block.zap;
 import com.minelittlepony.unicopia.server.world.ZapAppleStageStore;
 import com.mojang.serialization.MapCodec;
 
-import net.minecraft.block.*;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.*;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 
 public class ZapAppleLeavesBlock extends BaseZapAppleLeavesBlock {
-    private static final MapCodec<ZapAppleLeavesBlock> CODEC = createCodec(ZapAppleLeavesBlock::new);
-    public static final EnumProperty<ZapAppleStageStore.Stage> STAGE = EnumProperty.of("stage", ZapAppleStageStore.Stage.class);
+    public static final EnumProperty<ZapAppleStageStore.Stage> STAGE = EnumProperty.create("stage", ZapAppleStageStore.Stage.class);
 
-    public ZapAppleLeavesBlock(Settings settings) {
+    public ZapAppleLeavesBlock(Properties settings) {
         super(settings);
-        setDefaultState(getDefaultState().with(STAGE, ZapAppleStageStore.Stage.GREENING));
+        registerDefaultState(defaultBlockState().setValue(STAGE, ZapAppleStageStore.Stage.GREENING));
     }
 
-    @Override
-    public MapCodec<? extends ZapAppleLeavesBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return super.getPlacementState(ctx).with(STAGE, ZapAppleStageStore.Stage.GREENING);
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        return super.getStateForPlacement(ctx).setValue(STAGE, ZapAppleStageStore.Stage.GREENING);
     }
 
     @Override
     public ZapAppleStageStore.Stage getStage(BlockState state) {
-        return state.get(STAGE);
+        return state.getValue(STAGE);
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(STAGE);
     }
 }

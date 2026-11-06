@@ -1,7 +1,7 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.world.InteractionResult;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.ability.magic.spell.HomingSpell;
@@ -12,8 +12,6 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.TypedActionResult;
-
-import net.minecraft.util.ActionResult;
 
 /**
  * Fires a spell as a projectile.
@@ -29,7 +27,7 @@ public class UnicornProjectileAbility extends AbstractSpellCastingAbility {
 
     @Override
     public Optional<Hit> prepare(Pony player) {
-        return Hit.of(player.getCharms().getSpellInHand(false).result() != ActionResult.FAIL);
+        return Hit.of(player.getCharms().getSpellInHand(false).result() != InteractionResult.FAIL);
     }
 
     @Override
@@ -43,7 +41,7 @@ public class UnicornProjectileAbility extends AbstractSpellCastingAbility {
             if (!player.isClient()) {
                 TypedActionResult<CustomisedSpellType<?>> thrown = player.getCharms().getSpellInHand(true);
 
-                if (thrown.result() != ActionResult.FAIL) {
+                if (thrown.result() != InteractionResult.FAIL) {
                     Spell spell = thrown.value().create();
                     if (spell != null) {
                         spell.toThrowable().throwProjectile(player).ifPresent(projectile -> {
@@ -68,7 +66,7 @@ public class UnicornProjectileAbility extends AbstractSpellCastingAbility {
     public boolean apply(Pony player, Hit data) {
         TypedActionResult<CustomisedSpellType<?>> thrown = player.getCharms().getSpellInHand(true);
 
-        if (thrown.result() != ActionResult.FAIL) {
+        if (thrown.result() != InteractionResult.FAIL) {
             Spell spell = thrown.value().create();
 
             if (spell != null) {

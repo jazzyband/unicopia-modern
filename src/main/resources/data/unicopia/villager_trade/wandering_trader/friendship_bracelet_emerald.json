@@ -1,0 +1,12 @@
+{
+  "wants": {
+    "id": "unicopia:friendship_bracelet",
+    "count": 2
+  },
+  "gives": {
+    "id": "minecraft:emerald"
+  },
+  "max_uses": 10,
+  "xp": 7,
+  "reputation_discount": 0.17
+}

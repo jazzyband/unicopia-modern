@@ -3,10 +3,12 @@ package com.minelittlepony.unicopia.util;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.util.hit.*;
-import net.minecraft.util.math.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
 @SuppressWarnings("unchecked")
 public record Trace(
@@ -28,7 +30,7 @@ public record Trace(
     public static Trace create(Entity e, double distance, float tickDelta, Predicate<Entity> predicate) {
         return new Trace(
                 ((Optional<HitResult>)(Optional<?>)TraceHelper.traceEntity(e, distance, tickDelta, predicate))
-                .or(() -> Optional.ofNullable(e.raycast(distance, tickDelta, false)))
+                .or(() -> Optional.ofNullable(e.pick(distance, tickDelta, false)))
         );
     }
 
@@ -57,11 +59,11 @@ public record Trace(
     }
 
     public Optional<BlockPos> getBlockOrEntityPos() {
-        return getBlockPos().or(() -> getEntity().map(Entity::getBlockPos));
+        return getBlockPos().or(() -> getEntity().map(Entity::blockPosition));
     }
 
     public Optional<Direction> getSide() {
-        return getBlockResult().map(BlockHitResult::getSide);
+        return getBlockResult().map(BlockHitResult::getDirection);
     }
 
     public Trace ifEntity(Consumer<Entity> consumer) {

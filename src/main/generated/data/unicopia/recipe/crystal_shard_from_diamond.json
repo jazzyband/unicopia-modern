@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "crystal_shard",
+  "ingredients": [
+    "minecraft:diamond"
+  ],
+  "result": {
+    "count": 6,
+    "id": "unicopia:crystal_shard"
+  }
+}

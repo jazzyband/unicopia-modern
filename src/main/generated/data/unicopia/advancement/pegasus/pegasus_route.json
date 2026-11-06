@@ -1,0 +1,28 @@
+{
+  "parent": "unicopia:root",
+  "criteria": {
+    "be_pegasus": {
+      "conditions": {
+        "race": "unicopia:pegasus"
+      },
+      "trigger": "unicopia:player_change_race"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.pegasus_route.description"
+    },
+    "icon": {
+      "id": "unicopia:pegasus_badge"
+    },
+    "title": {
+      "translate": "advancements.unicopia.pegasus_route.title"
+    }
+  },
+  "requirements": [
+    [
+      "be_pegasus"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

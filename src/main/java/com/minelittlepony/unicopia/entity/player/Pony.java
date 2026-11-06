@@ -47,41 +47,49 @@ import com.minelittlepony.common.util.animation.LinearInterpolator;
 import com.google.common.collect.Streams;
 import com.minelittlepony.common.util.animation.Interpolator;
 import com.mojang.authlib.GameProfile;
-
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.*;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.DamageTypeTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.*;
-import net.minecraft.world.GameMode;
-import net.minecraft.world.GameRules;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.Items;
 
-public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, UpdateCallback {
+public class Pony extends Living<Player> implements Copyable<Pony>, UpdateCallback {
     static final int INITIAL_SUN_IMMUNITY = 20;
 
     private final AbilityDispatcher powers = new AbilityDispatcher(this);
@@ -128,7 +136,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     private Entity lookedAtEntity;
     private int ticksUntilLookTimeout;
 
-    public Pony(PlayerEntity player) {
+    public Pony(Player player) {
         super(player);
         trackers.addPacketEmitter((sender, initial) -> {
             if (initial) {
@@ -139,7 +147,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         race = this.tracker.startTracking(TrackableDataType.RACE, Race.UNSET);
         suppressedRace = this.tracker.startTracking(TrackableDataType.RACE, Race.UNSET);
         this.features = this.tracker.startTracking(TrackableDataType.SKIN_FEATURES, SkinFeatures.DEFAULT);
-        this.levels = new PlayerLevelStore(this, tracker, true, USounds.Vanilla.ENTITY_PLAYER_LEVELUP);
+        this.levels = new PlayerLevelStore(this, tracker, true, USounds.Vanilla.PLAYER_LEVELUP);
         this.corruption = new PlayerLevelStore(this, tracker, false, USounds.ENTITY_PLAYER_CORRUPTION);
         this.mana = addTicker(new ManaContainer(this, tracker));
 
@@ -151,18 +159,18 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     public void sendUpdatePacket() {
-        if (entity instanceof ServerPlayerEntity pl && pl.networkHandler != null) {
-            Channel.SERVER_PLAYER_CAPABILITIES.sendToAllPlayers(new MsgPlayerCapabilities(this, false), entity.getWorld());
+        if (entity instanceof ServerPlayer) {
+            Channel.SERVER_PLAYER_CAPABILITIES.sendToAllPlayers(new MsgPlayerCapabilities(this, false), entity.level());
         }
     }
 
     public void sendUpdateToPlayer() {
-        if (entity instanceof ServerPlayerEntity pl && pl.networkHandler != null) {
+        if (entity instanceof ServerPlayer pl && pl.connection != null) {
             Channel.SERVER_PLAYER_CAPABILITIES.sendToPlayer(new MsgPlayerCapabilities(this, false), pl);
         }
     }
 
-    public static void registerAttributes(DefaultAttributeContainer.Builder builder) {
+    public static void registerAttributes(AttributeSupplier.Builder builder) {
         builder.add(UEntityAttributes.EXTRA_MINING_SPEED);
         builder.add(UEntityAttributes.ENTITY_GRAVITY_MODIFIER);
     }
@@ -252,7 +260,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
             if (isClient()) {
                 Channel.CLIENT_PLAYER_LOOK_AT_ENTITY.sendToServer(packet);
             } else if (this.lookedAtEntity == null) {
-                Channel.SERVER_PLAYER_LOOK_AT_ENTITY.sendToPlayer(packet, (ServerPlayerEntity)entity);
+                Channel.SERVER_PLAYER_LOOK_AT_ENTITY.sendToPlayer(packet, (ServerPlayer)entity);
             }
         } else if (target != null) {
             this.ticksUntilLookTimeout = 10;
@@ -314,7 +322,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         ticksInSun = 0;
 
         gravity.updateFlightState();
-        entity.sendAbilitiesUpdate();
+        entity.onUpdateAbilities();
         recalculateCompositeRace();
     }
 
@@ -401,7 +409,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     public float getBlockBreakingSpeed() {
-        return (float)entity.getAttributeInstance(UEntityAttributes.EXTRA_MINING_SPEED).getValue();
+        return (float)entity.getAttribute(UEntityAttributes.EXTRA_MINING_SPEED).getValue();
     }
 
     public Motion getMotion() {
@@ -423,15 +431,15 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
     @Override
     public Optional<UUID> getMasterId() {
-        return Optional.of(asEntity().getUuid());
+        return Optional.of(asEntity().getUUID());
     }
 
     public void forceRespawnOnRaceChange() {
         if (isSpawnInvalid(getOrigin())) {
-            BlockPos respawnPos = entity.getWorldSpawnPos((ServerWorld)asWorld(), getOrigin());
+            BlockPos respawnPos = entity.adjustSpawnLocation((ServerLevel)asWorld(), getOrigin());
             if (!isSpawnInvalid(respawnPos)) {
-                Vec3d pos = respawnPos.toBottomCenterPos();
-                entity.updatePosition(pos.x, pos.y, pos.z);
+                Vec3 pos = Vec3.atBottomCenterOf(respawnPos);
+                entity.absSnapTo(pos.x, pos.y, pos.z);
             }
         }
         onSpawn();
@@ -449,14 +457,14 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     public boolean isSpawnInvalid(BlockPos pos) {
-        return (entity.getWorld() instanceof ServerWorld sw && sw.getDimension().hasSkyLight() && sw.getServer().getSaveProperties().getGameMode() != GameMode.ADVENTURE)
+        return (entity.level() instanceof ServerLevel sw && sw.dimensionType().hasSkyLight() && sw.getServer().getWorldData().getGameType() != GameType.ADVENTURE)
             && ((getCompositeRace().includes(Race.BAT) && MeteorlogicalUtil.isPositionExposedToSun(asWorld(), pos))
-            || (getCompositeRace().includes(Race.SEAPONY) && !asWorld().getFluidState(pos).isIn(FluidTags.WATER)));
+            || (getCompositeRace().includes(Race.SEAPONY) && !asWorld().getFluidState(pos).is(FluidTags.WATER)));
     }
 
     @Override
     public boolean beforeUpdate() {
-        if (compositeRace.includes(Race.UNSET) || entity.age % 2 == 0) {
+        if (compositeRace.includes(Race.UNSET) || entity.tickCount % 2 == 0) {
             recalculateCompositeRace();
         }
 
@@ -470,7 +478,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         if (getObservedSpecies() == Race.KIRIN) {
             var charge = getMagicalReserves().getCharge();
 
-            if (entity.isTouchingWater() || entity.isFrozen()) {
+            if (entity.isInWater() || entity.isFullyFrozen()) {
                 charge.multiply(0.5F);
             }
 
@@ -478,38 +486,38 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
                 var energy = getMagicalReserves().getEnergy();
                 if (energy.getPercentFill() < 0.002F) {
                     energy.addPercent(1.03F);
-                    if (entity.age % 25 == 0) {
-                        playSound(USounds.ENTITY_PLAYER_HEARTBEAT, 0.17F + (float)entity.getWorld().random.nextGaussian() * 0.03F, 0.5F);
+                    if (entity.tickCount % 25 == 0) {
+                        playSound(USounds.ENTITY_PLAYER_HEARTBEAT, 0.17F + (float)entity.level().getRandom().nextGaussian() * 0.03F, 0.5F);
                         spawnParticles(ParticleTypes.LAVA, 2);
                         energy.addPercent(1.07F);
                     }
                 }
             }
 
-            if (entity.getLastAttackTime() == 0) {
-                if (!EquinePredicates.RAGING.test(entity) && charge.getPercentFill() >= 1 && entity.getWorld().random.nextInt(1000) == 0) {
+            if (entity.getLastHurtMobTimestamp() == 0) {
+                if (!EquinePredicates.RAGING.test(entity) && charge.getPercentFill() >= 1 && entity.level().getRandom().nextInt(1000) == 0) {
                     SpellType.RAGE.withTraits().apply(this, CastingMethod.INNATE);
                 }
             }
         }
 
         if (getCompositeRace().includes(Race.SEAPONY)) {
-            if (entity.isSubmergedInWater()) {
-                if (entity.getVelocity().lengthSquared() > 0.02) {
+            if (entity.isUnderWater()) {
+                if (entity.getDeltaMovement().lengthSqr() > 0.02) {
                     spawnParticles(ParticleTypes.BUBBLE, 4);
                 }
             } else {
-                if (entity.getAir() == entity.getMaxAir()) {
-                    entity.setAir(entity.getAir() - 1);
+                if (entity.getAirSupply() == entity.getMaxAirSupply()) {
+                    entity.setAirSupply(entity.getAirSupply() - 1);
                 }
 
-                if (entity.age % 60 == 0) {
-                    entity.playSound(SoundEvents.ENTITY_TURTLE_AMBIENT_LAND, 1, 1);
+                if (entity.tickCount % 60 == 0) {
+                    entity.playSound(SoundEvents.TURTLE_AMBIENT_LAND, 1, 1);
                 }
 
-                if (entity.getAir() == -20 && !asWorld().isClient) {
-                    entity.setAir(0);
-                    entity.damage((ServerWorld)asWorld(), entity.getDamageSources().dryOut(), 2);
+                if (entity.getAirSupply() == -20 && !asWorld().isClientSide()) {
+                    entity.setAirSupply(0);
+                    entity.hurtServer((ServerLevel)asWorld(), entity.damageSources().dryOut(), 2);
                 }
             }
         }
@@ -524,15 +532,15 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     @Override
     public void onAttacking(Entity target) {
         if (getObservedSpecies() == Race.KIRIN) {
-            boolean killedTarget = target instanceof LivingEntity l && l.isDead();
-            if (killedTarget || entity.getWorld().random.nextInt(10) == 0) {
+            boolean killedTarget = target instanceof LivingEntity l && l.isDeadOrDying();
+            if (killedTarget || entity.level().getRandom().nextInt(10) == 0) {
                 var charge = getMagicalReserves().getCharge();
 
                 if (charge.getPercentFill() < 1) {
                     charge.addPercent(killedTarget ? (target instanceof LivingEntity l && l.isBaby() ? 15 : 10) : 3);
                 }
 
-                if (!EquinePredicates.RAGING.test(entity) && charge.getPercentFill() >= 1 && entity.getWorld().random.nextInt(1000) == 0) {
+                if (!EquinePredicates.RAGING.test(entity) && charge.getPercentFill() >= 1 && entity.level().getRandom().nextInt(1000) == 0) {
                     SpellType.RAGE.withTraits().apply(this, CastingMethod.INNATE);
                 }
             }
@@ -559,7 +567,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         UCriteria.PLAYER_CHANGE_RACE.trigger(entity);
         if (prevMorphedRace.isPresent() && morphedRace.isEmpty()) {
             ParticleUtils.spawnParticles(new MagicParticleEffect(0x886F0F), entity, 50);
-            entity.getWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), USounds.ENTITY_PLAYER_CHANGELING_TRANSFORM, entity.getSoundCategory(), 1, 1);
+            entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), USounds.ENTITY_PLAYER_CHANGELING_TRANSFORM, entity.getSoundSource(), 1, 1);
         }
         prevMorphedRace = morphedRace;
     }
@@ -567,8 +575,8 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     @Override
     public Optional<BlockPos> chooseClimbingPos() {
         if (getObservedSpecies() == Race.CHANGELING && getSpellSlot().get(SpellPredicate.IS_DISGUISE).isEmpty()) {
-            if (acrobatics.isFaceClimbable(entity.getWorld(), entity.getBlockPos(), entity.getHorizontalFacing()) || acrobatics.canHangAt(entity.getBlockPos())) {
-                return Optional.of(entity.getBlockPos());
+            if (acrobatics.isFaceClimbable(entity.level(), entity.blockPosition(), entity.getDirection()) || acrobatics.canHangAt(entity.blockPosition())) {
+                return Optional.of(entity.blockPosition());
             }
         }
         return super.chooseClimbingPos();
@@ -577,9 +585,9 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     private void updateAnimations() {
 
         if (acrobatics.distanceClimbed > 0
-                && ((animation.isOf(Animation.CLIMB) && entity.isSneaking()) || animation.isOf(Animation.HANG))
-                && entity.getClimbingPos().isPresent()
-                && entity.getVelocity().length() < 0.08F) {
+                && ((animation.isOf(Animation.CLIMB) && entity.isShiftKeyDown()) || animation.isOf(Animation.HANG))
+                && entity.getLastClimbablePos().isPresent()
+                && entity.getDeltaMovement().length() < 0.08F) {
             if (animation.renderBothArms()) {
                 animationDuration = 2;
             }
@@ -603,8 +611,8 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
             ticksSunImmunity--;
         }
 
-        if (getObservedSpecies() == Race.BAT && !entity.hasPortalCooldown()) {
-            boolean hasShades = TrinketsDelegate.getInstance(entity).getEquipped(entity, TrinketsDelegate.FACE).anyMatch(s -> s.stack().isIn(UTags.Items.PROTECTS_BAT_PONY_EYES));
+        if (getObservedSpecies() == Race.BAT && !entity.isOnPortalCooldown()) {
+            boolean hasShades = TrinketsDelegate.getInstance(entity).getEquipped(entity, TrinketsDelegate.FACE).anyMatch(s -> s.stack().is(UTags.Items.PROTECTS_BAT_PONY_EYES));
             if (!this.hasShades && hasShades && getObservedSpecies() == Race.BAT) {
                 UCriteria.WEAR_SHADES.trigger(entity);
             }
@@ -612,7 +620,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
             if (!hasShades && ticksSunImmunity <= 0 && MeteorlogicalUtil.isLookingIntoSun(asWorld(), entity)) {
                 if (!isClient()) {
-                    entity.addStatusEffect(new StatusEffectInstance(UEffects.SUN_BLINDNESS, SunBlindnessStatusEffect.MAX_DURATION, 2, true, false));
+                    entity.addEffect(new MobEffectInstance(UEffects.SUN_BLINDNESS, SunBlindnessStatusEffect.MAX_DURATION, 2, true, false));
                     UCriteria.LOOK_INTO_SUN.trigger(entity);
                 } else if (isClientPlayer()) {
                     InteractionManager.getInstance().playLoopingSound(entity, InteractionManager.SOUND_EARS_RINGING, entity.getId());
@@ -626,7 +634,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
                 if (ticksInSun == 1) {
                     if (!isClient()) {
-                        entity.addStatusEffect(new StatusEffectInstance(UEffects.SUN_BLINDNESS, SunBlindnessStatusEffect.MAX_DURATION, 1, true, false));
+                        entity.addEffect(new MobEffectInstance(UEffects.SUN_BLINDNESS, SunBlindnessStatusEffect.MAX_DURATION, 1, true, false));
                     } else if (isClientPlayer()) {
                         InteractionManager.getInstance().playLoopingSound(entity, InteractionManager.SOUND_EARS_RINGING, entity.getId());
                     }
@@ -657,22 +665,22 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
     @Override
     public boolean canBeSeenBy(Entity entity) {
-        if (entity instanceof HostileEntity hostile
+        if (entity instanceof Monster hostile
                 && getObservedSpecies() == Race.BAT
                 && hostile.getTarget() != this.entity
-                && hostile.getAttacker() != this.entity
-                && entity.distanceTo(this.entity) > entity.getWidth()) {
-            if (entity.isSneaking() && entity.distanceTo(this.entity) > 4) {
+                && hostile.getLastHurtByMob() != this.entity
+                && entity.distanceTo(this.entity) > entity.getBbWidth()) {
+            if (entity.isShiftKeyDown() && entity.distanceTo(this.entity) > 4) {
                 return false;
             }
 
             float vel = (float)getPhysics().getHorizontalMotion();
-            float velocityScale = MathHelper.clamp(vel * 15, 0, 1);
-            int light = asWorld().getLightLevel(getPhysics().getHeadPosition());
+            float velocityScale = Mth.clamp(vel * 15, 0, 1);
+            int light = asWorld().getMaxLocalRawBrightness(getPhysics().getHeadPosition());
             float lightScale = light / 15F;
             float approachFactor = ((velocityScale + lightScale) / 2F);
 
-            if (approachFactor < (entity.isSneaking() ? 0.8F : 0.3F)) {
+            if (approachFactor < (entity.isShiftKeyDown() ? 0.8F : 0.3F)) {
                 return false;
             }
         }
@@ -680,17 +688,17 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     @Override
-    public Optional<Vec3d> adjustMovementSpeedInWater(Vec3d speed) {
+    public Optional<Vec3> adjustMovementSpeedInWater(Vec3 speed) {
         if (getObservedSpecies() == Race.KIRIN) {
             return Optional.of(speed.multiply(0.5, 1, 0.5));
         }
         if (getCompositeRace().includes(Race.SEAPONY)) {
             float factor = entity.isSwimming() ? 1.132F : 1.0232F;
             float max = 0.6F;
-            return Optional.of(new Vec3d(
-                    MathHelper.clamp(speed.x * factor, -max, max),
+            return Optional.of(new Vec3(
+                    Mth.clamp(speed.x * factor, -max, max),
                     speed.y * (speed.y > 0 ? 1.2 : 1.101),
-                    MathHelper.clamp(speed.z * factor, -max, max)
+                    Mth.clamp(speed.z * factor, -max, max)
             ));
         }
         return Optional.empty();
@@ -701,32 +709,32 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     @Override
-    public boolean onUpdatePassengerPosition(Entity passender, Entity.PositionUpdater positionUpdater) {
+    public boolean onUpdatePassengerPosition(Entity passender, Entity.MoveFunction positionUpdater) {
         Entity passenger = entity.getFirstPassenger();
         if (Living.getOrEmpty(passenger).filter(Living::isBeingCarried).isPresent()) {
 
-            Vec3d carryPosition = new Vec3d(0, 0, entity.getWidth());
+            Vec3 carryPosition = new Vec3(0, 0, entity.getBbWidth());
 
             float leanAmount = ((LivingEntityDuck)entity).getLeaningPitch();
-            carryPosition = carryPosition.rotateX(-leanAmount * MathHelper.PI / 4F)
-                    .add(new Vec3d(0, -0.5F, 0).multiply(leanAmount));
+            carryPosition = carryPosition.xRot(-leanAmount * Mth.PI / 4F)
+                    .add(new Vec3(0, -0.5F, 0).scale(leanAmount));
 
-            carryPosition = carryPosition.rotateY(-entity.getBodyYaw() * MathHelper.RADIANS_PER_DEGREE);
+            carryPosition = carryPosition.yRot(-entity.getVisualRotationYInDegrees() * Mth.DEG_TO_RAD);
 
-            carryPosition = entity.getPos().add(carryPosition);
+            carryPosition = entity.position().add(carryPosition);
             positionUpdater.accept(passenger, carryPosition.x, carryPosition.y, carryPosition.z);
             return true;
         }
         return false;
     }
 
-    public int getImplicitEnchantmentLevel(RegistryEntry<Enchantment> enchantment, int initial) {
+    public int getImplicitEnchantmentLevel(Holder<Enchantment> enchantment, int initial) {
 
-        if ((enchantment == Enchantments.AQUA_AFFINITY
-                || enchantment == Enchantments.DEPTH_STRIDER
-                || enchantment == Enchantments.LUCK_OF_THE_SEA
-                || enchantment == Enchantments.LURE) && getCompositeRace().includes(Race.SEAPONY)) {
-            return MathHelper.clamp(initial + 3, enchantment.value().getMinLevel(), enchantment.value().getMaxLevel());
+        if ((enchantment.is(Enchantments.AQUA_AFFINITY)
+                || enchantment.is(Enchantments.DEPTH_STRIDER)
+                || enchantment.is(Enchantments.LUCK_OF_THE_SEA)
+                || enchantment.is(Enchantments.LURE)) && getCompositeRace().includes(Race.SEAPONY)) {
+            return Mth.clamp(initial + 3, enchantment.value().getMinLevel(), enchantment.value().getMaxLevel());
         }
 
         return initial;
@@ -736,13 +744,13 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
         if (getObservedSpecies() == Race.KIRIN) {
             var charge = getMagicalReserves().getCharge();
-            charge.addPercent(MathHelper.clamp(amount / 10F, 5, 15));
+            charge.addPercent(Mth.clamp(amount / 10F, 5, 15));
             float anger = charge.getPercentFill();
             getMagicalReserves().getEnergy().addPercent(50 * anger);
             playSound(USounds.ENTITY_PLAYER_KIRIN_RAGE, 0.2F, 1.25F);
             spawnParticles(ParticleTypes.LAVA, 2);
 
-            if (anger > 0 && entity.getWorld().random.nextFloat() < anger / 2F) {
+            if (anger > 0 && entity.level().getRandom().nextFloat() < anger / 2F) {
                 if (consumeSuperMove()) {
                     SpellType.RAGE.withTraits().apply(this, CastingMethod.INNATE);
                 }
@@ -750,14 +758,14 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         }
 
         if (EffectUtils.hasExtraDefenses(entity)
-                && !cause.isIn(DamageTypeTags.BYPASSES_SHIELD)
-                && !cause.isOf(DamageTypes.MAGIC)
-                && !cause.isIn(DamageTypeTags.IS_FIRE)
-                && !cause.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)
-                && !cause.isOf(DamageTypes.THORNS)
-                && !cause.isOf(DamageTypes.FREEZE)) {
+                && !cause.is(DamageTypeTags.BYPASSES_SHIELD)
+                && !cause.is(DamageTypes.MAGIC)
+                && !cause.is(DamageTypeTags.IS_FIRE)
+                && !cause.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
+                && !cause.is(DamageTypes.THORNS)
+                && !cause.is(DamageTypes.FREEZE)) {
 
-            amount /= (cause.isOf(DamageTypes.MOB_PROJECTILE) ? 3 : 2) * (entity.getHealth() < 5 ? 3 : 1);
+            amount /= (cause.is(DamageTypes.MOB_PROJECTILE) ? 3 : 2) * (entity.getHealth() < 5 ? 3 : 1);
 
             return Optional.of(amount);
         }
@@ -771,7 +779,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         if (EffectUtils.hasExtraDefenses(entity)) {
             double radius = distance / 10;
             if (radius > 0) {
-                EarthPonyStompAbility.spawnEffectAround(this, entity, entity.getSteppingPos(), radius, radius);
+                EarthPonyStompAbility.spawnEffectAround(this, entity, entity.getOnPos(), radius, radius);
             }
         }
 
@@ -786,7 +794,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
             if (extraProtection) {
                 distance /= (getLevel().getScaled(3) + 1);
-                if (entity.isSneaking()) {
+                if (entity.isShiftKeyDown()) {
                     distance /= 2;
                 }
             }
@@ -799,13 +807,13 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         return Math.max(0, distance);
     }
 
-    public void onEat(ItemStack stack, FoodComponent food) {
+    public void onEat(ItemStack stack, FoodProperties food) {
         if (isClient()) {
             return;
         }
 
         if (getObservedSpecies() == Race.KIRIN
-                && (stack.isIn(UTags.Items.COOLS_OFF_KIRINS) || stack.get(DataComponentTypes.POTION_CONTENTS) == PotionContentsComponent.DEFAULT)) {
+                && (stack.is(UTags.Items.COOLS_OFF_KIRINS) || stack.get(DataComponents.POTION_CONTENTS) == PotionContents.EMPTY)) {
             getMagicalReserves().getCharge().multiply(0.5F);
             getSpellSlot().get(SpellType.RAGE).ifPresent(RageAbilitySpell::setExtenguishing);
         }
@@ -813,65 +821,65 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
         PonyDiets.getInstance().getEffects(stack, this).ailment().effects().afflict(asEntity(), stack);
     }
 
-    public ActionResult interact(Hand hand, BlockHitResult hit) {
-        if (entity.shouldCancelInteraction() || entity.isSpectator()) {
-            return ActionResult.PASS;
+    public InteractionResult interact(InteractionHand hand, BlockHitResult hit) {
+        if (entity.isSecondaryUseActive() || entity.isSpectator()) {
+            return InteractionResult.PASS;
         }
 
-        ItemStack stack = entity.getStackInHand(hand);
+        ItemStack stack = entity.getItemInHand(hand);
         if (stack.isEmpty()) {
-            ActionResult result = levitatingItems.interact(hit);
-            if (result.isAccepted()) {
-                return ActionResult.SUCCESS;
+            InteractionResult result = levitatingItems.interact(hit);
+            if (result.consumesAction()) {
+                return InteractionResult.SUCCESS;
             }
         }
 
-        return ForageableItem.use(entity, stack, entity.getWorld(), hand, hit);
+        return ForageableItem.use(entity, stack, entity.level(), hand, hit);
     }
 
-    public ActionResult interact(Hand hand, Entity entity, @Nullable EntityHitResult hit) {
-        if (this.entity.shouldCancelInteraction() || this.entity.isSpectator()) {
-            return ActionResult.PASS;
+    public InteractionResult interact(InteractionHand hand, Entity entity, @Nullable EntityHitResult hit) {
+        if (this.entity.isSecondaryUseActive() || this.entity.isSpectator()) {
+            return InteractionResult.PASS;
         }
 
-        if (this.entity.getStackInHand(hand).isEmpty()) {
-            ActionResult result = levitatingItems.interact(entity, hit);
-            if (result.isAccepted()) {
-                return ActionResult.SUCCESS;
+        if (this.entity.getItemInHand(hand).isEmpty()) {
+            InteractionResult result = levitatingItems.interact(entity, hit);
+            if (result.consumesAction()) {
+                return InteractionResult.SUCCESS;
             }
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public ActionResult onStartedBreakingBlock(Hand hand, BlockPos pos, Direction direction) {
-        if (hand == Hand.MAIN_HAND && !entity.isSpectator()) {
-            levitatingItems.startMining(entity.getWorld().getBlockState(pos), pos, direction);
+    public InteractionResult onStartedBreakingBlock(InteractionHand hand, BlockPos pos, Direction direction) {
+        if (hand == InteractionHand.MAIN_HAND && !entity.isSpectator()) {
+            levitatingItems.startMining(entity.level().getBlockState(pos), pos, direction);
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public ActionResult onStoppedBreakingBlock(BlockPos pos) {
-        return ActionResult.PASS;
+    public InteractionResult onStoppedBreakingBlock(BlockPos pos) {
+        return InteractionResult.PASS;
     }
 
-    public ActionResult onAttackEntity(Hand hand, Entity entity, @Nullable EntityHitResult hit) {
+    public InteractionResult onAttackEntity(InteractionHand hand, Entity entity, @Nullable EntityHitResult hit) {
         if (this.entity.isSpectator()) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
 
-        if (this.entity.getStackInHand(hand).isEmpty()) {
-            ActionResult result = levitatingItems.attack(entity, hit);
-            if (result.isAccepted()) {
-                return ActionResult.SUCCESS;
+        if (this.entity.getItemInHand(hand).isEmpty()) {
+            InteractionResult result = levitatingItems.attack(entity, hit);
+            if (result.consumesAction()) {
+                return InteractionResult.SUCCESS;
             }
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     public void onKill(Entity killedEntity, DamageSource damage) {
-        if (killedEntity != null && killedEntity.getType() == EntityType.PHANTOM && getPhysics().isFlying()) {
+        if (killedEntity != null && killedEntity.getType() == EntityTypes.PHANTOM && getPhysics().isFlying()) {
             UCriteria.KILL_PHANTOM_WHILE_FLYING.trigger(entity);
         }
     }
@@ -900,7 +908,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     protected void directTakeEnergy(double foodSubtract) {
-        if (!entity.isCreative() && !entity.getWorld().isClient) {
+        if (!entity.isCreative() && !entity.level().isClientSide()) {
             magicExhaustion += ManaConsumptionUtil.consumeMana(mana.getMana(), foodSubtract);
         }
     }
@@ -909,35 +917,35 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     protected Stream<ItemStack> getInventoryStacks() {
         return Streams.concat(
                 super.getInventoryStacks(),
-                entity.getInventory().getMainStacks().stream()
+                entity.getInventory().getNonEquipmentItems().stream()
         );
     }
 
     @Override
-    protected void giveBackItem(ServerWorld world, ItemStack stack) {
-        if (!entity.giveItemStack(stack)) {
-            entity.dropItem(stack, false);
+    protected void giveBackItem(ServerLevel world, ItemStack stack) {
+        if (!entity.addItem(stack)) {
+            entity.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
         }
     }
 
-    public Optional<Text> trySleep(BlockPos pos) {
+    public Optional<Component> trySleep(BlockPos pos) {
 
         if (AmuletSelectors.ALICORN_AMULET.test(entity)) {
-            return Optional.of(Text.translatable("block.unicopia.bed.not_tired"));
+            return Optional.of(Component.translatable("block.unicopia.bed.not_tired"));
         }
 
         return findAllSpellsInRange(10)
                 .filter(p -> p instanceof Pony && ((Pony)p).isEnemy(this))
                 .findFirst()
-                .map(p -> Text.translatable("block.unicopia.bed.not_safe"));
+                .map(p -> Component.translatable("block.unicopia.bed.not_safe"));
     }
 
-    public ActionResult canSleepNow(boolean isDay) {
-        if (!asWorld().isClient && asServerWorld().getGameRules().getBoolean(UGameRules.DO_NOCTURNAL_BAT_PONIES) && getSpecies().isNocturnal()) {
-            return !isDay || asWorld().getAmbientDarkness() >= 4 ? ActionResult.SUCCESS : ActionResult.FAIL;
+    public InteractionResult canSleepNow(boolean isDay) {
+        if (!asWorld().isClientSide() && asServerWorld().getGameRules().get(UGameRules.DO_NOCTURNAL_BAT_PONIES) && getSpecies().isNocturnal()) {
+            return !isDay || asWorld().getSkyDarken() >= 4 ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     @Override
@@ -946,27 +954,27 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-        compound.put("advancementTriggerCounts", TriggerCountTracker.CODEC, lookup.getOps(NbtOps.INSTANCE), advancementProgress);
+    public void toNBT(CompoundTag compound, Provider lookup) {
+        compound.store("advancementTriggerCounts", TriggerCountTracker.CODEC, lookup.createSerializationContext(NbtOps.INSTANCE), advancementProgress);
         compound.put("levitatingItems", levitatingItems.toNBT(lookup));
         super.toNBT(compound, lookup);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         levitatingItems.fromNBT(compound.getCompoundOrEmpty("levitatingItems"), lookup);
-        advancementProgress = compound.get("advancementTriggerCounts", TriggerCountTracker.CODEC, lookup.getOps(NbtOps.INSTANCE)).orElseGet(() -> new TriggerCountTracker(Map.of()));
+        advancementProgress = compound.read("advancementTriggerCounts", TriggerCountTracker.CODEC, lookup.createSerializationContext(NbtOps.INSTANCE)).orElseGet(() -> new TriggerCountTracker(Map.of()));
         super.fromNBT(compound, lookup);
     }
 
     @Override
-    public void toSyncronisedNbt(NbtCompound compound, WrapperLookup lookup) {
+    public void toSyncronisedNbt(CompoundTag compound, Provider lookup) {
         super.toSyncronisedNbt(compound, lookup);
         compound.put("mana", mana.toNBT(lookup));
         compound.putInt("levels", levels.get());
         compound.putInt("corruption", corruption.get());
-        compound.putString("playerSpecies", Race.REGISTRY.getId(getPersistentSpecies()).toString());
-        compound.putString("suppressedSpecies", Race.REGISTRY.getId(getSuppressedRace()).toString());
+        compound.putString("playerSpecies", Race.REGISTRY.getKey(getPersistentSpecies()).toString());
+        compound.putString("suppressedSpecies", Race.REGISTRY.getKey(getSuppressedRace()).toString());
         compound.putFloat("magicExhaustion", magicExhaustion);
         compound.putInt("ticksInSun", ticksInSun);
         compound.putBoolean("hasShades", hasShades);
@@ -979,29 +987,29 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     @Override
-    public void fromSynchronizedNbt(NbtCompound compound, WrapperLookup lookup) {
+    public void fromSynchronizedNbt(CompoundTag compound, Provider lookup) {
         super.fromSynchronizedNbt(compound, lookup);
-        levels.set(compound.getInt("levels", 0));
-        corruption.set(compound.getInt("corruption", 0));
+        levels.set(compound.getIntOr("levels", 0));
+        corruption.set(compound.getIntOr("corruption", 0));
         mana.fromNBT(compound.getCompoundOrEmpty("mana"), lookup);
-        setSpecies(compound.get("playerSpecies", Race.CODEC).orElse(Race.HUMAN));
-        setSuppressedRace(compound.get("suppressedSpecies", Race.CODEC).orElse(Race.UNSET));
+        setSpecies(compound.read("playerSpecies", Race.REGISTRY.byNameCodec()).orElse(Race.HUMAN));
+        setSuppressedRace(compound.read("suppressedSpecies", Race.REGISTRY.byNameCodec()).orElse(Race.UNSET));
         powers.fromNBT(compound.getCompoundOrEmpty("powers"), lookup);
         gravity.fromNBT(compound.getCompoundOrEmpty("gravity"), lookup);
         charms.fromNBT(compound.getCompoundOrEmpty("charms"), lookup);
         discoveries.fromNBT(compound.getCompoundOrEmpty("discoveries"), lookup);
         acrobatics.fromNBT(compound.getCompoundOrEmpty("acrobatics"), lookup);
-        magicExhaustion = compound.getFloat("magicExhaustion", 0);
-        ticksInSun = compound.getInt("ticksInSun", 0);
-        hasShades = compound.getBoolean("hasShades", false);
-        ticksMetamorphising = compound.getInt("ticksMetamorphising", 0);
+        magicExhaustion = compound.getFloatOr("magicExhaustion", 0);
+        ticksInSun = compound.getIntOr("ticksInSun", 0);
+        hasShades = compound.getBooleanOr("hasShades", false);
+        ticksMetamorphising = compound.getIntOr("ticksMetamorphising", 0);
     }
 
     @Override
     public void copyFrom(Pony oldPlayer, boolean alive) {
         boolean forcedSwap = (!alive
-                && entity instanceof ServerPlayerEntity
-                && ((ServerWorld)entity.getWorld()).getGameRules().getBoolean(UGameRules.SWAP_TRIBE_ON_DEATH)
+                && entity instanceof ServerPlayer
+                && ((ServerLevel)entity.level()).getGameRules().get(UGameRules.SWAP_TRIBE_ON_DEATH)
                 && oldPlayer.respawnRace.isUnset())
                 || oldPlayer.getPersistentSpecies().isUnset();
 
@@ -1016,17 +1024,17 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
         if (forcedSwap) {
             oldSuppressedRace = Race.UNSET;
-            Channel.SERVER_SELECT_TRIBE.sendToPlayer(new MsgTribeSelect(Race.allPermitted(entity), "gui.unicopia.tribe_selection.respawn"), (ServerPlayerEntity)entity);
+            Channel.SERVER_SELECT_TRIBE.sendToPlayer(new MsgTribeSelect(Race.allPermitted(entity), "gui.unicopia.tribe_selection.respawn"), (ServerPlayer)entity);
         }
 
         if (!alive) {
             // putting it here instead of adding another injection point into ServerPlayerEntity.copyFrom()
-            if (!((ServerWorld)asWorld()).getGameRules().getBoolean(GameRules.KEEP_INVENTORY)) {
-                PlayerInventory inventory = oldPlayer.asEntity().getInventory();
-                for (int i = 0; i < inventory.size(); i++) {
-                    ItemStack stack = inventory.getStack(i);
-                    if (EnchantmentUtil.consumeEnchantment(entryFor(UEnchantments.HEART_BOUND), 1, stack, entity.getWorld().random, EnchantmentUtil.getLuck(3, oldPlayer.asEntity()))) {
-                        asEntity().getInventory().setStack(i, stack);
+            if (!((ServerLevel)asWorld()).getGameRules().get(GameRules.KEEP_INVENTORY)) {
+                Inventory inventory = oldPlayer.asEntity().getInventory();
+                for (int i = 0; i < inventory.getContainerSize(); i++) {
+                    ItemStack stack = inventory.getItem(i);
+                    if (EnchantmentUtil.consumeEnchantment(entryFor(UEnchantments.HEART_BOUND), 1, stack, entity.level().getRandom(), EnchantmentUtil.getLuck(3, oldPlayer.asEntity()))) {
+                        asEntity().getInventory().setItem(i, stack);
                     }
                 }
             }
@@ -1051,8 +1059,8 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
     @Override
     public void onSpellAdded(Spell spell) {
-        if (spell.getAffinity() == Affinity.BAD && entity.getWorld().random.nextInt(20) == 0) {
-            getCorruption().add(entity.getRandom().nextBetween(1, 10));
+        if (spell.getAffinity() == Affinity.BAD && entity.level().getRandom().nextInt(20) == 0) {
+            getCorruption().add(entity.getRandom().nextIntBetweenInclusive(1, 10));
         }
         getCorruption().add(((int)spell.getTypeAndTraits().traits().getCorruption() * 10) + spell.getTypeAndTraits().type().getAffinity().getCorruption());
     }
@@ -1063,7 +1071,7 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
 
     @SuppressWarnings("unchecked")
     @Nullable
-    public static Pony of(@Nullable PlayerEntity player) {
+    public static Pony of(@Nullable Player player) {
         return player == null ? null : ((Container<Pony>)player).get();
     }
 
@@ -1076,14 +1084,14 @@ public class Pony extends Living<PlayerEntity> implements Copyable<Pony>, Update
     }
 
     public static boolean equal(GameProfile one, GameProfile two) {
-        return one == two || (one != null && two != null && one.getId().equals(two.getId()));
+        return one == two || (one != null && two != null && one.id().equals(two.id()));
     }
 
     public static boolean equal(Entity one, Entity two) {
-        return Objects.equals(one, two) || (one instanceof PlayerEntity && two instanceof PlayerEntity && equal((PlayerEntity)one, (PlayerEntity)two));
+        return Objects.equals(one, two) || (one instanceof Player && two instanceof Player && equal((Player)one, (Player)two));
     }
 
-    public static boolean equal(PlayerEntity one, PlayerEntity two) {
+    public static boolean equal(Player one, Player two) {
         return one == two || (one != null && two != null && equal(one.getGameProfile(), two.getGameProfile()));
     }
 }

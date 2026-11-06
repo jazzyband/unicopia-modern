@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "cloud",
+  "ingredients": [
+    "#unicopia:cloud_jars"
+  ],
+  "result": {
+    "count": 4,
+    "id": "unicopia:cloud_lump"
+  }
+}

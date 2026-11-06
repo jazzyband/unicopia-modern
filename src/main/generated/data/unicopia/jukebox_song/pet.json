@@ -1,0 +1,8 @@
+{
+  "comparator_output": 2,
+  "description": {
+    "translate": "jukebox_song.unicopia.pet"
+  },
+  "length_in_seconds": 221.0,
+  "sound_event": "unicopia:music_disc.pet"
+}

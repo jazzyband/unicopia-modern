@@ -1,16 +1,16 @@
 package com.minelittlepony.unicopia;
 
-import net.minecraft.block.Block;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.item.Item;
-import net.minecraft.registry.*;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.dimension.DimensionType;
 
 public interface UTags {
     interface Items {
@@ -83,7 +83,7 @@ public interface UTags {
         TagKey<Item> FORAGE_SEVERE_PRICKLY = item("forage/severe/prickly");
 
         private static TagKey<Item> item(String name) {
-            return TagKey.of(RegistryKeys.ITEM, Unicopia.id(name));
+            return TagKey.create(Registries.ITEM, Unicopia.id(name));
         }
     }
 
@@ -115,7 +115,7 @@ public interface UTags {
         TagKey<Block> ANGERS_GUARDIANS = block("angers_guardians");
 
         private static TagKey<Block> block(String name) {
-            return TagKey.of(RegistryKeys.BLOCK, Unicopia.id(name));
+            return TagKey.create(Registries.BLOCK, Unicopia.id(name));
         }
     }
 
@@ -123,7 +123,7 @@ public interface UTags {
         TagKey<EntityType<?>> TRANSFORMABLE = entity("transformable");
 
         private static TagKey<EntityType<?>> entity(String name) {
-            return TagKey.of(RegistryKeys.ENTITY_TYPE, Unicopia.id(name));
+            return TagKey.create(Registries.ENTITY_TYPE, Unicopia.id(name));
         }
     }
 
@@ -134,7 +134,7 @@ public interface UTags {
         TagKey<DamageType> FROM_HORSESHOES = damage("from_horseshoes");
 
         private static TagKey<DamageType> damage(String name) {
-            return TagKey.of(RegistryKeys.DAMAGE_TYPE, Unicopia.id(name));
+            return TagKey.create(Registries.DAMAGE_TYPE, Unicopia.id(name));
         }
     }
 
@@ -142,15 +142,15 @@ public interface UTags {
         TagKey<DimensionType> HAS_NO_ATMOSPHERE = dimension("has_no_atmosphere");
 
         private static TagKey<DimensionType> dimension(String name) {
-            return TagKey.of(RegistryKeys.DIMENSION_TYPE, Identifier.of("c", name));
+            return TagKey.create(Registries.DIMENSION_TYPE, Identifier.fromNamespaceAndPath("c", name));
         }
     }
 
     interface StatusEffects {
-        TagKey<StatusEffect> PINEAPPLE_EFFECTS = effect("pineapple_effects");
+        TagKey<MobEffect> PINEAPPLE_EFFECTS = effect("pineapple_effects");
 
-        private static TagKey<StatusEffect> effect(String name) {
-            return TagKey.of(RegistryKeys.STATUS_EFFECT, Unicopia.id(name));
+        private static TagKey<MobEffect> effect(String name) {
+            return TagKey.create(Registries.MOB_EFFECT, Unicopia.id(name));
         }
     }
 
@@ -158,7 +158,7 @@ public interface UTags {
         TagKey<SoundEvent> POISON_JOKE_EVENTS = sound("poison_joke_events");
 
         private static TagKey<SoundEvent> sound(String name) {
-            return TagKey.of(RegistryKeys.SOUND_EVENT, Unicopia.id(name));
+            return TagKey.create(Registries.SOUND_EVENT, Unicopia.id(name));
         }
     }
 
@@ -169,7 +169,7 @@ public interface UTags {
         TagKey<Enchantment> PERMITS_CLOUD_INTERACTION = enchantment("permits_cloud_interaction");
 
         private static TagKey<Enchantment> enchantment(String name) {
-            return TagKey.of(RegistryKeys.ENCHANTMENT, Unicopia.id(name));
+            return TagKey.create(Registries.ENCHANTMENT, Unicopia.id(name));
         }
     }
 }

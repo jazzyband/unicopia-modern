@@ -3,56 +3,53 @@ package com.minelittlepony.unicopia.client.particle;
 import org.joml.Vector3f;
 
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.core.particles.ParticleOptions;
 
-import net.minecraft.client.particle.ParticleTextureSheet;
-import net.minecraft.client.particle.SpriteBillboardParticle;
-import net.minecraft.client.particle.SpriteProvider;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.particle.ParticleEffect;
-
-public class MagicParticle extends SpriteBillboardParticle {
+public class MagicParticle extends SingleQuadParticle {
     private final double startX;
     private final double startY;
     private final double startZ;
 
-    MagicParticle(ParticleEffect effect, SpriteProvider provider, ClientWorld w, double x, double y, double z, double vX, double vY, double vZ, Vector3f color, float alpha) {
-        super(w, x, y, z);
-        setSprite(provider);
+    MagicParticle(ParticleOptions effect, SpriteSet provider, ClientLevel w, double x, double y, double z, double vX, double vY, double vZ, Vector3f color, float alpha) {
+        super(w, x, y, z, provider.get(w.getRandom()));
 
-        velocityX = vX;
-        velocityY = vY;
-        velocityZ = vZ;
+        xd = vX;
+        yd = vY;
+        zd = vZ;
         startX = x + random.nextGaussian()/3;
         startY = y + random.nextGaussian()/3;
         startZ = z + random.nextGaussian()/3;
-        scale = random.nextFloat() * 0.12F;
-        maxAge = (int)(Math.random() * 10) + 20;
+        quadSize = random.nextFloat() * 0.12F;
+        lifetime = (int)(Math.random() * 10) + 20;
 
-        red = color.x;
-        green = color.y;
-        blue = color.z;
+        rCol = color.x;
+        gCol = color.y;
+        bCol = color.z;
         this.alpha = alpha;
     }
 
-    public MagicParticle(MagicParticleEffect effect, SpriteProvider provider, ClientWorld w, double x, double y, double z, double vX, double vY, double vZ) {
-        this(effect, provider, w, x, y, z, vX, vY, vZ, effect.getColor(w.random), 0.7F);
+    public MagicParticle(MagicParticleEffect effect, SpriteSet provider, ClientLevel w, double x, double y, double z, double vX, double vY, double vZ) {
+        this(effect, provider, w, x, y, z, vX, vY, vZ, effect.getColor(w.getRandom()), 0.7F);
     }
 
     @Override
-    public ParticleTextureSheet getType() {
-       return ParticleTextureSheet.PARTICLE_SHEET_TRANSLUCENT;
+    protected Layer getLayer() {
+       return Layer.TRANSLUCENT;
     }
 
     @Override
-    public float getSize(float tickDelta) {
-       float shrink = (age + tickDelta) / maxAge;
-       return this.scale * (1 - shrink * shrink);
+    public float getQuadSize(float tickDelta) {
+       float shrink = (age + tickDelta) / lifetime;
+       return this.quadSize * (1 - shrink * shrink);
     }
 
     @Override
-    public int getBrightness(float tint) {
-        int light = super.getBrightness(tint);
-        float timer = (float)age / (float)maxAge;
+    public int getLightCoords(float tint) {
+        int light = super.getLightCoords(tint);
+        float timer = (float)age / (float)lifetime;
 
         int v = light >> 16 & 255;
         v = (int)Math.min(v + (timer * timer * timer * timer) * 240, 240);
@@ -62,20 +59,20 @@ public class MagicParticle extends SpriteBillboardParticle {
 
     @Override
     public void tick() {
-        lastX = x;
-        lastY = y;
-        lastZ = z;
+        xo = x;
+        yo = y;
+        zo = z;
 
-        if (age++ >= maxAge) {
-            markDead();
+        if (age++ >= lifetime) {
+            remove();
         } else {
-            float timer = (float)age / (float)maxAge;
+            float timer = (float)age / (float)lifetime;
 
             timer += 1 - (timer * timer) * 2;
 
-            x = startX + velocityX * timer;
-            y = startY + velocityY;
-            z = startZ + velocityZ * timer;
+            x = startX + xd * timer;
+            y = startY + yd;
+            z = startZ + zd * timer;
         }
     }
 

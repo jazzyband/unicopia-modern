@@ -3,52 +3,28 @@ package com.minelittlepony.unicopia.client.gui.spellbook.element;
 import com.minelittlepony.common.client.gui.IViewRoot;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
 import com.minelittlepony.unicopia.block.state.Schematic;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.Mth;
 
 public record Structure(Bounds bounds, Schematic schematic) implements PageElement {
     @Override
-    public void draw(DynamicContent.GuiPage page, DrawContext context, int mouseX, int mouseY, IViewRoot container) {
+    public void draw(DynamicContent.GuiPage page, GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
         if (schematic.volume() == 0) {
             return;
         }
 
-        context.draw(immediate -> {
-            MatrixStack matrices = context.getMatrices();
-
-            MinecraftClient client = MinecraftClient.getInstance();
-            float tickDelta = client.player.age + client.getRenderTickCounter().getTickProgress(false);
-            float age = tickDelta % 360F;
-
-            matrices.push();
-            if (container != null) {
-                matrices.translate(container.getBounds().width / 2, container.getBounds().height / 2 - 20, 100);
-                float minDimensions = Math.min(container.getBounds().width * 0.7F, container.getBounds().height) - 30;
-                int minSize = (Math.max(schematic.dx(), Math.max(schematic.dy(), schematic.dz())) + 1) * 16;
-                float scale = minDimensions / minSize;
-                matrices.scale(scale, scale, 1);
-            }
-            matrices.scale(16, -16, 16);
-            matrices.peek().getNormalMatrix().scale(1, -1, 1);
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(20 + MathHelper.sin(tickDelta / 10F) * 2));
-            matrices.peek().getPositionMatrix().rotate(RotationAxis.POSITIVE_Y.rotationDegrees(age));
-            matrices.translate((-schematic.dx() - 1) / 2F, (-schematic.dy() - 1) / 2F, (-schematic.dz() - 1) / 2F);
-            DiffuseLighting.disableGuiDepthLighting();
-
-            for (var entry : schematic.states()) {
-                matrices.push();
-                matrices.translate(entry.x(), entry.y(), entry.z());
-                client.getBlockRenderManager().renderBlockAsEntity(entry.state(), matrices, immediate, LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV);
-                matrices.pop();
-            }
-
-            matrices.pop();
-        });
+        int centerX = container == null ? bounds.left : container.getBounds().width / 2;
+        int centerY = container == null ? bounds.top : container.getBounds().height / 2;
+        for (var entry : schematic.states()) {
+            int x = centerX + (entry.x() - entry.z()) * 10;
+            int y = centerY + (entry.x() + entry.z()) * 5 - entry.y() * 10;
+            context.item(entry.state().getBlock().asItem().getDefaultInstance(), x, y);
+        }
     }
 }

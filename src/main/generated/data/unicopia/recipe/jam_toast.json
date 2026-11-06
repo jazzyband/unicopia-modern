@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "unicopia:zap_apple_jam_jar",
+    "unicopia:toast",
+    "unicopia:toast",
+    "unicopia:toast",
+    "unicopia:toast",
+    "unicopia:toast",
+    "unicopia:toast",
+    "unicopia:toast",
+    "unicopia:toast"
+  ],
+  "result": {
+    "count": 8,
+    "id": "unicopia:jam_toast"
+  }
+}

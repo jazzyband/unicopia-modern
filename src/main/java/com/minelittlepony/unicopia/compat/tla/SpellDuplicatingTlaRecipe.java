@@ -3,10 +3,10 @@ package com.minelittlepony.unicopia.compat.tla;
 import com.minelittlepony.unicopia.ability.magic.spell.crafting.SpellbookRecipe;
 
 import io.github.mattidragon.tlaapi.api.recipe.TlaIngredient;
-import net.minecraft.recipe.RecipeEntry;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 class SpellDuplicatingTlaRecipe extends SpellbookTlaRecipe {
-    public SpellDuplicatingTlaRecipe(RecipeEntry<SpellbookRecipe> recipe) {
+    public SpellDuplicatingTlaRecipe(RecipeHolder<SpellbookRecipe> recipe) {
         super(recipe);
     }
 

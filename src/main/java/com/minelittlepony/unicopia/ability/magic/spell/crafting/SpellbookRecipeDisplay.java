@@ -4,7 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay.Composite;
+import net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay;
 import com.minelittlepony.unicopia.ability.magic.spell.crafting.SpellbookRecipe.CraftingTreeBuilder;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.item.UItems;
@@ -13,32 +21,22 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.display.RecipeDisplay;
-import net.minecraft.recipe.display.SlotDisplay;
-import net.minecraft.recipe.display.SlotDisplay.CompositeSlotDisplay;
-import net.minecraft.recipe.display.SlotDisplay.ItemSlotDisplay;
-import net.minecraft.recipe.display.SlotDisplay.StackSlotDisplay;
-
 public record SpellbookRecipeDisplay(List<Input> inputs, List<List<ItemStack>> results, SlotDisplay result) implements RecipeDisplay {
     @SuppressWarnings("deprecation")
-    static final SlotDisplay CRAFTING_STATION = new ItemSlotDisplay(UItems.SPELLBOOK.getRegistryEntry());
+    static final SlotDisplay CRAFTING_STATION = new ItemSlotDisplay(UItems.SPELLBOOK.builtInRegistryHolder());
 
     private static final MapCodec<SpellbookRecipeDisplay> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         Input.CODEC.listOf().fieldOf("inputs").forGetter(SpellbookRecipeDisplay::inputs),
         ItemStack.CODEC.listOf().listOf().fieldOf("results").forGetter(SpellbookRecipeDisplay::results),
         SlotDisplay.CODEC.fieldOf("result").forGetter(SpellbookRecipeDisplay::result)
     ).apply(i, SpellbookRecipeDisplay::new));
-    private static final PacketCodec<RegistryByteBuf, SpellbookRecipeDisplay> PACKET_CODEC = PacketCodec.tuple(
-        Input.PACKET_CODEC.collect(PacketCodecs.toList()), SpellbookRecipeDisplay::inputs,
-        ItemStack.PACKET_CODEC.collect(PacketCodecs.toList()).collect(PacketCodecs.toList()), SpellbookRecipeDisplay::results,
-        SlotDisplay.PACKET_CODEC, SpellbookRecipeDisplay::result,
+    private static final StreamCodec<RegistryFriendlyByteBuf, SpellbookRecipeDisplay> PACKET_CODEC = StreamCodec.composite(
+        Input.PACKET_CODEC.apply(ByteBufCodecs.list()), SpellbookRecipeDisplay::inputs,
+        ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list()).apply(ByteBufCodecs.list()), SpellbookRecipeDisplay::results,
+        SlotDisplay.STREAM_CODEC, SpellbookRecipeDisplay::result,
         SpellbookRecipeDisplay::new
     );
-    public static final Serializer<SpellbookRecipeDisplay> SERIALIZER = new Serializer<>(CODEC, PACKET_CODEC);
+    public static final Type<SpellbookRecipeDisplay> SERIALIZER = new Type<>(CODEC, PACKET_CODEC);
 
     public static SpellbookRecipeDisplay of(Consumer<CraftingTreeBuilder> consumer) {
         List<Input> inputs = new ArrayList<>();
@@ -70,8 +68,8 @@ public record SpellbookRecipeDisplay(List<Input> inputs, List<List<ItemStack>> r
             }
         });
 
-        return new SpellbookRecipeDisplay(inputs, results, new CompositeSlotDisplay(results.stream()
-                .map(stacks -> (SlotDisplay)(stacks.size() == 1 ? new StackSlotDisplay(stacks.get(0)) :  new CompositeSlotDisplay(stacks.stream().map(i -> (SlotDisplay)new StackSlotDisplay(i)).toList())))
+        return new SpellbookRecipeDisplay(inputs, results, new Composite(results.stream()
+                .map(stacks -> (SlotDisplay)(stacks.size() == 1 ? new ItemStackSlotDisplay(net.minecraft.world.item.ItemStackTemplate.fromStack(stacks.get(0))) :  new Composite(stacks.stream().map(i -> (SlotDisplay)new ItemStackSlotDisplay(net.minecraft.world.item.ItemStackTemplate.fromStack(i))).toList())))
                 .toList()));
     }
 
@@ -81,7 +79,7 @@ public record SpellbookRecipeDisplay(List<Input> inputs, List<List<ItemStack>> r
     }
 
     @Override
-    public Serializer<? extends RecipeDisplay> serializer() {
+    public Type<? extends RecipeDisplay> type() {
         return SERIALIZER;
     }
 
@@ -114,9 +112,9 @@ public record SpellbookRecipeDisplay(List<Input> inputs, List<List<ItemStack>> r
             Trait.CODEC.fieldOf("trait").forGetter(Pair::getFirst),
             Codec.FLOAT.fieldOf("value").forGetter(Pair::getSecond)
         ).apply(instance, Pair::of));
-        private static final PacketCodec<RegistryByteBuf, Pair<Trait, Float>> TRAIT_PAIR_PACKET_CODEC = PacketCodec.tuple(
+        private static final StreamCodec<RegistryFriendlyByteBuf, Pair<Trait, Float>> TRAIT_PAIR_PACKET_CODEC = StreamCodec.composite(
                 Trait.PACKET_CODEC, Pair::getFirst,
-                PacketCodecs.FLOAT, Pair::getSecond,
+                ByteBufCodecs.FLOAT, Pair::getSecond,
                 Pair::of
         );
 
@@ -126,11 +124,11 @@ public record SpellbookRecipeDisplay(List<Input> inputs, List<List<ItemStack>> r
             Trait.CODEC.listOf().optionalFieldOf("traits").forGetter(Input::traits),
             TRAIT_PAIR_CODEC.optionalFieldOf("trait").forGetter(Input::trait)
         ).apply(i, Input::new));
-        private static final PacketCodec<RegistryByteBuf, Input> PACKET_CODEC = PacketCodec.tuple(
-                PacketCodecs.BOOLEAN, Input::hidden,
-                PacketCodecs.optional(ItemStack.PACKET_CODEC.collect(PacketCodecs.toList())), Input::stacks,
-                PacketCodecs.optional(Trait.PACKET_CODEC.collect(PacketCodecs.toList())), Input::traits,
-                PacketCodecs.optional(TRAIT_PAIR_PACKET_CODEC), Input::trait,
+        private static final StreamCodec<RegistryFriendlyByteBuf, Input> PACKET_CODEC = StreamCodec.composite(
+                ByteBufCodecs.BOOL, Input::hidden,
+                ByteBufCodecs.optional(ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list())), Input::stacks,
+                ByteBufCodecs.optional(Trait.PACKET_CODEC.apply(ByteBufCodecs.list())), Input::traits,
+                ByteBufCodecs.optional(TRAIT_PAIR_PACKET_CODEC), Input::trait,
                 Input::new
         );
     }

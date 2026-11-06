@@ -1,9 +1,8 @@
 package com.minelittlepony.unicopia.util;
 
 import com.minelittlepony.unicopia.Unicopia;
-
 import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 public class Lerp {
     private long duration;
@@ -28,7 +27,7 @@ public class Lerp {
         if (Float.isNaN(newTarget) || Float.isInfinite(newTarget)) {
             Unicopia.LOGGER.error("Invalid lerp target. Target cannot be NaN or Infinity");
         }
-        if (MathHelper.approximatelyEquals(end, newTarget)) {
+        if (Mth.equal(end, newTarget)) {
             return false;
         }
         if (changeDuration == 0) {
@@ -39,7 +38,7 @@ public class Lerp {
         }
 
         start = getValue();
-        startTime = Util.getMeasuringTimeMs();
+        startTime = Util.getMillis();
         end = newTarget;
         duration = changeDuration;
         finished = false;
@@ -59,9 +58,9 @@ public class Lerp {
         float delta = getDelta();
         finished = delta >= 1F;
         if (angle) {
-            return MathHelper.lerpAngleDegrees(delta, start, end);
+            return Mth.rotLerp(delta, start, end);
         }
-        return MathHelper.lerp(delta, start, end);
+        return Mth.lerp(delta, start, end);
     }
 
     public float getTarget() {
@@ -76,6 +75,6 @@ public class Lerp {
         if (duration == 0) {
             return 1;
         }
-        return MathHelper.clamp((float)(Util.getMeasuringTimeMs() - startTime) / (float)duration, 0, 1);
+        return Mth.clamp((float)(Util.getMillis() - startTime) / (float)duration, 0, 1);
     }
 }

@@ -5,16 +5,16 @@ import java.util.concurrent.CompletableFuture;
 
 import com.minelittlepony.unicopia.Unicopia;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
-import net.minecraft.registry.RegistryLoader;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.resources.RegistryDataLoader;
 
 public class UDynamicRegistriesProvider extends FabricDynamicRegistryProvider {
     private final Set<String> namespaces = Set.of(Unicopia.DEFAULT_NAMESPACE, Unicopia.VANILLA_EXTENSIONS_NAMESPACE);
 
-    public UDynamicRegistriesProvider(FabricDataOutput output, CompletableFuture<WrapperLookup> registriesFuture) {
+    public UDynamicRegistriesProvider(FabricPackOutput output, CompletableFuture<Provider> registriesFuture) {
         super(output, registriesFuture);
     }
 
@@ -24,15 +24,15 @@ public class UDynamicRegistriesProvider extends FabricDynamicRegistryProvider {
     }
 
     @Override
-    protected void configure(WrapperLookup registries, Entries entries) {
-        RegistryLoader.DYNAMIC_REGISTRIES.forEach(registry -> {
-            addAll(entries, entries.getLookups().getOrThrow(registry.key()));
+    protected void configure(Provider registries, Entries entries) {
+        RegistryDataLoader.WORLD_REGISTRIES.forEach(registry -> {
+            addAll(entries, entries.getLookups().lookupOrThrow(registry.key()));
         });
     }
 
-    private <T> void addAll(Entries entries, RegistryWrapper.Impl<T> wrapper) {
-        wrapper.streamKeys()
-            .filter(registryKey -> namespaces.contains(registryKey.getValue().getNamespace()))
+    private <T> void addAll(Entries entries, HolderLookup.RegistryLookup<T> wrapper) {
+        wrapper.listElementIds()
+            .filter(registryKey -> namespaces.contains(registryKey.identifier().getNamespace()))
             .forEach(key -> entries.add(wrapper, key));
     }
 }

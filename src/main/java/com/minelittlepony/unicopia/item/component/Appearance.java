@@ -2,24 +2,23 @@ package com.minelittlepony.unicopia.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public record Appearance(ItemStack item, boolean replaceFully) {
     public static final Appearance DEFAULT = new Appearance(ItemStack.EMPTY, false);
     public static final Appearance DEFAULT_FULLY_DISGUISED = new Appearance(ItemStack.EMPTY, true);
     public static final Codec<Appearance> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.withAlternative(ItemStack.CODEC, Registries.ITEM.getCodec(), Item::getDefaultStack).fieldOf("item").forGetter(Appearance::item),
+            Codec.withAlternative(ItemStack.CODEC, BuiltInRegistries.ITEM.byNameCodec(), Item::getDefaultInstance).fieldOf("item").forGetter(Appearance::item),
             Codec.BOOL.fieldOf("replace_fully").forGetter(Appearance::replaceFully)
     ).apply(instance, Appearance::of));
-    public static final PacketCodec<RegistryByteBuf, Appearance> PACKET_CODEC = PacketCodec.tuple(
-            ItemStack.PACKET_CODEC, Appearance::item,
-            PacketCodecs.BOOLEAN, Appearance::replaceFully,
+    public static final StreamCodec<RegistryFriendlyByteBuf, Appearance> PACKET_CODEC = StreamCodec.composite(
+            ItemStack.STREAM_CODEC, Appearance::item,
+            ByteBufCodecs.BOOL, Appearance::replaceFully,
             Appearance::of
     );
 
@@ -60,12 +59,12 @@ public record Appearance(ItemStack item, boolean replaceFully) {
 
     private static Appearance createAppearanceFor(ItemStack stack, ItemStack appearance) {
         if (appearance.isEmpty()) {
-            return stack.getDefaultComponents().getOrDefault(UDataComponentTypes.APPEARANCE, DEFAULT);
+            return stack.getPrototype().getOrDefault(UDataComponentTypes.APPEARANCE, DEFAULT);
         }
 
         appearance = appearance.copy();
         appearance.setCount(stack.getCount());
-        appearance.setDamage(stack.getDamage());
+        appearance.setDamageValue(stack.getDamageValue());
         return of(appearance, stack.getOrDefault(UDataComponentTypes.APPEARANCE, DEFAULT).replaceFully());
     }
 

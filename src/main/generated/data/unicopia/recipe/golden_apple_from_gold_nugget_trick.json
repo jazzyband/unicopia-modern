@@ -1,0 +1,8 @@
+{
+  "type": "unicopia:crafting_zap_apple",
+  "appearance": "minecraft:golden_apple",
+  "ingredients": [
+    "unicopia:zap_apple",
+    "minecraft:gold_nugget"
+  ]
+}

@@ -32,43 +32,43 @@ import com.mojang.serialization.DataResult;
 import io.netty.buffer.ByteBuf;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.SpawnEggItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.Mth;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.block.Block;
 
 public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     public static final SpellTraits EMPTY = new SpellTraits(Map.of());
     private static final SpellTraits SPAWN_EGG_TRAITS = new SpellTraits(Map.of(Trait.LIFE, 20F));
 
-    private static Map<RegistryKey<Item>, SpellTraits> REGISTRY = new HashMap<>();
+    private static Map<ResourceKey<Item>, SpellTraits> REGISTRY = new HashMap<>();
     static final Map<Trait, List<Item>> ITEMS = new HashMap<>();
 
     public static final Codec<SpellTraits> CODEC = Codec.unboundedMap(Trait.CODEC, Codec.FLOAT).flatXmap(
             map -> DataResult.success(fromEntries(map.entrySet().stream())),
             traits -> DataResult.success(traits.traits)
     );
-    public static final PacketCodec<ByteBuf, SpellTraits> PACKET_CODEC = PacketCodecs.map(i -> new EnumMap<>(Trait.class), Trait.PACKET_CODEC, PacketCodecs.FLOAT).xmap(
+    public static final StreamCodec<ByteBuf, SpellTraits> PACKET_CODEC = ByteBufCodecs.map(i -> new EnumMap<>(Trait.class), Trait.PACKET_CODEC, ByteBufCodecs.FLOAT).map(
             entries -> fromEntries(entries.entrySet().stream()),
             traits -> traits.traits
     );
 
     private static final Interner<SpellTraits> INTERNER = Interners.newWeakInterner();
 
-    public static void load(Map<RegistryKey<Item>, SpellTraits> newRegistry) {
+    public static void load(Map<ResourceKey<Item>, SpellTraits> newRegistry) {
         REGISTRY = newRegistry;
         ITEMS.clear();
         REGISTRY.forEach((itemId, traits) -> {
-            Registries.ITEM.getOptionalValue(itemId).ifPresent(item -> {
+            BuiltInRegistries.ITEM.getOptional(itemId).ifPresent(item -> {
                 traits.forEach(entry -> {
                     List<Item> items = ITEMS.computeIfAbsent(entry.getKey(), k -> new ArrayList<>());
                     if (!items.contains(item)) {
@@ -83,7 +83,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
         return EMPTY;
     }
 
-    public static Map<RegistryKey<Item>, SpellTraits> all() {
+    public static Map<ResourceKey<Item>, SpellTraits> all() {
         return new HashMap<>(REGISTRY);
     }
 
@@ -170,19 +170,19 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     }
 
     public float get(Trait trait, float min, float max) {
-        return MathHelper.clamp(get(trait), min, max);
+        return Mth.clamp(get(trait), min, max);
     }
 
     @Environment(EnvType.CLIENT)
-    public void appendTooltip(Consumer<Text> textConsumer) {
+    public void appendTooltip(Consumer<Component> textConsumer) {
         if (isEmpty()) {
             return;
         }
         textConsumer.accept(new ItemTraitsTooltipRenderer(this));
     }
 
-    public NbtCompound toNbt() {
-        NbtCompound nbt = new NbtCompound();
+    public CompoundTag toNbt() {
+        CompoundTag nbt = new CompoundTag();
         traits.forEach((key, value) -> nbt.putFloat(key.getId().toString(), value));
         return nbt;
     }
@@ -236,7 +236,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
         return traits.isEmpty() ? EMPTY : INTERNER.intern(new SpellTraits(traits));
     }
 
-    public static SpellTraits of(Inventory inventory) {
+    public static SpellTraits of(Container inventory) {
         return of(InventoryUtil.stream(inventory).toList());
     }
 
@@ -245,7 +245,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     }
 
     public static SpellTraits of(ItemStack stack) {
-        return getEmbeddedTraits(stack).orElseGet(() -> of(stack.getRegistryEntry().getKey().orElseThrow()));
+        return getEmbeddedTraits(stack).orElseGet(() -> of(stack.getItem().builtInRegistryHolder().unwrapKey().orElseThrow()));
     }
 
     public static SpellTraits of(Trait trait, float amount) {
@@ -260,11 +260,11 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
         if (item instanceof SpawnEggItem) {
             return SPAWN_EGG_TRAITS;
         }
-        return REGISTRY.getOrDefault(item.getRegistryEntry().registryKey(), EMPTY);
+        return REGISTRY.getOrDefault(item.builtInRegistryHolder().key(), EMPTY);
     }
 
-    public static SpellTraits of(RegistryKey<Item> key) {
-        Item item = Registries.ITEM.get(key);
+    public static SpellTraits of(ResourceKey<Item> key) {
+        Item item = BuiltInRegistries.ITEM.getValue(key);
         if (item instanceof ItemWithTraits i) {
             return i.getDefaultTraits();
         }
@@ -276,7 +276,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
 
     @SuppressWarnings("deprecation")
     public static SpellTraits of(Block block) {
-        return of(block.asItem().getRegistryEntry().registryKey());
+        return of(block.asItem().builtInRegistryHolder().key());
     }
 
     public static Stream<Item> getItems(Trait trait) {
@@ -288,7 +288,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     }
 
     @Deprecated
-    public static Optional<SpellTraits> fromNbt(NbtCompound traits) {
+    public static Optional<SpellTraits> fromNbt(CompoundTag traits) {
         return CODEC.decode(NbtOps.INSTANCE, traits).result().map(Pair::getFirst);
     }
 
@@ -296,7 +296,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
         return Codec.STRING.xmap(traits -> {
             return fromEntries(Arrays.stream(traits.split(delimiter)).map(a -> a.split(":"))
                     .flatMap(pair -> Trait.of(pair[0]).stream().map(key -> Map.entry(key, Float.parseFloat(pair[1])))));
-        }, spellTraits -> spellTraits.stream().map(entry -> entry.getKey().asString() + ":" + entry.getValue()).collect(Collectors.joining(delimiter)));
+        }, spellTraits -> spellTraits.stream().map(entry -> entry.getKey().getSerializedName() + ":" + entry.getValue()).collect(Collectors.joining(delimiter)));
     }
 
     private static SpellTraits fromEntries(Stream<Map.Entry<Trait, Float>> entries) {

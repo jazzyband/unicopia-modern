@@ -1,0 +1,9 @@
+{
+  "parent": "unicopia:block/seethrough_stairs",
+  "textures": {
+    "bottom": "unicopia:block/cloud_bricks",
+    "side": "unicopia:block/cloud_bricks",
+    "step": "unicopia:block/cloud_bricks",
+    "top": "unicopia:block/cloud_bricks"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_sour_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:sour_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:sour_apple_seeds_from_sour_apple"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_sour_apple"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:sour_apple_seeds_from_sour_apple"
+    ]
+  }
+}

@@ -9,22 +9,25 @@ import com.minelittlepony.api.model.PonyModel;
 import com.minelittlepony.api.model.gear.Gear;
 import com.minelittlepony.unicopia.client.render.GlassesFeatureRenderer.GlassesModel;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
-import net.minecraft.client.model.*;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import com.minelittlepony.unicopia.client.render.RenderGeometry;
+import com.minelittlepony.client.render.entity.state.PonyRenderState;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.resources.Identifier;
 
-class GlassesGear extends GlassesModel implements Gear {
+class GlassesGear extends GlassesModel implements Gear<com.minelittlepony.client.render.entity.state.PonyRenderState> {
 
     private final Map<Identifier, Identifier> textures = new HashMap<>();
 
     public GlassesGear() {
-        super(GlassesModel.getData(new Dilation(0.3F), -6, -6).createModel());
+        super(GlassesModel.getData(new CubeDeformation(0.3F), -6, -6).bakeRoot());
     }
 
     @Override
-    public boolean canRender(PonyModel<?> model, EntityRenderState entity) {
+    public boolean canRender(PonyModel<?> model, PonyRenderState entity) {
         return !CasterState.of(entity).eyewear.stack().isEmpty();
     }
 
@@ -34,12 +37,16 @@ class GlassesGear extends GlassesModel implements Gear {
     }
 
     @Override
-    public <S extends EntityRenderState> Identifier getTexture(S entity, Context<S, ?> context) {
-        return textures.computeIfAbsent(CasterState.of(entity).eyewear.stack().getRegistryEntry().getKey().get().getValue(), id -> id.withPath(p -> "textures/models/armor/" + p + ".png"));
+    public Identifier getTexture(PonyRenderState entity, Context<PonyRenderState, ?> context) {
+        return textures.computeIfAbsent(CasterState.of(entity).eyewear.stack().getItem().builtInRegistryHolder().unwrapKey().get().identifier(), id -> id.withPath(p -> "textures/models/armor/" + p + ".png"));
     }
 
     @Override
-    public void render(MatrixStack stack, VertexConsumer consumer, int light, int overlay, int color, UUID interpolatorId) {
-        render(stack, consumer, light, overlay, color);
+    public void render(PoseStack stack, GearRenderState<PonyRenderState> state, SubmitNodeCollector frame,
+            RenderType renderType, int overlay, int light, int color) {
+        if (state.model instanceof net.minecraft.client.model.HumanoidModel<?> biped) {
+            setAngles(state.entityState, biped);
+        }
+        RenderGeometry.submitModel(stack, frame, this, renderType, light, overlay, color);
     }
 }

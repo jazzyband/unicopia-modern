@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet_convert",
+  "key": {
+    "#": "minecraft:light_blue_wool",
+    "%": "minecraft:white_wool",
+    "X": {
+      "fabric:type": "unicopia:exclusive",
+      "exclude": "unicopia:barred_bed_sheets",
+      "include": "#unicopia:wool_bed_sheets"
+    }
+  },
+  "pattern": [
+    "#%#",
+    "% %",
+    "X%#"
+  ],
+  "result": {
+    "count": 2,
+    "id": "unicopia:barred_bed_sheets"
+  }
+}

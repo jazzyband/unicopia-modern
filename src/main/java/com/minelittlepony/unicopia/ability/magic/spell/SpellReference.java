@@ -1,18 +1,15 @@
 package com.minelittlepony.unicopia.ability.magic.spell;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 public final class SpellReference<T extends Spell> implements NbtSerialisable {
     @Nullable
@@ -52,14 +49,17 @@ public final class SpellReference<T extends Spell> implements NbtSerialisable {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-        Spell.writeNbt(compound, spell, lookup);
+    public void toNBT(CompoundTag compound, Provider lookup) {
+        if (spell != null && !spell.isDead()) {
+            spell.toNBT(compound, lookup);
+            spell.getTypeAndTraits().toNbt(compound);
+        }
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         if (spell == null || !Objects.equals(Spell.getUuid(compound), spell.getUuid())) {
-            spell = Spell.<T>readNbt(Optional.of(compound), lookup).orElse(null);
+            spell = Spell.readNbt(compound, lookup);
         } else  {
             spell.fromNBT(compound, lookup);
         }

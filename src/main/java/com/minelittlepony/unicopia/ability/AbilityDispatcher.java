@@ -5,7 +5,9 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.*;
@@ -15,10 +17,6 @@ import com.minelittlepony.unicopia.network.MsgPlayerAbility;
 import com.minelittlepony.unicopia.network.Channel;
 import com.minelittlepony.unicopia.util.Tickable;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Identifier;
 
 public class AbilityDispatcher implements Tickable, NbtSerialisable {
 
@@ -84,19 +82,19 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         if (compound.contains("stats")) {
             stats.clear();
-            NbtCompound li = compound.getCompoundOrEmpty("stats");
-            li.getKeys().forEach(key -> {
+            CompoundTag li = compound.getCompoundOrEmpty("stats");
+            li.keySet().forEach(key -> {
                 getStat(AbilitySlot.valueOf(key)).fromNBT(li.getCompoundOrEmpty(key), lookup);
             });
         }
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-        NbtCompound li = new NbtCompound();
+    public void fromNBT(CompoundTag compound, Provider lookup) {
+        CompoundTag li = new CompoundTag();
         stats.forEach((key, value) -> li.put(key.name(), value.toNBT(lookup)));
         compound.put("stats", li);
     }
@@ -284,25 +282,25 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
         }
 
         @Override
-        public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+        public void toNBT(CompoundTag compound, Provider lookup) {
             compound.putInt("warmup", warmup);
             compound.putInt("cooldown", cooldown);
             compound.putInt("maxWarmup", maxWarmup);
             compound.putInt("maxCooldown", maxCooldown);
             compound.putBoolean("triggered", triggered);
             getActiveAbility().ifPresent(ability -> {
-                compound.putString("activeAbility", Abilities.REGISTRY.getId(ability).toString());
+                compound.putString("activeAbility", Abilities.REGISTRY.getKey(ability).toString());
             });
         }
 
         @Override
-        public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-            warmup = compound.getInt("warmup", 0);
-            cooldown = compound.getInt("cooldown", 0);
-            maxWarmup = compound.getInt("maxWarmup", 0);
-            maxCooldown = compound.getInt("maxCooldown", 0);
-            triggered = compound.getBoolean("triggered", false);
-            activeAbility = Abilities.REGISTRY.getOptionalValue(Identifier.of(compound.getString("activeAbility", null)));
+        public void fromNBT(CompoundTag compound, Provider lookup) {
+            warmup = compound.getIntOr("warmup", 0);
+            cooldown = compound.getIntOr("cooldown", 0);
+            maxWarmup = compound.getIntOr("maxWarmup", 0);
+            maxCooldown = compound.getIntOr("maxCooldown", 0);
+            triggered = compound.getBooleanOr("triggered", false);
+            activeAbility = Abilities.REGISTRY.getOptional(Identifier.parse(compound.getStringOr("activeAbility", null)));
         }
     }
 }

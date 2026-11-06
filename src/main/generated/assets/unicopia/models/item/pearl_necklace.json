@@ -1,0 +1,6 @@
+{
+  "parent": "unicopia:item/template_amulet",
+  "textures": {
+    "layer0": "unicopia:item/pearl_necklace"
+  }
+}

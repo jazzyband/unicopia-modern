@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_rock": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:rock"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.born_on_a_rock_farm.description"
+    },
+    "icon": {
+      "id": "unicopia:rock"
+    },
+    "title": {
+      "translate": "advancements.unicopia.born_on_a_rock_farm.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_rock"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

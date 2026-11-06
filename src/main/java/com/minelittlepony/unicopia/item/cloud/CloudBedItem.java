@@ -1,28 +1,26 @@
 package com.minelittlepony.unicopia.item.cloud;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import com.google.common.base.Suppliers;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.util.math.BlockPos;
 
 public class CloudBedItem extends CloudBlockItem implements Supplier<BlockEntity> {
 
     private final Supplier<BlockEntity> renderEntity;
 
-    public CloudBedItem(Block block, Settings settings) {
+    public CloudBedItem(Block block, Properties settings) {
         super(block, settings);
-        this.renderEntity = Suppliers.memoize(() -> ((BlockEntityProvider)block).createBlockEntity(BlockPos.ORIGIN, block.getDefaultState()));
+        this.renderEntity = Suppliers.memoize(() -> ((EntityBlock)block).newBlockEntity(BlockPos.ZERO, block.defaultBlockState()));
     }
 
     @Override
-    protected boolean place(ItemPlacementContext context, BlockState state) {
-        return context.getWorld().setBlockState(context.getBlockPos(), state, Block.NOTIFY_LISTENERS | Block.REDRAW_ON_MAIN_THREAD | Block.FORCE_STATE);
+    protected boolean placeBlock(BlockPlaceContext context, BlockState state) {
+        return context.getLevel().setBlock(context.getClickedPos(), state, Block.UPDATE_CLIENTS | Block.UPDATE_IMMEDIATE | Block.UPDATE_KNOWN_SHAPE);
     }
 
     @Override

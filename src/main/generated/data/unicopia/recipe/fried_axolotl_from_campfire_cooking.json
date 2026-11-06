@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:campfire_cooking",
+  "category": "food",
+  "cookingtime": 630,
+  "experience": 2.2,
+  "ingredient": "minecraft:axolotl_bucket",
+  "result": {
+    "id": "unicopia:fried_axolotl"
+  }
+}

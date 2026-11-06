@@ -1,0 +1,24 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "type": "farmersdelight:cutting",
+  "ingredients": [
+    "unicopia:apple_pie_hoof"
+  ],
+  "result": [
+    {
+      "item": {
+        "count": 4,
+        "id": "unicopia:apple_pie_slice"
+      }
+    }
+  ],
+  "sound": "minecraft:block.beehive.shear",
+  "tool": "#c:tools/knife"
+}

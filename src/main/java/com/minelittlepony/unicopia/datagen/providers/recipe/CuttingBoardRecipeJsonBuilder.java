@@ -4,6 +4,33 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementRequirements;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.triggers.RecipeUnlockedTrigger;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.PlacementInfo;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.Level;
 import org.spongepowered.include.com.google.common.base.Preconditions;
 
 import com.mojang.datafixers.util.Either;
@@ -11,55 +38,26 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementCriterion;
-import net.minecraft.advancement.AdvancementRequirements;
-import net.minecraft.advancement.AdvancementRewards;
-import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.IngredientPlacement;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.book.RecipeBookCategories;
-import net.minecraft.recipe.book.RecipeBookCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.world.World;
-
 public class CuttingBoardRecipeJsonBuilder {
-    private final Map<String, AdvancementCriterion<?>> criterions = new LinkedHashMap<>();
+    private final Map<String, Criterion<?>> criterions = new LinkedHashMap<>();
 
-    private final ItemConvertible output;
+    private final ItemLike output;
     private Either<Ingredient, Tool> tool;
 
     private final List<Result> results = new ArrayList<>();
     private final List<Ingredient> ingredients = new ArrayList<>();
 
-    private Identifier sound = Identifier.ofVanilla("item.axe.strip");
+    private Identifier sound = Identifier.withDefaultNamespace("item.axe.strip");
 
-    public static CuttingBoardRecipeJsonBuilder create(ItemConvertible output, String action) {
+    public static CuttingBoardRecipeJsonBuilder create(ItemLike output, String action) {
         return new CuttingBoardRecipeJsonBuilder(output).tool(action);
     }
 
-    public static CuttingBoardRecipeJsonBuilder create(ItemConvertible output, Ingredient tool) {
+    public static CuttingBoardRecipeJsonBuilder create(ItemLike output, Ingredient tool) {
         return new CuttingBoardRecipeJsonBuilder(output).tool(tool);
     }
 
-    protected CuttingBoardRecipeJsonBuilder(ItemConvertible output) {
+    protected CuttingBoardRecipeJsonBuilder(ItemLike output) {
         this.output = output;
     }
 
@@ -69,26 +67,26 @@ public class CuttingBoardRecipeJsonBuilder {
     }
 
     public CuttingBoardRecipeJsonBuilder tool(String action) {
-        this.tool = Either.right(new Tool(Identifier.of("farmersdelight:tool_action"), action));
+        this.tool = Either.right(new Tool(Identifier.parse("farmersdelight:item_ability"), action));
         return this;
     }
 
     public CuttingBoardRecipeJsonBuilder sound(SoundEvent sound) {
-        this.sound = Registries.SOUND_EVENT.getId(sound);
+        this.sound = BuiltInRegistries.SOUND_EVENT.getKey(sound);
         return this;
     }
 
-    public CuttingBoardRecipeJsonBuilder input(ItemConvertible input) {
-        ingredients.add(Ingredient.ofItems(input));
+    public CuttingBoardRecipeJsonBuilder input(ItemLike input) {
+        ingredients.add(Ingredient.of(input));
         return this;
     }
 
-    public CuttingBoardRecipeJsonBuilder result(ItemConvertible result, int count) {
-        results.add(new Result(Registries.ITEM.getId(result.asItem()), count));
+    public CuttingBoardRecipeJsonBuilder result(ItemLike result, int count) {
+        results.add(new Result(BuiltInRegistries.ITEM.getKey(result.asItem()), count));
         return this;
     }
 
-    public CuttingBoardRecipeJsonBuilder result(ItemConvertible result) {
+    public CuttingBoardRecipeJsonBuilder result(ItemLike result) {
         return result(result, 1);
     }
 
@@ -101,36 +99,35 @@ public class CuttingBoardRecipeJsonBuilder {
         return this;
     }
 
-    public CuttingBoardRecipeJsonBuilder criterion(String name, AdvancementCriterion<?> condition) {
+    public CuttingBoardRecipeJsonBuilder criterion(String name, Criterion<?> condition) {
         criterions.put(name, condition);
         return this;
     }
 
-    public void offerTo(RecipeExporter exporter, RegistryKey<Recipe<?>> key) {
-        key = RegistryKey.of(key.getRegistryRef(), key.getValue().withPrefixedPath("cutting/"));
-        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.getValue());
-        Advancement.Builder advancementBuilder = exporter.getAdvancementBuilder()
-            .criterion("has_the_recipe", RecipeUnlockedCriterion.create(key))
+    public void offerTo(RecipeOutput exporter, ResourceKey<Recipe<?>> key) {
+        key = ResourceKey.create(key.registryKey(), key.identifier().withPrefix("cutting/"));
+        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.identifier());
+        Advancement.Builder advancementBuilder = exporter.advancement()
             .rewards(AdvancementRewards.Builder.recipe(key))
-            .criteriaMerger(AdvancementRequirements.CriterionMerger.OR);
-        criterions.forEach(advancementBuilder::criterion);
+            .requirements(AdvancementRequirements.Strategy.OR);
+        criterions.forEach(advancementBuilder::addCriterion);
         exporter.accept(key,
             new CuttingBoardRecipe(ingredients, tool, sound, results),
-            advancementBuilder.build(key.getValue().withPrefixedPath("recipes/"))
+            advancementBuilder.build(key.identifier().withPrefix("recipes/"))
         );
     }
 
-    public void offerTo(RecipeExporter exporter) {
-        offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, Registries.ITEM.getId(output.asItem())));
+    public void offerTo(RecipeOutput exporter) {
+        offerTo(exporter, ResourceKey.create(Registries.RECIPE, BuiltInRegistries.ITEM.getKey(output.asItem())));
     }
 
-    public void offerTo(RecipeExporter exporter, String recipePath) {
-        Identifier outputItemId = Registries.ITEM.getId(output.asItem());
+    public void offerTo(RecipeOutput exporter, String recipePath) {
+        Identifier outputItemId = BuiltInRegistries.ITEM.getKey(output.asItem());
         Identifier recipeId = outputItemId.withPath(recipePath);
         if (recipeId.equals(outputItemId)) {
             throw new IllegalStateException("Recipe " + recipePath + " should remove its 'save' argument as it is equal to default one");
         }
-        offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, recipeId));
+        offerTo(exporter, ResourceKey.create(Registries.RECIPE, recipeId));
     }
 
     public record Tool(Identifier type, String action) {
@@ -140,10 +137,11 @@ public class CuttingBoardRecipeJsonBuilder {
         ).apply(ii, Tool::new));
     }
     public record Result(Identifier item, int count) {
-        public static final Codec<Result> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Identifier.CODEC.fieldOf("item").forGetter(Result::item),
-            Codecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(Result::count)
+        private static final Codec<Result> ITEM_CODEC = RecordCodecBuilder.create(i -> i.group(
+                Identifier.CODEC.fieldOf("id").forGetter(Result::item),
+            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(Result::count)
         ).apply(i, Result::new));
+        public static final Codec<Result> CODEC = ITEM_CODEC.fieldOf("item").codec();
     }
 
     public record CuttingBoardRecipe(
@@ -151,8 +149,8 @@ public class CuttingBoardRecipeJsonBuilder {
             Either<Ingredient, Tool> tool,
             Identifier sound,
             List<Result> result
-        ) implements Recipe<CraftingRecipeInput> {
-        static final Identifier ID = Identifier.of("farmersdelight", "cutting");
+        ) implements Recipe<CraftingInput> {
+        static final Identifier ID = Identifier.fromNamespaceAndPath("farmersdelight", "cutting");
         static final Codec<Either<Ingredient, Tool>> TOOL_CODEC = Codec.xor(Ingredient.CODEC, Tool.CODEC);
         static final MapCodec<CuttingBoardRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Ingredient.CODEC.listOf().fieldOf("ingredients").forGetter(CuttingBoardRecipe::ingredients),
@@ -160,25 +158,26 @@ public class CuttingBoardRecipeJsonBuilder {
                 Identifier.CODEC.fieldOf("sound").forGetter(CuttingBoardRecipe::sound),
                 Result.CODEC.listOf().fieldOf("result").forGetter(CuttingBoardRecipe::result)
         ).apply(i, CuttingBoardRecipe::new));
-        static final RecipeType<CuttingBoardRecipe> TYPE = Registry.register(Registries.RECIPE_TYPE, ID, new RecipeType<>() {
+        static final RecipeType<CuttingBoardRecipe> TYPE = Registry.register(BuiltInRegistries.RECIPE_TYPE, ID, new RecipeType<>() {
             @Override
             public String toString() {
                 return "farmersdelight:cutting";
             }
         });
-        static final RecipeSerializer<CuttingBoardRecipe> SERIALIZER = Registry.register(Registries.RECIPE_SERIALIZER, ID, new RecipeSerializer<>() {
-            @Override
-            public MapCodec<CuttingBoardRecipe> codec() { return CODEC; }
-            @Override
-            public PacketCodec<RegistryByteBuf, CuttingBoardRecipe> packetCodec() { return null; }
-        });
+        static final RecipeSerializer<CuttingBoardRecipe> SERIALIZER = Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, ID, new RecipeSerializer<>(CODEC, null));
         public static void bootstrap() {}
 
         @Override
-        public boolean matches(CraftingRecipeInput inventory, World world) { return false; }
+        public boolean matches(CraftingInput inventory, Level world) { return false; }
 
         @Override
-        public ItemStack craft(CraftingRecipeInput inventory, WrapperLookup registryManager) { return ItemStack.EMPTY; }
+        public ItemStack assemble(CraftingInput inventory) { return ItemStack.EMPTY; }
+
+        @Override
+        public boolean showNotification() { return false; }
+
+        @Override
+        public String group() { return ""; }
 
         @Override
         public RecipeSerializer<CuttingBoardRecipe> getSerializer() { return SERIALIZER; }
@@ -187,12 +186,12 @@ public class CuttingBoardRecipeJsonBuilder {
         public RecipeType<CuttingBoardRecipe> getType() { return TYPE; }
 
         @Override
-        public IngredientPlacement getIngredientPlacement() {
-            return IngredientPlacement.NONE;
+        public PlacementInfo placementInfo() {
+            return PlacementInfo.NOT_PLACEABLE;
         }
 
         @Override
-        public RecipeBookCategory getRecipeBookCategory() {
+        public RecipeBookCategory recipeBookCategory() {
             return RecipeBookCategories.CRAFTING_MISC;
         }
     }

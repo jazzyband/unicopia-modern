@@ -6,13 +6,12 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import com.minelittlepony.unicopia.item.component.Appearance;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.world.item.ItemStack;
 
-import net.minecraft.client.item.ItemModelManager;
-import net.minecraft.item.ItemStack;
-
-@Mixin(ItemModelManager.class)
+@Mixin(ItemModelResolver.class)
 abstract class MixinItemModels {
-    @ModifyVariable(method = "update(Lnet/minecraft/client/render/item/ItemRenderState;Lnet/minecraft/item/ItemStack;Lnet/minecraft/item/ItemDisplayContext;Lnet/minecraft/world/World;Lnet/minecraft/entity/LivingEntity;I)V",
+    @ModifyVariable(method = "appendItemLayers(Lnet/minecraft/client/renderer/item/ItemStackRenderState;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/ItemOwner;I)V",
             at = @At("HEAD"),
             ordinal = 0,
             argsOnly = true)

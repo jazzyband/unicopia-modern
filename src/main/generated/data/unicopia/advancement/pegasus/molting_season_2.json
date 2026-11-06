@@ -1,0 +1,45 @@
+{
+  "parent": "unicopia:pegasus/molting_season_1",
+  "criteria": {
+    "shed_feather_1": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_2": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 2
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.molting_season_2.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:pegasus_feather"
+    },
+    "title": {
+      "translate": "advancements.unicopia.molting_season_2.title"
+    }
+  },
+  "requirements": [
+    [
+      "shed_feather_1"
+    ],
+    [
+      "shed_feather_2"
+    ]
+  ],
+  "rewards": {
+    "experience": 2
+  },
+  "sends_telemetry_event": true
+}

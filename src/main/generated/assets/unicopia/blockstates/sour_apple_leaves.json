@@ -1,0 +1,17 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "unicopia:block/sour_apple_leaves"
+      }
+    },
+    {
+      "apply": {
+        "model": "unicopia:block/sour_apple_leaves_flowering"
+      },
+      "when": {
+        "stage": "flowering"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:empty"
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 5,
+      "saturation": 6.0
+    }
+  },
+  "tags": [
+    "unicopia:baked_goods"
+  ]
+}

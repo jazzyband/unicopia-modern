@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:equestria",
+  "author": {
+    "translate": "painting.unicopia.equestria.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.equestria.title"
+  },
+  "width": 2
+}

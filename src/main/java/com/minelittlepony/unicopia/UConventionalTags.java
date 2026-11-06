@@ -1,10 +1,10 @@
 package com.minelittlepony.unicopia;
 
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 
 public interface UConventionalTags {
     interface Blocks {
@@ -15,7 +15,7 @@ public interface UConventionalTags {
         TagKey<Block> CORALS = block("corals");
 
         private static TagKey<Block> block(String name) {
-            return TagKey.of(RegistryKeys.BLOCK, Identifier.of("c", name));
+            return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("c", name));
         }
     }
 
@@ -57,7 +57,7 @@ public interface UConventionalTags {
         TagKey<Item> TOOL_KNIVES = item("tools/knife");
 
         private static TagKey<Item> item(String name) {
-            return TagKey.of(RegistryKeys.ITEM, Identifier.of("c", name));
+            return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("c", name));
         }
     }
 }

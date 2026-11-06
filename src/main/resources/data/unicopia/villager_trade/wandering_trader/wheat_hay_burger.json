@@ -1,0 +1,12 @@
+{
+  "wants": {
+    "id": "minecraft:wheat",
+    "count": 17
+  },
+  "gives": {
+    "id": "unicopia:hay_burger"
+  },
+  "max_uses": 10,
+  "xp": 6,
+  "reputation_discount": 0.08
+}

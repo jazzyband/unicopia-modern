@@ -1,6 +1,6 @@
 package com.minelittlepony.unicopia.entity;
 
-import net.minecraft.entity.ItemEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 
 class ItemPhysics extends EntityPhysics<ItemEntity> {
     public ItemPhysics(ItemEntity entity) {
@@ -9,7 +9,7 @@ class ItemPhysics extends EntityPhysics<ItemEntity> {
 
     @Override
     protected void onGravitychanged() {
-        if (!entity.getWorld().isClient) {
+        if (!entity.level().isClientSide()) {
             float gravity = getBaseGravityModifier();
             setBaseGravityModifier(gravity == 0 ? 1 : gravity * 2);
             setBaseGravityModifier(gravity);

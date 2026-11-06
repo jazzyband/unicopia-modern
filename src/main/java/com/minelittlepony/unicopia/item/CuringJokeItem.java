@@ -3,19 +3,19 @@ package com.minelittlepony.unicopia.item;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.tags.EnchantmentTags;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.EquipmentUtil;
-import net.minecraft.block.Block;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.tag.EnchantmentTags;
-import net.minecraft.world.World;
 
 public class CuringJokeItem extends BlockItem {
     static final List<Predicate<LivingEntity>> EFFECTS = List.of(
@@ -27,35 +27,35 @@ public class CuringJokeItem extends BlockItem {
             CuringJokeItem::repairItem
     );
 
-    public CuringJokeItem(Block block, Settings settings) {
+    public CuringJokeItem(Block block, Properties settings) {
         super(block, settings);
     }
 
     @Override
-    public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
+    public ItemStack finishUsingItem(ItemStack stack, Level world, LivingEntity user) {
         var items = new ArrayList<>(EFFECTS);
         while (!items.isEmpty()) {
-            if (items.remove(world.random.nextInt(items.size())).test(user)) {
+            if (items.remove(world.getRandom().nextInt(items.size())).test(user)) {
                 ParticleUtils.spawnParticles(new MagicParticleEffect(0x3388EE), user, 25);
-                world.playSound(null, user.getBlockPos(), USounds.ITEM_CURING_JOKE_CURE, user.getSoundCategory(), 1, 1);
+                world.playSound(null, user.blockPosition(), USounds.ITEM_CURING_JOKE_CURE, user.getSoundSource(), 1, 1);
                 break;
             }
         }
 
-        return super.finishUsing(stack, world, user);
+        return super.finishUsingItem(stack, world, user);
     }
 
     static boolean restoreAir(LivingEntity user) {
-        if (user.getAir() < user.getMaxAir()) {
-            user.setAir(user.getMaxAir());
+        if (user.getAirSupply() < user.getMaxAirSupply()) {
+            user.setAirSupply(user.getMaxAirSupply());
             return true;
         }
         return false;
     }
 
     static boolean restoreHunger(LivingEntity user) {
-        if (user instanceof PlayerEntity player && player.getHungerManager().getFoodLevel() < 20) {
-            player.getHungerManager().add(20, 0);
+        if (user instanceof Player player && player.getFoodData().getFoodLevel() < 20) {
+            player.getFoodData().eat(20, 0);
             return true;
         }
         return false;
@@ -70,10 +70,10 @@ public class CuringJokeItem extends BlockItem {
     }
 
     static boolean removeEffect(LivingEntity user) {
-        return user.getStatusEffects().stream().filter(effect -> {
-            return !effect.getEffectType().value().isBeneficial();
+        return user.getActiveEffects().stream().filter(effect -> {
+            return !effect.getEffect().value().isBeneficial();
         }).findAny().filter(effect -> {
-            user.removeStatusEffect(effect.getEffectType());
+            user.removeEffect(effect.getEffect());
             return true;
         }).isPresent();
     }
@@ -81,21 +81,21 @@ public class CuringJokeItem extends BlockItem {
     static boolean uncurseItem(LivingEntity user) {
         return EquipmentUtil.getInventory(user)
                 .filter(s -> {
-                    var enchantments = s.get(DataComponentTypes.ENCHANTMENTS);
-                    return enchantments != null && enchantments.getEnchantments().stream().anyMatch(entry -> entry.isIn(EnchantmentTags.CURSE));
+                    var enchantments = s.get(DataComponents.ENCHANTMENTS);
+                    return enchantments != null && enchantments.keySet().stream().anyMatch(entry -> entry.is(EnchantmentTags.CURSE));
                 })
                 .findAny()
                 .map(s -> {
-                    EnchantmentHelper.apply(s, builder -> builder.remove(entry -> entry.isIn(EnchantmentTags.CURSE)));
+                    EnchantmentHelper.updateEnchantments(s, builder -> builder.removeIf(entry -> entry.is(EnchantmentTags.CURSE)));
                     return s;
                 }).isPresent();
     }
 
     static boolean repairItem(LivingEntity user) {
         return EquipmentUtil.getInventory(user)
-                .filter(s -> s.getDamage() < s.getMaxDamage())
+                .filter(s -> s.getDamageValue() < s.getMaxDamage())
                 .findAny().filter(s -> {
-                    s.setDamage(0);
+                    s.setDamageValue(0);
                     return true;
                 }).isPresent();
     }

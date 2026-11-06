@@ -1,13 +1,12 @@
 package com.minelittlepony.unicopia.network;
 
 import java.util.UUID;
-
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import com.minelittlepony.unicopia.client.render.PlayerPoser.AnimationInstance;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.Uuids;
 
 /**
  * Sent to the client when a player's animation changes.
@@ -17,14 +16,14 @@ public record MsgPlayerAnimationChange (
         AnimationInstance animation,
         int duration
     ) {
-    public static final PacketCodec<PacketByteBuf, MsgPlayerAnimationChange> PACKET_CODEC = PacketCodec.tuple(
-            Uuids.PACKET_CODEC, MsgPlayerAnimationChange::playerId,
+    public static final StreamCodec<FriendlyByteBuf, MsgPlayerAnimationChange> PACKET_CODEC = StreamCodec.composite(
+            UUIDUtil.STREAM_CODEC, MsgPlayerAnimationChange::playerId,
             AnimationInstance.PACKET_CODEC, MsgPlayerAnimationChange::animation,
-            PacketCodecs.INTEGER, MsgPlayerAnimationChange::duration,
+            ByteBufCodecs.INT, MsgPlayerAnimationChange::duration,
             MsgPlayerAnimationChange::new
     );
 
     public MsgPlayerAnimationChange(Pony player, AnimationInstance animation, int duration) {
-        this(player.asEntity().getUuid(), animation, duration);
+        this(player.asEntity().getUUID(), animation, duration);
     }
 }

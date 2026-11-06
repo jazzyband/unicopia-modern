@@ -7,29 +7,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.minelittlepony.unicopia.client.gui.HudEffects;
 import com.minelittlepony.unicopia.client.gui.UHud;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.Hud;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.entity.player.Player;
 
-@Mixin(InGameHud.class)
+@Mixin(Hud.class)
 abstract class MixinInGameHud {
 
     @Shadow
-    abstract PlayerEntity getCameraPlayer();
+    abstract Player getCameraPlayer();
 
-    @Inject(method = "render", at = @At("HEAD"))
-    private void onRender(DrawContext context, RenderTickCounter tickCounter, CallbackInfo info) {
+    @Inject(method = "extractRenderState", at = @At("HEAD"))
+    private void onRender(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo info) {
         HudEffects.tryApply(getCameraPlayer(), tickCounter, true);
+        UHud.INSTANCE.render(context, tickCounter);
     }
 
-    @Inject(method = "renderHotbar", at = @At("HEAD"))
-    private void onRenderHorbat(DrawContext context, RenderTickCounter tickCounter, CallbackInfo info) {
-        UHud.INSTANCE.render((InGameHud)(Object)this, context, tickCounter);
-    }
-
-    @Inject(method = "render", at = @At("RETURN"))
-    private void afterRender(DrawContext context, RenderTickCounter tickCounter, CallbackInfo info) {
+    @Inject(method = "extractRenderState", at = @At("RETURN"))
+    private void afterRender(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo info) {
         HudEffects.tryApply(getCameraPlayer(), tickCounter, false);
     }
 
@@ -43,12 +40,12 @@ abstract class MixinInGameHud {
     }*/
 }
 
-@Mixin(InGameHud.HeartType.class)
-abstract class MixinInGameHud$HeartType {
+@Mixin(targets = "net.minecraft.client.gui.Hud$HeartType")
+abstract class HeartType {
     @ModifyReturnValue(
-        method = "fromPlayerState(Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/client/gui/hud/InGameHud$HeartType;",
+        method = "forPlayer",
         at = @At("RETURN"))
-    private static InGameHud.HeartType onFromPlayerState(InGameHud.HeartType heartsType, PlayerEntity player) {
-        return UHud.getHeartsType(player, heartsType);
+    private static Hud.HeartType onFromPlayerState(Hud.HeartType heartsType, Player player) {
+        return (Hud.HeartType)UHud.getHeartsType(player, heartsType);
     }
 }

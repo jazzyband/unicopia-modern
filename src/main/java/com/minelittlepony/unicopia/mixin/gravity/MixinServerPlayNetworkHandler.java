@@ -3,20 +3,19 @@ package com.minelittlepony.unicopia.mixin.gravity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.network.TickablePacketListener;
+import net.minecraft.network.protocol.game.ServerGamePacketListener;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.server.network.ServerPlayerConnection;
 
-import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.network.listener.TickablePacketListener;
-import net.minecraft.server.network.PlayerAssociatedNetworkHandler;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+@Mixin(ServerGamePacketListenerImpl.class)
+abstract class MixinServerPlayNetworkHandler implements ServerGamePacketListener, ServerPlayerConnection, TickablePacketListener {
+    @Shadow public ServerPlayer player;
 
-@Mixin(ServerPlayNetworkHandler.class)
-abstract class MixinServerPlayNetworkHandler implements ServerPlayPacketListener, PlayerAssociatedNetworkHandler, TickablePacketListener {
-    @Shadow public ServerPlayerEntity player;
-
-    @ModifyVariable(method = "onPlayerMove", at = @At("STORE"), ordinal = 0)
+    @ModifyArg(method = "handleMovePlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;handlePlayerPositionChange(DDDFFZZ)V"), index = 5)
     private boolean flipLandingFlag(boolean value) {
         if (Pony.of(this.player).getPhysics().isGravityNegative()) {
             return !value;

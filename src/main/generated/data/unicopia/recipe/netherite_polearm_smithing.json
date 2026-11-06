@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smithing_transform",
+  "addition": "#minecraft:netherite_tool_materials",
+  "base": "unicopia:diamond_polearm",
+  "result": {
+    "id": "unicopia:netherite_polearm"
+  },
+  "template": "minecraft:netherite_upgrade_smithing_template"
+}

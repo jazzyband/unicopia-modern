@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:tag",
+          "expand": true,
+          "items": "#unicopia:fresh_apples"
+        },
+        {
+          "type": "minecraft:tag",
+          "expand": true,
+          "items": "#unicopia:apple_seeds"
+        }
+      ],
+      "rolls": {
+        "type": "minecraft:uniform",
+        "max": 4,
+        "min": 3
+      }
+    }
+  ]
+}

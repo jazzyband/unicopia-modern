@@ -1,0 +1,6 @@
+{
+  "type": "unicopia:transform_crop",
+  "consume": "minecraft:raw_gold_block",
+  "output": "unicopia:golden_oak_sapling",
+  "target": "minecraft:oak_sapling"
+}

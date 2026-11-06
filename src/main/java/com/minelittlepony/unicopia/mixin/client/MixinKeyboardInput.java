@@ -7,48 +7,47 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.client.gui.UHud;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.input.Input;
-import net.minecraft.client.input.KeyboardInput;
-import net.minecraft.util.PlayerInput;
-import net.minecraft.util.math.Vec2f;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.ClientInput;
+import net.minecraft.client.player.KeyboardInput;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.phys.Vec2;
 
 @Mixin(KeyboardInput.class)
-abstract class MixinKeyboardInput extends Input {
+abstract class MixinKeyboardInput extends ClientInput {
     @Inject(method = "tick()V", at = @At("TAIL"))
     private void onTick(CallbackInfo info) {
-        Pony player = Pony.of(MinecraftClient.getInstance().player);
+        Pony player = Pony.of(Minecraft.getInstance().player);
 
         if (player != null) {
             if (player.getPhysics().isGravityNegative()) {
-                playerInput = new PlayerInput(
-                    playerInput.forward(),
-                    playerInput.backward(),
-                    playerInput.right(),
-                    playerInput.left(),
-                    playerInput.jump(),
-                    playerInput.sneak(),
-                    playerInput.sprint()
+                keyPresses = new Input(
+                    keyPresses.forward(),
+                    keyPresses.backward(),
+                    keyPresses.right(),
+                    keyPresses.left(),
+                    keyPresses.jump(),
+                    keyPresses.shift(),
+                    keyPresses.sprint()
                 );
-                movementVector = new Vec2f(-movementVector.x, movementVector.y).normalize();
+                moveVector = new Vec2(-moveVector.x, moveVector.y).normalized();
             }
 
             if (player.getAcrobatics().isImmobile()) {
-                movementVector = Vec2f.ZERO;
+                moveVector = Vec2.ZERO;
             }
 
             if (UHud.INSTANCE.handleInput(player, this)) {
-                movementVector = Vec2f.ZERO;
-                if (playerInput.jump()) {
-                    playerInput = new PlayerInput(
-                        playerInput.forward(),
-                        playerInput.backward(),
-                        playerInput.left(),
-                        playerInput.right(),
+                moveVector = Vec2.ZERO;
+                if (keyPresses.jump()) {
+                    keyPresses = new Input(
+                        keyPresses.forward(),
+                        keyPresses.backward(),
+                        keyPresses.left(),
+                        keyPresses.right(),
                         false,
-                        playerInput.sneak(),
-                        playerInput.sprint()
+                        keyPresses.shift(),
+                        keyPresses.sprint()
                     );
                 }
             }

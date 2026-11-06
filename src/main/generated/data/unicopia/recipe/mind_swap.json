@@ -1,0 +1,23 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:mimic"
+    }
+  ],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:stored_spell": "unicopia:mind_swap"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:chaos": 40.0,
+    "unicopia:knowledge": 19.0,
+    "unicopia:life": 10.0
+  }
+}

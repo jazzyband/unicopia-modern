@@ -6,13 +6,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.block.PowderSnowBlock;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.PowderSnowBlock;
 
 @Mixin(PowderSnowBlock.class)
 abstract class MixinPowderSnowBlock {
-    @Inject(method = "canWalkOnPowderSnow", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "canEntityWalkOnPowderSnow", at = @At("HEAD"), cancellable = true)
     private static void onCanWalkOnPowderSnow(Entity entity, CallbackInfoReturnable<Boolean> info) {
         if (Pony.of(entity).filter(pony -> pony.getCompositeRace().canFly()).isPresent()) {
             info.setReturnValue(true);

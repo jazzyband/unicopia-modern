@@ -1,0 +1,17 @@
+{
+  "type": "unicopia:crafting_magical",
+  "category": "equipment",
+  "key": {
+    "*": "unicopia:gemstone",
+    "/": "#c:rods/wooden"
+  },
+  "pattern": [
+    "  *",
+    " / ",
+    "/  "
+  ],
+  "result": {
+    "id": "unicopia:magic_staff"
+  },
+  "spell_source": "unicopia:gemstone"
+}

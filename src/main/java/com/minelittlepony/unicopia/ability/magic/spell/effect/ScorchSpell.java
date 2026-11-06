@@ -12,10 +12,9 @@ import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import com.minelittlepony.unicopia.util.PosHelper;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.Vec3;
 
 public class ScorchSpell extends FireSpell implements ProjectileDelegate.ConfigurationListener {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -37,7 +36,7 @@ public class ScorchSpell extends FireSpell implements ProjectileDelegate.Configu
 
         if (source.canModifyAt(pos) && StateMaps.FIRE_AFFECTED.convert(source.asWorld(), pos)) {
             source.spawnParticles(new Sphere(false, RANGE.get(getTraits())), 5, p -> {
-                source.addParticle(ParticleTypes.SMOKE, PosHelper.offset(p, pos), Vec3d.ZERO);
+                source.addParticle(ParticleTypes.SMOKE, PosHelper.offset(p, pos), Vec3.ZERO);
             });
         }
 
@@ -46,7 +45,7 @@ public class ScorchSpell extends FireSpell implements ProjectileDelegate.Configu
 
     @Override
     protected void generateParticles(Caster<?> source) {
-        source.addParticle(ParticleTypes.END_ROD, source.getOriginVector(), Vec3d.ZERO);
+        source.addParticle(ParticleTypes.END_ROD, source.getOriginVector(), Vec3.ZERO);
         source.spawnParticles(ParticleTypes.FLAME, 3);
         source.spawnParticles(new MagicParticleEffect(getType().getColor()), 3);
     }

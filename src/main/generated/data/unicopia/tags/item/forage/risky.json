@@ -1,0 +1,19 @@
+{
+  "values": [
+    "minecraft:allium",
+    "minecraft:white_tulip",
+    "unicopia:burned_juice",
+    {
+      "id": "farmersdelight:wild_tomatoes",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:wild_potatoes",
+      "required": false
+    },
+    {
+      "id": "#c:meads",
+      "required": false
+    }
+  ]
+}

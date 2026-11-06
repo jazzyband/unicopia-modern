@@ -6,71 +6,75 @@ import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.mob.UEntityAttributes;
 
 import net.fabricmc.fabric.api.item.v1.EnchantingContext;
-import net.minecraft.block.*;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.AttributeModifierSlot;
-import net.minecraft.component.type.AttributeModifiersComponent;
-import net.minecraft.component.type.ToolComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.*;
-import net.minecraft.item.*;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.util.parsing.packrat.Rule;
 
 public class PolearmItem extends Item implements ItemDuck {
-    public PolearmItem(ToolMaterial material, int damage, float speed, int range, Settings settings) {
-        super(settings.maxDamage(material.durability()).repairable(material.repairItems()).enchantable(material.enchantmentValue())
-                .attributeModifiers(createToolAttributeModifiers(material, damage, speed).with(
-                UEntityAttributes.EXTENDED_REACH_DISTANCE, new EntityAttributeModifier(UItemModifierIds.ATTACK_RANGE_MODIFIER_ID, range, EntityAttributeModifier.Operation.ADD_VALUE), AttributeModifierSlot.MAINHAND
-        ).with(
-                UEntityAttributes.EXTENDED_ATTACK_DISTANCE, new EntityAttributeModifier(UItemModifierIds.ATTACK_RANGE_MODIFIER_ID, range, EntityAttributeModifier.Operation.ADD_VALUE), AttributeModifierSlot.MAINHAND
-        )).component(DataComponentTypes.TOOL, createToolComponent()));
+    public PolearmItem(ToolMaterial material, int damage, float speed, int range, Properties settings) {
+        super(settings.durability(material.durability()).repairable(material.repairItems()).enchantable(material.enchantmentValue())
+                .attributes(createToolAttributeModifiers(material, damage, speed).withModifierAdded(
+                UEntityAttributes.EXTENDED_REACH_DISTANCE, new AttributeModifier(UItemModifierIds.ATTACK_RANGE_MODIFIER_ID, range, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND
+        ).withModifierAdded(
+                UEntityAttributes.EXTENDED_ATTACK_DISTANCE, new AttributeModifier(UItemModifierIds.ATTACK_RANGE_MODIFIER_ID, range, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND
+        )).component(DataComponents.TOOL, createToolComponent()));
     }
 
-    private static AttributeModifiersComponent createToolAttributeModifiers(ToolMaterial material, float attackDamage, float attackSpeed) {
-        return AttributeModifiersComponent.builder()
-            .add(EntityAttributes.ATTACK_DAMAGE,
-                    new EntityAttributeModifier(Item.BASE_ATTACK_DAMAGE_MODIFIER_ID, attackDamage + material.attackDamageBonus(), EntityAttributeModifier.Operation.ADD_VALUE),
-                    AttributeModifierSlot.MAINHAND)
-            .add(EntityAttributes.ATTACK_SPEED,
-                new EntityAttributeModifier(Item.BASE_ATTACK_SPEED_MODIFIER_ID, attackSpeed, EntityAttributeModifier.Operation.ADD_VALUE),
-                AttributeModifierSlot.MAINHAND)
+    private static ItemAttributeModifiers createToolAttributeModifiers(ToolMaterial material, float attackDamage, float attackSpeed) {
+        return ItemAttributeModifiers.builder()
+            .add(Attributes.ATTACK_DAMAGE,
+                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, attackDamage + material.attackDamageBonus(), AttributeModifier.Operation.ADD_VALUE),
+                    EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ATTACK_SPEED,
+                new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, attackSpeed, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
             .build();
     }
 
     @SuppressWarnings("deprecation")
-    private static ToolComponent createToolComponent() {
-        return new ToolComponent(
+    private static Tool createToolComponent() {
+        return new Tool(
             List.of(
-                ToolComponent.Rule.ofAlwaysDropping(RegistryEntryList.of(Blocks.COBWEB.getRegistryEntry()), 15),
-                ToolComponent.Rule.of(Registries.createEntryLookup(Registries.BLOCK).getOrThrow(UTags.Blocks.POLEARM_MINEABLE), 1.5F)
+                Tool.Rule.minesAndDrops(HolderSet.direct(Blocks.COBWEB.builtInRegistryHolder()), 15),
+                Tool.Rule.overrideSpeed(BuiltInRegistries.acquireBootstrapRegistrationLookup(BuiltInRegistries.BLOCK).getOrThrow(UTags.Blocks.POLEARM_MINEABLE), 1.5F)
             ), 1, 2, false
         );
     }
 
     @Override
-    public void postHit(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+    public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         boolean tooNear = target.distanceTo(attacker) <= 2;
-        target.takeKnockback(0.15, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
+        target.knockback(0.15, attacker.getX() - target.getX(), attacker.getZ() - target.getZ(), attacker.damageSources().mobAttack(attacker), 0);
         Living.updateVelocity(target);
         if (tooNear) {
-            attacker.takeKnockback(attacker.getRandom().nextTriangular(0.4, 0.2), target.getX() - attacker.getX(), target.getZ() - attacker.getZ());
+            attacker.knockback(attacker.getRandom().triangle(0.4, 0.2), target.getX() - attacker.getX(), target.getZ() - attacker.getZ(), attacker.damageSources().mobAttack(attacker), 0);
             Living.updateVelocity(attacker);
         }
     }
 
     @Override
-    public void postDamageEntity(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+    public void postHurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         boolean tooNear = target.distanceTo(attacker) <= 2;
-        stack.damage(tooNear ? 4 : 1, attacker, EquipmentSlot.MAINHAND);
+        stack.hurtAndBreak(tooNear ? 4 : 1, attacker, EquipmentSlot.MAINHAND);
     }
 
     @Override
-    public boolean canBeEnchantedWith(ItemStack stack, RegistryEntry<Enchantment> enchantment, EnchantingContext context) {
-        return !enchantment.matchesId(Enchantments.SWEEPING_EDGE.getValue()) && super.canBeEnchantedWith(stack, enchantment, context);
+    public boolean canBeEnchantedWith(ItemStack stack, Holder<Enchantment> enchantment, EnchantingContext context) {
+        return !enchantment.is(Enchantments.SWEEPING_EDGE.identifier()) && super.canBeEnchantedWith(stack, enchantment, context);
     }
 }

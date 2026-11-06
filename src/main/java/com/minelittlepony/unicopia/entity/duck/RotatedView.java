@@ -1,8 +1,7 @@
 package com.minelittlepony.unicopia.entity.duck;
 
 import java.util.Stack;
-
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 public interface RotatedView {
 

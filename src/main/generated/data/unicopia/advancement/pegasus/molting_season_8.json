@@ -1,0 +1,1432 @@
+{
+  "parent": "unicopia:pegasus/molting_season_7",
+  "criteria": {
+    "shed_feather_1": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_10": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 10
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_100": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 100
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_101": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 101
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_102": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 102
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_103": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 103
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_104": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 104
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_105": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 105
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_106": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 106
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_107": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 107
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_108": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 108
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_109": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 109
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_11": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 11
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_110": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 110
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_111": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 111
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_112": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 112
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_113": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 113
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_114": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 114
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_115": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 115
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_116": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 116
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_117": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 117
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_118": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 118
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_119": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 119
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_12": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 12
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_120": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 120
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_121": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 121
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_122": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 122
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_123": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 123
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_124": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 124
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_125": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 125
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_126": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 126
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_127": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 127
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_128": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 128
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_13": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 13
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_14": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 14
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_15": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 15
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_16": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 16
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_17": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 17
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_18": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 18
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_19": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 19
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_2": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 2
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_20": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 20
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_21": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 21
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_22": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 22
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_23": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 23
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_24": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 24
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_25": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 25
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_26": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 26
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_27": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 27
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_28": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 28
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_29": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 29
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_3": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 3
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_30": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 30
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_31": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 31
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_32": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 32
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_33": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 33
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_34": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 34
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_35": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 35
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_36": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 36
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_37": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 37
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_38": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 38
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_39": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 39
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_4": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 4
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_40": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 40
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_41": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 41
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_42": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 42
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_43": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 43
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_44": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 44
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_45": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 45
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_46": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 46
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_47": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 47
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_48": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 48
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_49": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 49
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_5": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 5
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_50": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 50
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_51": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 51
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_52": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 52
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_53": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 53
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_54": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 54
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_55": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 55
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_56": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 56
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_57": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 57
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_58": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 58
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_59": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 59
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_6": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 6
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_60": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 60
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_61": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 61
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_62": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 62
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_63": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 63
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_64": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 64
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_65": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 65
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_66": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 66
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_67": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 67
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_68": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 68
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_69": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 69
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_7": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 7
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_70": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 70
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_71": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 71
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_72": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 72
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_73": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 73
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_74": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 74
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_75": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 75
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_76": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 76
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_77": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 77
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_78": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 78
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_79": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 79
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_8": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 8
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_80": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 80
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_81": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 81
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_82": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 82
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_83": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 83
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_84": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 84
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_85": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 85
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_86": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 86
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_87": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 87
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_88": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 88
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_89": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 89
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_9": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 9
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_90": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 90
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_91": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 91
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_92": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 92
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_93": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 93
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_94": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 94
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_95": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 95
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_96": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 96
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_97": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 97
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_98": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 98
+      },
+      "trigger": "unicopia:custom"
+    },
+    "shed_feather_99": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 99
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.molting_season_8.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:pegasus_feather"
+    },
+    "title": {
+      "translate": "advancements.unicopia.molting_season_8.title"
+    }
+  },
+  "requirements": [
+    [
+      "shed_feather_1"
+    ],
+    [
+      "shed_feather_2"
+    ],
+    [
+      "shed_feather_3"
+    ],
+    [
+      "shed_feather_4"
+    ],
+    [
+      "shed_feather_5"
+    ],
+    [
+      "shed_feather_6"
+    ],
+    [
+      "shed_feather_7"
+    ],
+    [
+      "shed_feather_8"
+    ],
+    [
+      "shed_feather_9"
+    ],
+    [
+      "shed_feather_10"
+    ],
+    [
+      "shed_feather_11"
+    ],
+    [
+      "shed_feather_12"
+    ],
+    [
+      "shed_feather_13"
+    ],
+    [
+      "shed_feather_14"
+    ],
+    [
+      "shed_feather_15"
+    ],
+    [
+      "shed_feather_16"
+    ],
+    [
+      "shed_feather_17"
+    ],
+    [
+      "shed_feather_18"
+    ],
+    [
+      "shed_feather_19"
+    ],
+    [
+      "shed_feather_20"
+    ],
+    [
+      "shed_feather_21"
+    ],
+    [
+      "shed_feather_22"
+    ],
+    [
+      "shed_feather_23"
+    ],
+    [
+      "shed_feather_24"
+    ],
+    [
+      "shed_feather_25"
+    ],
+    [
+      "shed_feather_26"
+    ],
+    [
+      "shed_feather_27"
+    ],
+    [
+      "shed_feather_28"
+    ],
+    [
+      "shed_feather_29"
+    ],
+    [
+      "shed_feather_30"
+    ],
+    [
+      "shed_feather_31"
+    ],
+    [
+      "shed_feather_32"
+    ],
+    [
+      "shed_feather_33"
+    ],
+    [
+      "shed_feather_34"
+    ],
+    [
+      "shed_feather_35"
+    ],
+    [
+      "shed_feather_36"
+    ],
+    [
+      "shed_feather_37"
+    ],
+    [
+      "shed_feather_38"
+    ],
+    [
+      "shed_feather_39"
+    ],
+    [
+      "shed_feather_40"
+    ],
+    [
+      "shed_feather_41"
+    ],
+    [
+      "shed_feather_42"
+    ],
+    [
+      "shed_feather_43"
+    ],
+    [
+      "shed_feather_44"
+    ],
+    [
+      "shed_feather_45"
+    ],
+    [
+      "shed_feather_46"
+    ],
+    [
+      "shed_feather_47"
+    ],
+    [
+      "shed_feather_48"
+    ],
+    [
+      "shed_feather_49"
+    ],
+    [
+      "shed_feather_50"
+    ],
+    [
+      "shed_feather_51"
+    ],
+    [
+      "shed_feather_52"
+    ],
+    [
+      "shed_feather_53"
+    ],
+    [
+      "shed_feather_54"
+    ],
+    [
+      "shed_feather_55"
+    ],
+    [
+      "shed_feather_56"
+    ],
+    [
+      "shed_feather_57"
+    ],
+    [
+      "shed_feather_58"
+    ],
+    [
+      "shed_feather_59"
+    ],
+    [
+      "shed_feather_60"
+    ],
+    [
+      "shed_feather_61"
+    ],
+    [
+      "shed_feather_62"
+    ],
+    [
+      "shed_feather_63"
+    ],
+    [
+      "shed_feather_64"
+    ],
+    [
+      "shed_feather_65"
+    ],
+    [
+      "shed_feather_66"
+    ],
+    [
+      "shed_feather_67"
+    ],
+    [
+      "shed_feather_68"
+    ],
+    [
+      "shed_feather_69"
+    ],
+    [
+      "shed_feather_70"
+    ],
+    [
+      "shed_feather_71"
+    ],
+    [
+      "shed_feather_72"
+    ],
+    [
+      "shed_feather_73"
+    ],
+    [
+      "shed_feather_74"
+    ],
+    [
+      "shed_feather_75"
+    ],
+    [
+      "shed_feather_76"
+    ],
+    [
+      "shed_feather_77"
+    ],
+    [
+      "shed_feather_78"
+    ],
+    [
+      "shed_feather_79"
+    ],
+    [
+      "shed_feather_80"
+    ],
+    [
+      "shed_feather_81"
+    ],
+    [
+      "shed_feather_82"
+    ],
+    [
+      "shed_feather_83"
+    ],
+    [
+      "shed_feather_84"
+    ],
+    [
+      "shed_feather_85"
+    ],
+    [
+      "shed_feather_86"
+    ],
+    [
+      "shed_feather_87"
+    ],
+    [
+      "shed_feather_88"
+    ],
+    [
+      "shed_feather_89"
+    ],
+    [
+      "shed_feather_90"
+    ],
+    [
+      "shed_feather_91"
+    ],
+    [
+      "shed_feather_92"
+    ],
+    [
+      "shed_feather_93"
+    ],
+    [
+      "shed_feather_94"
+    ],
+    [
+      "shed_feather_95"
+    ],
+    [
+      "shed_feather_96"
+    ],
+    [
+      "shed_feather_97"
+    ],
+    [
+      "shed_feather_98"
+    ],
+    [
+      "shed_feather_99"
+    ],
+    [
+      "shed_feather_100"
+    ],
+    [
+      "shed_feather_101"
+    ],
+    [
+      "shed_feather_102"
+    ],
+    [
+      "shed_feather_103"
+    ],
+    [
+      "shed_feather_104"
+    ],
+    [
+      "shed_feather_105"
+    ],
+    [
+      "shed_feather_106"
+    ],
+    [
+      "shed_feather_107"
+    ],
+    [
+      "shed_feather_108"
+    ],
+    [
+      "shed_feather_109"
+    ],
+    [
+      "shed_feather_110"
+    ],
+    [
+      "shed_feather_111"
+    ],
+    [
+      "shed_feather_112"
+    ],
+    [
+      "shed_feather_113"
+    ],
+    [
+      "shed_feather_114"
+    ],
+    [
+      "shed_feather_115"
+    ],
+    [
+      "shed_feather_116"
+    ],
+    [
+      "shed_feather_117"
+    ],
+    [
+      "shed_feather_118"
+    ],
+    [
+      "shed_feather_119"
+    ],
+    [
+      "shed_feather_120"
+    ],
+    [
+      "shed_feather_121"
+    ],
+    [
+      "shed_feather_122"
+    ],
+    [
+      "shed_feather_123"
+    ],
+    [
+      "shed_feather_124"
+    ],
+    [
+      "shed_feather_125"
+    ],
+    [
+      "shed_feather_126"
+    ],
+    [
+      "shed_feather_127"
+    ],
+    [
+      "shed_feather_128"
+    ]
+  ],
+  "rewards": {
+    "experience": 500
+  },
+  "sends_telemetry_event": true
+}

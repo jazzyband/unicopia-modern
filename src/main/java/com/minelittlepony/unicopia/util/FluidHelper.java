@@ -11,11 +11,11 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Pair;
+import com.minelittlepony.unicopia.util.Tuple;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.FluidState;
 
 /**
  * Here be dragons
@@ -25,20 +25,20 @@ public interface FluidHelper {
         return PsyFluidHelper.getFullFluidState(variant);
     }
 
-    static Optional<Pair<Long, FluidVariant>> extract(ItemStack stack, PlayerEntity player, Hand hand) {
+    static Optional<Tuple<Long, FluidVariant>> extract(ItemStack stack, Player player, InteractionHand hand) {
         return getAsContainer(stack, ContainerItemContext.forPlayerInteraction(player, hand))
                 .filter(c -> !c.isResourceBlank())
                 .map(container -> applyTransaction(t -> {
                     FluidVariant type = container.getResource();
                     long amountExtracted = container.extract(type, FluidConstants.BUCKET, t);
                     if (amountExtracted > 0) {
-                        return new Pair<>(amountExtracted, type);
+                        return new Tuple<>(amountExtracted, type);
                     }
                     return null;
                 }));
     }
 
-    static long deposit(ItemStack stack, PlayerEntity player, Hand hand, FluidVariant variant, long amount) {
+    static long deposit(ItemStack stack, Player player, InteractionHand hand, FluidVariant variant, long amount) {
         return amount - getAsStorage(stack, ContainerItemContext.forPlayerInteraction(player, hand))
                 .map(storage -> applyTransaction(t -> storage.insert(variant, amount, t)))
                 .orElse(0L);

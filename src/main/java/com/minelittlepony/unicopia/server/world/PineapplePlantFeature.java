@@ -3,63 +3,63 @@ package com.minelittlepony.unicopia.server.world;
 import com.minelittlepony.unicopia.block.PineappleCropBlock;
 import com.minelittlepony.unicopia.block.UBlocks;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 
-import net.minecraft.block.enums.BlockHalf;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.FeatureConfig;
-import net.minecraft.world.gen.feature.util.FeatureContext;
+public class PineapplePlantFeature implements Feature {
 
-public class PineapplePlantFeature extends Feature<PineapplePlantFeature.Config> {
+    public static final MapCodec<PineapplePlantFeature> CODEC = MapCodec.unit(new PineapplePlantFeature());
 
     public PineapplePlantFeature() {
-        super(Config.CODEC);
     }
 
     @Override
-    public boolean generate(FeatureContext<Config> context) {
-        final StructureWorldAccess world = context.getWorld();
+    public MapCodec<PineapplePlantFeature> codec() { return CODEC; }
 
-        final Random random = context.getRandom();
+    @Override
+    public boolean place(WorldGenLevel world, ChunkGenerator generator, RandomSource random, BlockPos origin) {
 
         int xOffset = 3;
         int zOffset = 3;
 
-        BlockPos.Mutable mutablePos = context.getOrigin().mutableCopy();
+        BlockPos.MutableBlockPos mutablePos = origin.mutable();
         boolean succeeded = false;
-        for (BlockPos position : BlockPos.iterateOutwards(context.getOrigin(), xOffset, 0, zOffset)) {
+        for (BlockPos position : BlockPos.betweenClosed(origin.offset(-xOffset, 0, -zOffset), origin.offset(xOffset, 0, zOffset))) {
             if (random.nextFloat() < 0.5) {
                 continue;
             }
 
             findTerrainLevel(world, mutablePos.set(position));
 
-            if (world.isOutOfHeightLimit(mutablePos)
-                    || (!world.isAir(mutablePos) && !isReplaceable(world, mutablePos))
-                    || !isSoil(world, mutablePos.move(Direction.DOWN))) {
+            if (world.isOutsideBuildHeight(mutablePos)
+                    || (!world.isEmptyBlock(mutablePos) && !isReplaceable(world, mutablePos))
+                    || !world.getBlockState(mutablePos.move(Direction.DOWN)).is(BlockTags.DIRT)) {
                 continue;
             }
 
             mutablePos.move(Direction.UP);
 
             int maxAge = UBlocks.PINEAPPLE.getMaxAge();
-            int age = random.nextBetween(maxAge - 3, maxAge);
+            int age = random.nextIntBetweenInclusive(maxAge - 3, maxAge);
 
             succeeded = true;
-            setBlockState(world, mutablePos, UBlocks.PINEAPPLE.withAge(age).with(PineappleCropBlock.WILD, true));
+            setBlock(world, mutablePos, UBlocks.PINEAPPLE.getStateForAge(age).setValue(PineappleCropBlock.WILD, true));
 
             if (age >= maxAge) {
                 mutablePos.move(Direction.UP);
 
                 if (isReplaceable(world, mutablePos)) {
-                    setBlockState(world, mutablePos, UBlocks.PINEAPPLE
-                            .withAge(random.nextBetween(maxAge / 2, maxAge))
-                            .with(PineappleCropBlock.HALF, BlockHalf.TOP)
-                            .with(PineappleCropBlock.WILD, true));
+                    setBlock(world, mutablePos, UBlocks.PINEAPPLE
+                            .getStateForAge(random.nextIntBetweenInclusive(maxAge / 2, maxAge))
+                            .setValue(PineappleCropBlock.HALF, Half.TOP)
+                            .setValue(PineappleCropBlock.WILD, true));
                 }
             }
         }
@@ -67,11 +67,11 @@ public class PineapplePlantFeature extends Feature<PineapplePlantFeature.Config>
         return succeeded;
     }
 
-    static void findTerrainLevel(StructureWorldAccess world, BlockPos.Mutable mutablePos) {
+    static void findTerrainLevel(WorldGenLevel world, BlockPos.MutableBlockPos mutablePos) {
         if (isReplaceable(world, mutablePos)) {
             do {
                 mutablePos.move(Direction.DOWN);
-            } while (isReplaceable(world, mutablePos) && !world.isOutOfHeightLimit(mutablePos));
+            } while (isReplaceable(world, mutablePos) && !world.isOutsideBuildHeight(mutablePos));
 
             mutablePos.move(Direction.UP);
         }
@@ -79,16 +79,12 @@ public class PineapplePlantFeature extends Feature<PineapplePlantFeature.Config>
         if (!isReplaceable(world, mutablePos)) {
             do {
                 mutablePos.move(Direction.UP);
-            } while (!isReplaceable(world, mutablePos) && !world.isOutOfHeightLimit(mutablePos));
+            } while (!isReplaceable(world, mutablePos) && !world.isOutsideBuildHeight(mutablePos));
         }
     }
 
-    static boolean isReplaceable(StructureWorldAccess world, BlockPos pos) {
-        return (world.isAir(pos) || world.getBlockState(pos).isIn(BlockTags.REPLACEABLE_BY_TREES)) && world.getBlockState(pos).getFluidState().isEmpty();
+    static boolean isReplaceable(WorldGenLevel world, BlockPos pos) {
+        return (world.isEmptyBlock(pos) || world.getBlockState(pos).is(BlockTags.REPLACEABLE_BY_TREES)) && world.getBlockState(pos).getFluidState().isEmpty();
     }
 
-    public static class Config implements FeatureConfig {
-        public static final Config INSTANCE = new Config();
-        public static final Codec<Config> CODEC = Codec.unit(INSTANCE);
-    }
 }

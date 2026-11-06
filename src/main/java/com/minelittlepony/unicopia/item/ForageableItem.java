@@ -4,90 +4,87 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
 import com.minelittlepony.unicopia.server.world.BlockDestructionManager;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ToolComponent;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.HoeItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldEvents;
-
 public class ForageableItem extends Item {
     private static final List<ForageableItem> REGISTRY = new ArrayList<>();
 
-    public static ActionResult use(PlayerEntity player, ItemStack stack, World world, Hand hand, BlockHitResult hit) {
+    public static InteractionResult use(Player player, ItemStack stack, Level world, InteractionHand hand, BlockHitResult hit) {
         BlockPos pos = hit.getBlockPos();
         BlockState state = world.getBlockState(pos);
 
-        if (!stack.isIn(ItemTags.HOES)) {
-            return ActionResult.PASS;
+        if (!stack.is(ItemTags.HOES)) {
+            return InteractionResult.PASS;
         }
 
-        ActionResult result = ActionResult.PASS;
+        InteractionResult result = InteractionResult.PASS;
 
-        if (state.isIn(BlockTags.LEAVES)) {
-            player.swingHand(hand);
-            world.playSound(player, pos, state.getSoundGroup().getHitSound(), SoundCategory.BLOCKS);
-            InteractionManager.getInstance().addBlockBreakingParticles(pos, hit.getSide());
+        if (state.is(BlockTags.LEAVES)) {
+            player.swing(hand, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
+            world.playSound(player, pos, state.getSoundType().getHitSound(), SoundSource.BLOCKS);
+            InteractionManager.getInstance().addBlockBreakingParticles(pos, hit.getDirection());
 
             float foragingChance = getForagingChance(stack);
 
             for (ForageableItem item : REGISTRY) {
-                if ((result = item.onTryForage(world, pos, state, stack, player, foragingChance)).isAccepted()) {
-                    stack.damage(1, player, LivingEntity.getSlotForHand(hand));
+                if ((result = item.onTryForage(world, pos, state, stack, player, foragingChance)).consumesAction()) {
+                    stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
                     return result;
                 }
             }
         }
 
-        return result.isAccepted() ? ActionResult.SUCCESS : ActionResult.PASS;
+        return result.consumesAction() ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
     private final Supplier<Block> targetBlock;
 
-    public ForageableItem(Settings settings, Supplier<Block> targetBlock) {
+    public ForageableItem(Properties settings, Supplier<Block> targetBlock) {
         super(settings);
         this.targetBlock = targetBlock;
         REGISTRY.add(this);
     }
 
-    public ActionResult onTryForage(World world, BlockPos pos, BlockState state, ItemStack stack, PlayerEntity player, float spawnChance) {
-        if (!state.isOf(targetBlock.get())) {
-            return ActionResult.PASS;
+    public InteractionResult onTryForage(Level world, BlockPos pos, BlockState state, ItemStack stack, Player player, float spawnChance) {
+        if (!state.is(targetBlock.get())) {
+            return InteractionResult.PASS;
         }
 
         spawnChance -= EnchantmentUtil.getLuck(1, player);
 
-        if (spawnChance <= 0 || world.random.nextInt((int)(spawnChance * 32)) == 0) {
-            Block.dropStack(world, pos, new ItemStack(this, 1 + EnchantmentHelper.getEquipmentLevel(player.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT).getEntry(Enchantments.LOOTING.getValue()).get(), player)));
-            world.syncWorldEvent(WorldEvents.BLOCK_BROKEN, pos, Block.getRawIdFromState(state));
-            if (BlockDestructionManager.of(world).damageBlock(pos, world.getRandom().nextBetween(3, 7)) >= BlockDestructionManager.MAX_DAMAGE) {
-                world.breakBlock(pos, true);
+        if (spawnChance <= 0 || world.getRandom().nextInt((int)(spawnChance * 32)) == 0) {
+            Block.popResource(world, pos, new ItemStack(this, 1 + EnchantmentHelper.getEnchantmentLevel(player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).get(Enchantments.LOOTING.identifier()).get(), player)));
+            world.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, pos, Block.getId(state));
+            if (BlockDestructionManager.of(world).damageBlock(pos, world.getRandom().nextIntBetweenInclusive(3, 7)) >= BlockDestructionManager.MAX_DAMAGE) {
+                world.destroyBlock(pos, true);
             }
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
-        return ActionResult.FAIL;
+        return InteractionResult.FAIL;
     }
 
     static final Map<Item, Float> SPAWN_CHANCES = Map.of(
@@ -100,17 +97,17 @@ public class ForageableItem extends Item {
     );
 
     static float getForagingChance(ItemStack stack) {
-        if (!(stack.getItem() instanceof HoeItem)) {
+        if (!stack.is(ItemTags.HOES)) {
             return 0.25F;
         }
 
         float spawnChance = SPAWN_CHANCES.getOrDefault(stack.getItem(), -1F);
         if (spawnChance <= 0) {
-            ToolComponent comp = stack.get(DataComponentTypes.TOOL);
+            Tool comp = stack.get(DataComponents.TOOL);
             if (comp == null) {
                 return 0.25F;
             }
-            spawnChance = MathHelper.clamp(comp.defaultMiningSpeed(), 0, 1);
+            spawnChance = Mth.clamp(comp.defaultMiningSpeed(), 0, 1);
         }
 
         return 1F - spawnChance;

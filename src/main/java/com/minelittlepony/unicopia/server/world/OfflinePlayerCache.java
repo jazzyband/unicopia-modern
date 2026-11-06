@@ -12,16 +12,21 @@ import com.google.common.cache.LoadingCache;
 import com.mojang.authlib.GameProfile;
 
 import net.fabricmc.fabric.api.entity.FakePlayer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueInput;
 
 public class OfflinePlayerCache {
-    private static final LoadingCache<Key, Optional<ServerPlayerEntity>> CACHE = CacheBuilder.newBuilder()
+    private static final LoadingCache<Key, Optional<ServerPlayer>> CACHE = CacheBuilder.newBuilder()
             .expireAfterAccess(1, TimeUnit.MINUTES)
             .build(CacheLoader.from(key -> {
-                ServerPlayerEntity offlinePlayer = FakePlayer.get(key.world(), new GameProfile(key.playerId(), "[Offline Player]"));
+                ServerPlayer offlinePlayer = FakePlayer.get(key.world(), new GameProfile(key.playerId(), "[Offline Player]"));
 
-                if (key.world().getServer().getPlayerManager().loadPlayerData(offlinePlayer) != null) {
+                var savedData = key.world().getServer().getPlayerList().loadPlayerData(new NameAndId(key.playerId(), "[Offline Player]"));
+                if (savedData.isPresent()) {
+                    offlinePlayer.load(TagValueInput.create(ProblemReporter.DISCARDING, key.world().registryAccess(), savedData.get()));
                     return Optional.of(offlinePlayer);
                 }
 
@@ -29,10 +34,10 @@ public class OfflinePlayerCache {
             }));
 
     @Nullable
-    public static ServerPlayerEntity getOfflinePlayer(ServerWorld world, UUID playerId) {
-        ServerPlayerEntity player = (ServerPlayerEntity)world.getPlayerByUuid(playerId);
+    public static ServerPlayer getOfflinePlayer(ServerLevel world, UUID playerId) {
+        ServerPlayer player = (ServerPlayer)world.getPlayerByUUID(playerId);
         if (player == null) {
-            player = world.getServer().getPlayerManager().getPlayer(playerId);
+            player = world.getServer().getPlayerList().getPlayer(playerId);
         }
         if (player == null) {
             return CACHE.getUnchecked(new Key(world, playerId)).orElse(null);
@@ -40,5 +45,5 @@ public class OfflinePlayerCache {
         return player;
     }
 
-    record Key (ServerWorld world, UUID playerId) {}
+    record Key (ServerLevel world, UUID playerId) {}
 }

@@ -2,8 +2,6 @@ package com.minelittlepony.unicopia.ability.data.tree;
 
 import java.util.*;
 import java.util.function.Supplier;
-
-import com.minelittlepony.unicopia.Debug;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.util.Weighted;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
@@ -12,71 +10,60 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.resource.JsonDataLoader;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.profiler.Profiler;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.tag.TagKey;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.FileToIdConverter;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Block;
 
-public class TreeTypeLoader {
-    public static final RegistryKey<Registry<TreeTypeDef>> REGISTRY_KEY = Unicopia.key("tree_type");
+public class TreeTypeLoader extends SimpleJsonResourceReloadListener<TreeTypeLoader.TreeTypeDef> implements IdentifiableResourceReloadListener {
+    private static final Identifier ID = Unicopia.id("data/tree_type");
 
     public static final TreeTypeLoader INSTANCE = new TreeTypeLoader();
 
     private Map<Identifier, TreeTypeDef> entries = new HashMap<>();
 
+    TreeTypeLoader() {
+        super(TreeTypeDef.CODEC, FileToIdConverter.json("tree_types"));
+    }
+
     public Map<Identifier, TreeTypeDef> getEntries() {
         return entries;
     }
 
-    public Reload createReloader(RegistryWrapper.WrapperLookup registries) {
-        return new Reload(registries);
+    @Override
+    public Identifier getFabricId() {
+        return ID;
     }
 
-    public final class Reload extends JsonDataLoader<TreeTypeLoader.TreeTypeDef> implements IdentifiableResourceReloadListener {
-        Reload(RegistryWrapper.WrapperLookup registries) {
-            super(registries, TreeTypeDef.CODEC, REGISTRY_KEY);
-        }
+    @Override
+    protected void apply(Map<Identifier, TreeTypeDef> resources, ResourceManager manager, ProfilerFiller profiler) {
+        entries = resources;
 
-        @Override
-        public Identifier getFabricId() {
-            return REGISTRY_KEY.getValue();
-        }
-
-        @Override
-        protected void apply(Map<Identifier, TreeTypeDef> resources, ResourceManager manager, Profiler profiler) {
-            entries = resources;
-
-            if (Debug.CHECK_GAME_VALUES) {
-                Debug.checkTreeTypeRegistrations(entries::containsKey);
-            }
-            TreeTypes.load(entries);
-        }
+        TreeTypes.load(entries);
     }
 
     public record TreeTypeDef (
-            Set<RegistryKey<Block>> logs,
-            Set<RegistryKey<Block>> leaves,
+            Set<ResourceKey<Block>> logs,
+            Set<ResourceKey<Block>> leaves,
             Set<Drop> drops,
             boolean wideTrunk,
             int rarity,
             float leavesRatio
     ) {
-        public static final TreeTypeDef EMPTY = new TreeTypeLoader.TreeTypeDef(Set.of(), Set.of(), Set.of(), false, 0, 0.5F);
-        private static final Codec<Set<RegistryKey<Block>>> BLOCK_KEY_SET_CODEC = CodecUtils.setOf(RegistryKey.createCodec(RegistryKeys.BLOCK));
-        private static final PacketCodec<ByteBuf, Set<RegistryKey<Block>>> BLOCK_KEY_SET_PACKET_CODEC = RegistryKey.createPacketCodec(RegistryKeys.BLOCK).collect(PacketCodecs.toCollection(HashSet::new));
+        private static final Codec<Set<ResourceKey<Block>>> BLOCK_KEY_SET_CODEC = CodecUtils.setOf(ResourceKey.codec(Registries.BLOCK));
+        private static final StreamCodec<ByteBuf, Set<ResourceKey<Block>>> BLOCK_KEY_SET_PACKET_CODEC = ResourceKey.streamCodec(Registries.BLOCK).apply(ByteBufCodecs.collection(HashSet::new));
         public static final Codec<TreeTypeDef> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 BLOCK_KEY_SET_CODEC.fieldOf("logs").forGetter(TreeTypeDef::logs),
                 BLOCK_KEY_SET_CODEC.fieldOf("leaves").forGetter(TreeTypeDef::leaves),
@@ -85,13 +72,13 @@ public class TreeTypeLoader {
                 Codec.INT.optionalFieldOf("rarity", 0).forGetter(TreeTypeDef::rarity),
                 Codec.FLOAT.fieldOf("leavesRatio").forGetter(TreeTypeDef::leavesRatio)
         ).apply(instance, TreeTypeDef::new));
-        public static final PacketCodec<RegistryByteBuf, TreeTypeDef> PACKET_CODEC = PacketCodec.tuple(
+        public static final StreamCodec<RegistryFriendlyByteBuf, TreeTypeDef> PACKET_CODEC = StreamCodec.composite(
                 BLOCK_KEY_SET_PACKET_CODEC, TreeTypeDef::logs,
                 BLOCK_KEY_SET_PACKET_CODEC, TreeTypeDef::leaves,
-                Drop.PACKET_CODEC.collect(PacketCodecs.toCollection(HashSet::new)), TreeTypeDef::drops,
-                PacketCodecs.BOOLEAN, TreeTypeDef::wideTrunk,
-                PacketCodecs.INTEGER, TreeTypeDef::rarity,
-                PacketCodecs.FLOAT, TreeTypeDef::leavesRatio,
+                Drop.PACKET_CODEC.apply(ByteBufCodecs.collection(HashSet::new)), TreeTypeDef::drops,
+                ByteBufCodecs.BOOL, TreeTypeDef::wideTrunk,
+                ByteBufCodecs.INT, TreeTypeDef::rarity,
+                ByteBufCodecs.FLOAT, TreeTypeDef::leavesRatio,
                 TreeTypeDef::new
         );
 
@@ -102,8 +89,12 @@ public class TreeTypeLoader {
         public TreeType toTreeType(Identifier id) {
             return new TreeTypeImpl(
                     id,
-                    this,
-                    Weighted.of(drops)
+                    wideTrunk,
+                    Objects.requireNonNull(logs, "TreeType must have logs"),
+                    Objects.requireNonNull(leaves, "TreeType must have leaves"),
+                    Weighted.of(drops),
+                    rarity,
+                    leavesRatio
             );
         }
 
@@ -117,23 +108,23 @@ public class TreeTypeLoader {
                     Identifier.CODEC.optionalFieldOf("tag").forGetter(Drop::tag),
                     Identifier.CODEC.optionalFieldOf("item").forGetter(Drop::item)
             ).apply(instance, Drop::new));
-            public static final PacketCodec<RegistryByteBuf, Drop> PACKET_CODEC = PacketCodec.tuple(
-                    PacketCodecs.INTEGER, Drop::weight,
-                    PacketCodecs.optional(Identifier.PACKET_CODEC), Drop::tag,
-                    PacketCodecs.optional(Identifier.PACKET_CODEC), Drop::item,
+            public static final StreamCodec<RegistryFriendlyByteBuf, Drop> PACKET_CODEC = StreamCodec.composite(
+                    ByteBufCodecs.INT, Drop::weight,
+                    ByteBufCodecs.optional(Identifier.STREAM_CODEC), Drop::tag,
+                    ByteBufCodecs.optional(Identifier.STREAM_CODEC), Drop::item,
                     Drop::new
             );
 
             @Override
             public void appendTo(Weighted.Builder<Supplier<ItemStack>> weighted) {
                 if (item.isPresent()) {
-                    Registries.ITEM.getOptionalValue(item.get()).ifPresent(item -> {
-                        weighted.put(weight, item::getDefaultStack);
+                    BuiltInRegistries.ITEM.getOptional(item.get()).ifPresent(item -> {
+                        weighted.put(weight, item::getDefaultInstance);
                     });
                 } else {
                     weighted.put(weight, () -> {
-                        return Registries.ITEM.getRandomEntry(TagKey.of(RegistryKeys.ITEM, tag.get()), Weighted.getRng())
-                                .map(entry -> entry.value().getDefaultStack())
+                        return BuiltInRegistries.ITEM.getRandomElementOf(TagKey.create(Registries.ITEM, tag.get()), Weighted.getRng())
+                                .map(entry -> entry.value().getDefaultInstance())
                                 .orElse(ItemStack.EMPTY);
                     });
                 }
@@ -141,8 +132,8 @@ public class TreeTypeLoader {
         }
 
         public static class Builder {
-            private final Set<RegistryKey<Block>> logs = new HashSet<>();
-            private final Set<RegistryKey<Block>> leaves = new HashSet<>();
+            private final Set<ResourceKey<Block>> logs = new HashSet<>();
+            private final Set<ResourceKey<Block>> leaves = new HashSet<>();
             private final Set<Drop> drops = new HashSet<>();
 
             private boolean wideTrunk = false;
@@ -150,24 +141,24 @@ public class TreeTypeLoader {
             private float leavesRatio = 0.5F;
 
             public Builder drop(int weight, TagKey<Item> tag) {
-                drops.add(new Drop(weight, Optional.of(tag.id()), Optional.empty()));
+                drops.add(new Drop(weight, Optional.of(tag.location()), Optional.empty()));
                 return this;
             }
 
-            public Builder drop(int weight, ItemConvertible item) {
-                drops.add(new Drop(weight, Optional.empty(), Optional.of(Registries.ITEM.getId(item.asItem()))));
+            public Builder drop(int weight, ItemLike item) {
+                drops.add(new Drop(weight, Optional.empty(), Optional.of(BuiltInRegistries.ITEM.getKey(item.asItem()))));
                 return this;
             }
 
             @SuppressWarnings("deprecation")
             public Builder logs(Block...blocks) {
-                Arrays.stream(blocks).map(block -> block.getRegistryEntry().registryKey()).forEach(logs::add);
+                Arrays.stream(blocks).map(block -> block.builtInRegistryHolder().key()).forEach(logs::add);
                 return this;
             }
 
             @SuppressWarnings("deprecation")
             public Builder leaves(Block...blocks) {
-                Arrays.stream(blocks).map(block -> block.getRegistryEntry().registryKey()).forEach(leaves::add);
+                Arrays.stream(blocks).map(block -> block.builtInRegistryHolder().key()).forEach(leaves::add);
                 return this;
             }
 

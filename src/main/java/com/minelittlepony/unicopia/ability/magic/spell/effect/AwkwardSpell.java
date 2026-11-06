@@ -2,21 +2,19 @@ package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.TimedSpell;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 public class AwkwardSpell extends AbstractSpell implements TimedSpell {
 
@@ -45,15 +43,15 @@ public class AwkwardSpell extends AbstractSpell implements TimedSpell {
         if (source.isClient()) {
             source.spawnParticles(new Sphere(false, (1 + source.getLevel().getScaled(8)) * 8), 10, pos -> {
 
-                List<Identifier> names = new ArrayList<>(Registries.PARTICLE_TYPE.getIds());
+                List<Identifier> names = new ArrayList<>(BuiltInRegistries.PARTICLE_TYPE.keySet());
 
-                int index = (int)MathHelper.nextDouble(source.asWorld().random, 0, names.size());
+                int index = (int)Mth.nextDouble(source.asWorld().getRandom(), 0, names.size());
 
                 Identifier id = names.get(index);
-                ParticleType<?> type = Registries.PARTICLE_TYPE.get(id);
+                ParticleType<?> type = BuiltInRegistries.PARTICLE_TYPE.getValue(id);
 
-                if (type instanceof ParticleEffect && shouldSpawnParticle(type)) {
-                    source.addParticle((ParticleEffect)type, pos, Vec3d.ZERO);
+                if (type instanceof ParticleOptions && shouldSpawnParticle(type)) {
+                    source.addParticle((ParticleOptions)type, pos, Vec3.ZERO);
                 }
             });
         }
@@ -72,13 +70,13 @@ public class AwkwardSpell extends AbstractSpell implements TimedSpell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         timer.toNBT(compound, lookup);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         timer.fromNBT(compound, lookup);
     }

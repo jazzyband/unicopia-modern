@@ -1,14 +1,14 @@
 package com.minelittlepony.unicopia.client.sound;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.MovingSoundInstance;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
 
-public abstract class FadeOutSoundInstance extends MovingSoundInstance {
+public abstract class FadeOutSoundInstance extends AbstractTickableSoundInstance {
 
     protected int transitionTicks = 10;
 
@@ -23,28 +23,28 @@ public abstract class FadeOutSoundInstance extends MovingSoundInstance {
     private boolean muted;
     private int ticksMuted;
 
-    public FadeOutSoundInstance(SoundEvent sound, SoundCategory category, float volume, Random random) {
+    public FadeOutSoundInstance(SoundEvent sound, SoundSource category, float volume, RandomSource random) {
         super(sound, category, random);
         this.relative = true;
-        this.repeat = true;
+        this.looping = true;
         this.volume = volume;
         setTargetVolume(volume);
     }
 
-    protected void setPosition(Vec3d pos) {
+    protected void setPosition(Vec3 pos) {
         x = pos.x;
         y = pos.y;
         z = pos.z;
     }
 
     @Override
-    public boolean shouldAlwaysPlay() {
+    public boolean canStartSilent() {
         return true;
     }
 
     public void setMuted(boolean muted) {
         this.muted = muted;
-        this.repeat = !muted;
+        this.looping = !muted;
         if (!muted) {
             ticksMuted = 0;
         }
@@ -57,7 +57,7 @@ public abstract class FadeOutSoundInstance extends MovingSoundInstance {
         if (!muted) {
             setFadingOut(fadeOut);
         } else if (ticksMuted++ > 2000) {
-            setDone();
+            stop();
             return;
         }
 
@@ -67,7 +67,7 @@ public abstract class FadeOutSoundInstance extends MovingSoundInstance {
         }
 
         if (fadingOut && getVolume() < 0.001F) {
-            setDone();
+            stop();
         }
     }
 
@@ -95,9 +95,9 @@ public abstract class FadeOutSoundInstance extends MovingSoundInstance {
     }
 
     private float getLerpedVolume() {
-        float delta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false);
-        float interpolate = MathHelper.clamp(MathHelper.lerp(delta, prevProgress, progress) / transitionTicks, 0, 1);
-        return MathHelper.lerp(interpolate, sourceVolume, targetVolume);
+        float delta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float interpolate = Mth.clamp(Mth.lerpInt(delta, prevProgress, progress) / transitionTicks, 0, 1);
+        return Mth.lerp(interpolate, sourceVolume, targetVolume);
     }
 
     @Override
@@ -105,6 +105,6 @@ public abstract class FadeOutSoundInstance extends MovingSoundInstance {
         if (muted) {
             return 0.001F;
         }
-        return getLerpedVolume() * sound.getVolume().get(random);
+        return getLerpedVolume() * sound.getVolume().sample(random);
     }
 }

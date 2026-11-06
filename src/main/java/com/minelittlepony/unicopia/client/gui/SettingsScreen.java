@@ -13,15 +13,15 @@ import com.minelittlepony.unicopia.server.world.UnicopiaWorldProperties;
 import com.minelittlepony.unicopia.util.RegistryIndexer;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.server.integrated.IntegratedServer;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 
 public class SettingsScreen extends GameGui {
     private final Config config = Unicopia.getConfig();
@@ -34,7 +34,7 @@ public class SettingsScreen extends GameGui {
     private long drawingHudOutline;
 
     public SettingsScreen(Screen parent) {
-        super(Text.translatable("unicopia.options.title"), parent);
+        super(Component.translatable("unicopia.options.title"), parent);
 
         content.margin.setVertical(30);
         content.getContentPadding().setHorizontal(10);
@@ -86,13 +86,13 @@ public class SettingsScreen extends GameGui {
                 drawingHudOutline = System.currentTimeMillis() + 1000L;
                 return config.hudPosition.set(v);
             })
-            .setTextFormat(v -> Text.translatable("unicopia.options.hud_position", v.getValue().name()));
+            .setTextFormat(v -> Component.translatable("unicopia.options.hud_position", v.getValue().name()));
 
         RegistryIndexer<Race> races = RegistryIndexer.of(Race.REGISTRY);
 
         content.addButton(new Slider(LEFT, row += 25, 0, races.size(), races.indexOf(config.preferredRace.get())))
                 .onChange(races.createSetter(config.preferredRace))
-                .setTextFormat(v -> Text.translatable("unicopia.options.preferred_race", races.valueOf(v.getValue()).getDisplayName()));
+                .setTextFormat(v -> Component.translatable("unicopia.options.preferred_race", races.valueOf(v.getValue()).getDisplayName()));
 
         content.addButton(new Label(LEFT, row += 20)).getStyle().setText("unicopia.options.skin_features");
 
@@ -111,47 +111,47 @@ public class SettingsScreen extends GameGui {
             })
             .getStyle().setText("unicopia.options.skin_features.wings");
 
-        IntegratedServer server = client.getServer();
+        IntegratedServer server = minecraft.getSingleplayerServer();
         if (server != null) {
             row += 20;
             content.addButton(new Label(LEFT, row)).getStyle().setText("unicopia.options.world");
 
-            UnicopiaWorldProperties tribes = UnicopiaWorldProperties.forWorld((ServerWorld)server.getPlayerManager().getPlayer(MinecraftClient.getInstance().player.getUuid()).getWorld());
+            UnicopiaWorldProperties tribes = UnicopiaWorldProperties.forWorld((ServerLevel)server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).level());
 
             content.addButton(new Slider(LEFT, row += 20, 0, races.size(), races.indexOf(tribes.getDefaultRace())))
                     .onChange(races.createSetter(tribes::setDefaultRace))
-                    .setTextFormat(v -> Text.translatable("unicopia.options.world.default_race", races.valueOf(v.getValue()).getDisplayName()))
-                    .setEnabled(client.isInSingleplayer());
+                    .setTextFormat(v -> Component.translatable("unicopia.options.world.default_race", races.valueOf(v.getValue()).getDisplayName()))
+                    .setEnabled(minecraft.isLocalServer());
         }
     }
 
-    private Text getMineLPStatus() {
+    private Component getMineLPStatus() {
         final boolean hasMineLP = FabricLoader.getInstance().isModLoaded("minelp");
 
         if (hasMineLP) {
             if (config.ignoreMineLP.get()) {
-                return Text.translatable("unicopia.options.ignore_mine_lp.undetected").formatted(Formatting.DARK_GREEN);
+                return Component.translatable("unicopia.options.ignore_mine_lp.undetected").withStyle(ChatFormatting.DARK_GREEN);
             }
 
-            return Text.translatable("unicopia.options.ignore_mine_lp.detected", MineLPDelegate.getInstance().getPlayerPonyRace().getDisplayName()).formatted(Formatting.GREEN);
+            return Component.translatable("unicopia.options.ignore_mine_lp.detected", MineLPDelegate.getInstance().getPlayerPonyRace().getDisplayName()).withStyle(ChatFormatting.GREEN);
         }
 
-        return Text.translatable("unicopia.options.ignore_mine_lp.missing").formatted(Formatting.RED);
+        return Component.translatable("unicopia.options.ignore_mine_lp.missing").withStyle(ChatFormatting.RED);
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        super.render(context, mouseX, mouseY, tickDelta);
-        content.render(context, mouseX, mouseY, tickDelta);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+        super.extractRenderState(context, mouseX, mouseY, tickDelta);
+        content.extractRenderState(context, mouseX, mouseY, tickDelta);
         if (drawingHudOutline > System.currentTimeMillis()) {
 
-            int scaledWidth = client.getWindow().getScaledWidth();
-            int scaledHeight = client.getWindow().getScaledHeight();
+            int scaledWidth = minecraft.getWindow().getGuiScaledWidth();
+            int scaledHeight = minecraft.getWindow().getGuiScaledHeight();
 
             HudPosition selectedPos = config.hudPosition.get();
 
             for (var hudPos : HudPosition.values()) {
-                HudPosition.Alignment armAlignment = client.options.getMainArm().getValue() == Arm.LEFT ? HudPosition.Alignment.START : HudPosition.Alignment.END;
+                HudPosition.Alignment armAlignment = minecraft.options.mainHand().get() == HumanoidArm.LEFT ? HudPosition.Alignment.START : HudPosition.Alignment.END;
                 if (hudPos == HudPosition.OFF_HAND) {
                     armAlignment = armAlignment.opposite();
                 }
@@ -162,10 +162,10 @@ public class SettingsScreen extends GameGui {
                     top -= 22;
                 }
 
-                context.getMatrices().push();
-                context.getMatrices().translate(left + UHud.PRIMARY_SLOT_SIZE / 2, top + UHud.PRIMARY_SLOT_SIZE / 2, 0);
-                DrawableUtil.drawArc(context, 0, UHud.PRIMARY_SLOT_SIZE / 2, 0, MathHelper.TAU, hudPos == selectedPos ? 0xEEFF00A5 : 0xEEFFFF25);
-                context.getMatrices().pop();
+                context.pose().pushMatrix();
+                context.pose().translate(left + UHud.PRIMARY_SLOT_SIZE / 2, top + UHud.PRIMARY_SLOT_SIZE / 2);
+                DrawableUtil.drawArc(context, 0, UHud.PRIMARY_SLOT_SIZE / 2, 0, Mth.TWO_PI, hudPos == selectedPos ? 0xEEFF00A5 : 0xEEFFFF25);
+                context.pose().popMatrix();
             }
         }
     }

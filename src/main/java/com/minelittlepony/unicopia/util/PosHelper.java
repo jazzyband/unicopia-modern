@@ -1,6 +1,7 @@
 package com.minelittlepony.unicopia.util;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators.AbstractSpliterator;
@@ -9,38 +10,44 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import com.google.common.collect.Lists;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.World;
 
 public interface PosHelper {
     Direction[] ALL = Direction.values();
     Direction[] HORIZONTAL = Arrays.stream(Direction.values()).filter(d -> d.getAxis().isHorizontal()).toArray(Direction[]::new);
 
-    static Vec3d offset(Vec3d a, Vec3i b) {
+    static Stream<BlockPos> withinManhattanStream(BlockPos center, int xRadius, int yRadius, int zRadius) {
+        return BlockPos.betweenClosedStream(center.offset(-xRadius, -yRadius, -zRadius),
+                center.offset(xRadius, yRadius, zRadius))
+                .sorted(Comparator.comparingInt(pos -> Math.abs(pos.getX() - center.getX())
+                        + Math.abs(pos.getY() - center.getY()) + Math.abs(pos.getZ() - center.getZ())));
+    }
+
+    static Vec3 offset(Vec3 a, Vec3i b) {
         return a.add(b.getX(), b.getY(), b.getZ());
     }
 
-    static BlockPos findNearestSurface(World world, BlockPos pos) {
-        BlockPos topPos = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos);
+    static BlockPos findNearestSurface(Level world, BlockPos pos) {
+        BlockPos topPos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, pos);
         if (topPos.getY() < pos.getY()) {
             return topPos;
         }
-        BlockPos.Mutable mutable = pos.mutableCopy();
+        BlockPos.MutableBlockPos mutable = pos.mutable();
 
-        while (mutable.getY() > world.getBottomY() && world.isAir(mutable)) {
+        while (mutable.getY() > world.getMinY() && world.isEmptyBlock(mutable)) {
             mutable.move(Direction.DOWN);
         }
-        while (world.isInBuildLimit(mutable) && !world.isAir(mutable)) {
+        while (world.isInWorldBounds(mutable) && !world.isEmptyBlock(mutable)) {
             mutable.move(Direction.UP);
         }
         mutable.move(Direction.DOWN);
@@ -48,26 +55,26 @@ public interface PosHelper {
         return mutable;
     }
 
-    static BlockPos findSolidGroundAt(World world, BlockPos pos, int signum) {
-        BlockPos topPos = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos);
+    static BlockPos findSolidGroundAt(Level world, BlockPos pos, int signum) {
+        BlockPos topPos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, pos);
         if (topPos.getY() < pos.getY()) {
             return topPos;
         }
-        BlockPos.Mutable mutable = pos.mutableCopy();
-        while (world.isInBuildLimit(mutable) && (world.isAir(mutable) || !world.getBlockState(mutable).canPlaceAt(world, mutable))) {
+        BlockPos.MutableBlockPos mutable = pos.mutable();
+        while (world.isInWorldBounds(mutable) && (world.isEmptyBlock(mutable) || !world.getBlockState(mutable).canSurvive(world, mutable))) {
             mutable.move(Direction.DOWN, signum);
         }
 
-        return mutable.toImmutable();
+        return mutable.immutable();
     }
 
-    static boolean isOverVoid(World world, BlockPos pos, int signum) {
-        return signum > 0 && findSolidGroundAt(world, pos, signum).getY() < world.getBottomY();
+    static boolean isOverVoid(Level world, BlockPos pos, int signum) {
+        return signum > 0 && findSolidGroundAt(world, pos, signum).getY() < world.getMinY();
     }
 
-    static void fastAll(BlockPos origin, Consumer<BlockPos.Mutable> consumer, Direction... directions) {
-        final BlockPos immutable = origin instanceof BlockPos.Mutable m ? m.toImmutable() : origin;
-        final BlockPos.Mutable mutable = origin instanceof BlockPos.Mutable m ? m : origin.mutableCopy();
+    static void fastAll(BlockPos origin, Consumer<BlockPos.MutableBlockPos> consumer, Direction... directions) {
+        final BlockPos immutable = origin instanceof BlockPos.MutableBlockPos m ? m.immutable() : origin;
+        final BlockPos.MutableBlockPos mutable = origin instanceof BlockPos.MutableBlockPos m ? m : origin.mutable();
         for (Direction facing : directions) {
             consumer.accept(mutable.move(facing));
             mutable.set(immutable);
@@ -79,8 +86,8 @@ public interface PosHelper {
     }
 
     static boolean fastAny(BlockPos origin, BiPredicate<BlockPos, Direction> consumer, Direction... directions) {
-        final BlockPos immutable = origin instanceof BlockPos.Mutable m ? m.toImmutable() : origin;
-        final BlockPos.Mutable mutable = origin instanceof BlockPos.Mutable m ? m : origin.mutableCopy();
+        final BlockPos immutable = origin instanceof BlockPos.MutableBlockPos m ? m.immutable() : origin;
+        final BlockPos.MutableBlockPos mutable = origin instanceof BlockPos.MutableBlockPos m ? m : origin.mutable();
         try {
             for (Direction facing : directions) {
                 if (consumer.test(mutable.set(immutable).move(facing), facing)) {
@@ -95,14 +102,14 @@ public interface PosHelper {
 
     static Stream<BlockPos> adjacentNeighbours(BlockPos origin) {
         return StreamSupport.stream(new AbstractSpliterator<BlockPos>(Direction.values().length, Spliterator.SIZED) {
-            private final BlockPos.Mutable pos = new BlockPos.Mutable();
+            private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
             private final Iterator<Direction> iter = Lists.newArrayList(Direction.values()).iterator();
 
             @Override
             public boolean tryAdvance(Consumer<? super BlockPos> consumer) {
                 if (iter.hasNext()) {
                     Direction next = iter.next();
-                    consumer.accept(pos.set(origin.getX() + next.getOffsetX(), origin.getY() + next.getOffsetY(), origin.getZ() + next.getOffsetZ()));
+                    consumer.accept(pos.set(origin.getX() + next.getStepX(), origin.getY() + next.getStepY(), origin.getZ() + next.getStepZ()));
                     return true;
                 }
                 return false;
@@ -110,15 +117,15 @@ public interface PosHelper {
         }, false);
     }
 
-    static BlockPos traverseChain(BlockView world, BlockPos startingPos, Direction chainDirection, Predicate<BlockState> isInChain) {
-        BlockPos.Mutable mutablePos = new BlockPos.Mutable();
+    static BlockPos traverseChain(BlockGetter world, BlockPos startingPos, Direction chainDirection, Predicate<BlockState> isInChain) {
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         mutablePos.set(startingPos);
         do {
             mutablePos.move(chainDirection);
-        } while (isInChain.test(world.getBlockState(mutablePos)) && !world.isOutOfHeightLimit(mutablePos));
+        } while (isInChain.test(world.getBlockState(mutablePos)) && !world.isOutsideBuildHeight(mutablePos));
 
         mutablePos.move(chainDirection.getOpposite());
-        return mutablePos.toImmutable();
+        return mutablePos.immutable();
     }
 
     public final class PositionRecord {
@@ -141,16 +148,16 @@ public interface PosHelper {
             visitedPositions.clear();
         }
 
-        public void forEach(World world, Reactor reactor) {
-            forEach(new BlockPos.Mutable(), pos -> reactor.react(world, world.getBlockState(pos), pos));
+        public void forEach(Level world, Reactor reactor) {
+            forEach(new BlockPos.MutableBlockPos(), pos -> reactor.react(world, world.getBlockState(pos), pos));
         }
 
-        public void forEach(BlockPos.Mutable mutable, Consumer<BlockPos> consumer) {
+        public void forEach(BlockPos.MutableBlockPos mutable, Consumer<BlockPos> consumer) {
             visitedPositions.forEach(l -> consumer.accept(mutable.set(l)));
         }
 
         public interface Reactor {
-            void react(World w, BlockState state, BlockPos pos);
+            void react(Level w, BlockState state, BlockPos pos);
         }
     }
 }

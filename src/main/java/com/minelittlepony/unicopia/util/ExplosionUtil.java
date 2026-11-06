@@ -1,15 +1,15 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.explosion.Explosion;
-import net.minecraft.world.explosion.ExplosionBehavior;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.ExplosionDamageCalculator;
+import net.minecraft.world.level.block.state.BlockState;
 
 public interface ExplosionUtil {
-    ExplosionBehavior NON_DESTRUCTIVE = new ExplosionBehavior(){
+    ExplosionDamageCalculator NON_DESTRUCTIVE = new ExplosionDamageCalculator(){
         @Override
-        public boolean canDestroyBlock(Explosion explosion, BlockView world, BlockPos pos, BlockState state, float power) {
+        public boolean shouldBlockExplode(Explosion explosion, BlockGetter world, BlockPos pos, BlockState state, float power) {
             return false;
         }
     };

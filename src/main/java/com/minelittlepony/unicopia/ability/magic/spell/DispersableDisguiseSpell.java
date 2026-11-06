@@ -1,7 +1,9 @@
 package com.minelittlepony.unicopia.ability.magic.spell;
 
 import java.util.Optional;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
 import com.minelittlepony.unicopia.ability.Abilities;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.IllusionarySpell;
@@ -13,9 +15,6 @@ import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.network.track.TrackableDataType;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.particle.UParticles;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 /**
  * Shapeshifts the player.
@@ -62,7 +61,7 @@ public class DispersableDisguiseSpell extends AbstractDisguiseSpell implements I
             if (isSuppressed()) {
                 source.spawnParticles(MagicParticleEffect.UNICORN, 5);
                 source.spawnParticles(UParticles.CHANGELING_MAGIC, 5);
-            } else if (source.asWorld().random.nextInt(30) == 0) {
+            } else if (source.asWorld().getRandom().nextInt(30) == 0) {
                 source.spawnParticles(UParticles.CHANGELING_MAGIC, 2);
             }
         }
@@ -85,7 +84,7 @@ public class DispersableDisguiseSpell extends AbstractDisguiseSpell implements I
 
             if (appearance != null) {
                 appearance.setInvisible(true);
-                appearance.setPos(appearance.getX(), Integer.MIN_VALUE, appearance.getY());
+                appearance.setPosRaw(appearance.getX(), Integer.MIN_VALUE, appearance.getY());
             }
 
             return true;
@@ -95,17 +94,17 @@ public class DispersableDisguiseSpell extends AbstractDisguiseSpell implements I
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.putInt("suppressionCounter", suppressionCounter);
         compound.putBoolean("forced", forced);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        suppressionCounter = compound.getInt("suppressionCounter", 0);
-        forced = compound.getBoolean("forced", false);
+        suppressionCounter = compound.getIntOr("suppressionCounter", 0);
+        forced = compound.getBooleanOr("forced", false);
         if (suppressionCounter > 0) {
             suppressed.set(true);
         }

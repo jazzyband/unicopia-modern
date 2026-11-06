@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": "#minecraft:wool",
+    "-": "#minecraft:wool_carpets"
+  },
+  "pattern": [
+    "---",
+    "# #",
+    "---"
+  ],
+  "result": {
+    "id": "unicopia:giant_balloon"
+  }
+}

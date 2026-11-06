@@ -1,7 +1,18 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.block.state.StateUtil;
@@ -9,52 +20,30 @@ import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.StairsBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.state.StateManager;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-
 public class SoggyCloudStairsBlock extends CloudStairsBlock implements Soakable {
-    private static final MapCodec<SoggyCloudStairsBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockState.CODEC.fieldOf("base_state").forGetter(block -> block.baseBlockState),
-            CodecUtils.supplierOf(BlockState.CODEC).optionalFieldOf("soggy_block", null).forGetter(b -> b.dryBlock),
-            StairsBlock.createSettingsCodec()
-    ).apply(instance, SoggyCloudStairsBlock::new));
 
     private final Supplier<BlockState> dryBlock;
 
-    public SoggyCloudStairsBlock(BlockState baseState, Supplier<BlockState> dryBlock, Settings settings) {
+    public SoggyCloudStairsBlock(BlockState baseState, Supplier<BlockState> dryBlock, Properties settings) {
         super(baseState, settings);
-        setDefaultState(getDefaultState().with(MOISTURE, 7));
+        registerDefaultState(defaultBlockState().setValue(MOISTURE, 7));
         this.dryBlock = dryBlock;
     }
 
-    @Override
-    public MapCodec<? extends SoggyCloudStairsBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(MOISTURE);
     }
 
     @Override
-    protected ItemStack getPickStack(WorldView world, BlockPos pos, BlockState state, boolean includeData) {
-        return getStateWithMoisture(state, 0).getPickStack(world, pos, includeData);
+    protected ItemStack getCloneItemStack(LevelReader world, BlockPos pos, BlockState state, boolean includeData) {
+        return getStateWithMoisture(state, 0).getCloneItemStack(world, pos, includeData);
     }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         return Soakable.tryCollectMoisture(stack, state, world, pos, player, hand, hit);
     }
 
@@ -64,6 +53,6 @@ public class SoggyCloudStairsBlock extends CloudStairsBlock implements Soakable 
         if (moisture <= 0) {
             return StateUtil.copyState(state, dryBlock.get());
         }
-        return StateUtil.copyState(state, getDefaultState()).with(MOISTURE, moisture);
+        return StateUtil.copyState(state, defaultBlockState()).setValue(MOISTURE, moisture);
     }
 }

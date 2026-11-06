@@ -9,56 +9,52 @@ import com.minelittlepony.unicopia.entity.collision.MultiBox;
 import com.minelittlepony.unicopia.entity.mob.AirBalloonEntity;
 import com.minelittlepony.unicopia.entity.mob.AirBalloonEntity.BalloonDesign;
 import com.minelittlepony.unicopia.entity.mob.AirBalloonEntity.BasketType;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexRendering;
-import net.minecraft.client.render.entity.*;
-import net.minecraft.client.render.entity.feature.FeatureRenderer;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
-public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity, AirBalloonEntityRenderer.State, AirBalloonEntityModel> {
-    public AirBalloonEntityRenderer(EntityRendererFactory.Context context) {
-        super(context, new AirBalloonEntityModel(AirBalloonEntityModel.getBasketModelData().createModel()), 0);
-        addFeature(new BalloonFeature(new AirBalloonEntityModel(AirBalloonEntityModel.getBurnerModelData().createModel()), this,
+public class AirBalloonEntityRenderer extends MobRenderer<AirBalloonEntity, AirBalloonEntityRenderer.State, AirBalloonEntityModel> {
+    public AirBalloonEntityRenderer(EntityRendererProvider.Context context) {
+        super(context, new AirBalloonEntityModel(AirBalloonEntityModel.getBasketModelData().bakeRoot()), 0);
+        addLayer(new BalloonFeature(new AirBalloonEntityModel(AirBalloonEntityModel.getBurnerModelData().bakeRoot()), this,
                 i -> i.hasBurner, e -> {
             return getComponentTexture(e.hasSoulFlame ? "soul_burner" : "burner");
         }, (light, entity) -> entity.isAscending ? 0xFF00FF : light));
-        addFeature(new BalloonFeature(new AirBalloonEntityModel(AirBalloonEntityModel.getCanopyModelData().createModel()), this,
+        addLayer(new BalloonFeature(new AirBalloonEntityModel(AirBalloonEntityModel.getCanopyModelData().bakeRoot()), this,
                 i -> i.hasBalloon,
-                e -> getComponentTexture("canopy/" + e.design.asString()),
+                e -> getComponentTexture("canopy/" + e.design.getSerializedName()),
                 (light, entity) -> entity.hasBurner && entity.isAscending ? light | 0x00005F : light)
         );
-        addFeature(new BalloonFeature(new AirBalloonEntityModel(AirBalloonEntityModel.getSandbagsModelData().createModel()),
+        addLayer(new BalloonFeature(new AirBalloonEntityModel(AirBalloonEntityModel.getSandbagsModelData().bakeRoot()),
                 this, e -> e.hasBalloon && e.inflation >= 1, e -> getComponentTexture("sandbags"),
                 (light, entity) -> entity.hasBurner && entity.isAscending ? light | 0x00003F : light));
     }
 
     @Override
-    public void render(State entity, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        matrices.push();
-        if (entity.hurt) {
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(MathHelper.sin(entity.age) * 3));
+    public void submit(State entity, PoseStack matrices, SubmitNodeCollector vertices, CameraRenderState camera) {
+        matrices.pushPose();
+        if (entity.hasRedOverlay) {
+            matrices.rotate(Axis.XP.rotationDegrees(Mth.sin(entity.ageInTicks) * 3));
         }
-        super.render(entity, matrices, vertices, light);
-        matrices.pop();
+        super.submit(entity, matrices, vertices, camera);
+        matrices.popPose();
 
-        if (MinecraftClient.getInstance().getEntityRenderDispatcher().shouldRenderHitboxes() && !entity.invisible && !MinecraftClient.getInstance().hasReducedDebugInfo()) {
-            MultiBox.forEach(entity.boundingBox, box -> {
-                VertexRendering.drawBox(matrices, vertices.getBuffer(RenderLayer.getLines()), box.offset(entity.pos.multiply(-1)), 1, 1, 1, 1);
-            });
-        }
     }
 
 
@@ -68,10 +64,10 @@ public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity
     }
 
     @Override
-    public void updateRenderState(AirBalloonEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
-        state.yVelocity = MathHelper.clamp((float)Math.abs(entity.getVelocity().getY()) * 3F, 0.25F, 1F);
-        state.yaw = entity.getHorizontalFacing().getPositiveHorizontalDegrees();
+    public void extractRenderState(AirBalloonEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
+        state.yVelocity = Mth.clamp((float)Math.abs(entity.getDeltaMovement().y()) * 3F, 0.25F, 1F);
+        state.yaw = entity.getDirection().toYRot();
         state.design = entity.getDesign();
         state.basket = entity.getBasketType();
         state.inflation = entity.getInflation(tickDelta);
@@ -79,16 +75,16 @@ public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity
         state.hasBalloon = entity.hasBalloon();
         state.isAscending = entity.isAscending();
         state.boundingBox = entity.getBoundingBox();
-        state.hasSoulFlame = entity.getStackInHand(Hand.MAIN_HAND).isOf(Items.SOUL_LANTERN);
-        state.pos = entity.getPos();
+        state.hasSoulFlame = entity.getItemInHand(InteractionHand.MAIN_HAND).is(Items.SOUL_LANTERN);
+        state.pos = entity.position();
         state.burnerWiggleProgress = entity.getBurner().getPullProgress(tickDelta);
-        state.basketRoll = MathHelper.clamp(entity.getXVelocity(tickDelta), -0.5F, 0.5F);
-        state.basketPitch = MathHelper.clamp(entity.getZVelocity(tickDelta), -0.5F, 0.5F);
-        state.accessoriesPivotX = state.inflation * MathHelper.sin(state.limbSwingAmplitude + state.age / 5F) / 4F;
+        state.basketRoll = Mth.clamp(entity.getXVelocity(tickDelta), -0.5F, 0.5F);
+        state.basketPitch = Mth.clamp(entity.getZVelocity(tickDelta), -0.5F, 0.5F);
+        state.accessoriesPivotX = state.inflation * Mth.sin(state.walkAnimationSpeed + state.ageInTicks / 5F) / 4F;
         state.burnerPivoyY = 32 * (1 - state.inflation) - (9 * state.inflation);
-        state.sandbagsPitch = MathHelper.cos(state.limbSwingAmplitude + state.age / 5F) / 80F;
-        state.sandbagsRoll = MathHelper.sin(state.limbSwingAmplitude + state.age / 5F) / 80F;
-        if (state.leashData != null) {
+        state.sandbagsPitch = Mth.cos(state.walkAnimationSpeed + state.ageInTicks / 5F) / 80F;
+        state.sandbagsRoll = Mth.sin(state.walkAnimationSpeed + state.ageInTicks / 5F) / 80F;
+        if (!state.leashStates.isEmpty()) {
             state.basketRoll *= -1;
             state.basketPitch *= -1;
         }
@@ -120,8 +116,8 @@ public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity
         public boolean hasBalloon;
         public boolean isAscending;
         public boolean hasSoulFlame;
-        public Box boundingBox;
-        public Vec3d pos;
+        public AABB boundingBox;
+        public Vec3 pos;
 
         public float yaw;
 
@@ -129,20 +125,20 @@ public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity
     }
 
     @Override
-    protected Box getBoundingBox(AirBalloonEntity entity) {
+    protected AABB getBoundingBoxForCulling(AirBalloonEntity entity, float tickDelta) {
         if (entity.hasBalloon()) {
-            return entity.getBalloonBoundingBox(entity.getBoundingBox()).withMinY(entity.getY());
+            return entity.getBalloonBoundingBox(entity.getBoundingBox()).setMinY(entity.getY());
         }
         return entity.getInteriorBoundingBox(entity.getBoundingBox());
     }
 
     @Override
-    public Identifier getTexture(State entity) {
+    public Identifier getTextureLocation(State entity) {
         return getComponentTexture("basket/" + entity.basket.id().getPath());
     }
 
     @Override
-    protected float getLyingPositionRotationDegrees() {
+    protected float getFlipDegrees() {
         return 0;
     }
 
@@ -150,14 +146,14 @@ public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity
         return Unicopia.id("textures/entity/air_balloon/" + componentName + ".png");
     }
 
-    final class BalloonFeature extends FeatureRenderer<State, AirBalloonEntityModel> {
+    final class BalloonFeature extends RenderLayer<State, AirBalloonEntityModel> {
         private final AirBalloonEntityModel model;
         private final Predicate<State> visibilityTest;
         private final Function<State, Identifier> textureFunc;
         private final BiFunction<Integer, State, Integer> lightFunc;
 
         public BalloonFeature(AirBalloonEntityModel model,
-                FeatureRendererContext<State, AirBalloonEntityModel> context,
+                RenderLayerParent<State, AirBalloonEntityModel> context,
                 Predicate<State> visibilityTest,
                 Function<State, Identifier> textureFunc,
                 BiFunction<Integer, State, Integer> lightFunc) {
@@ -169,9 +165,9 @@ public class AirBalloonEntityRenderer extends MobEntityRenderer<AirBalloonEntity
         }
 
         @Override
-        public void render(MatrixStack matrices, VertexConsumerProvider vertices, int light, State state, float limbDistance, float limbAngle) {
+        public void submit(PoseStack matrices, SubmitNodeCollector vertices, int light, State state, float limbDistance, float limbAngle) {
             if (visibilityTest.test(state)) {
-                render(model, textureFunc.apply(state), matrices, vertices, lightFunc.apply(light, state), state, Colors.WHITE);
+                coloredCutoutModelCopyLayerRender(model, textureFunc.apply(state), matrices, vertices, lightFunc.apply(light, state), state, CommonColors.WHITE, 0);
             }
         }
     }

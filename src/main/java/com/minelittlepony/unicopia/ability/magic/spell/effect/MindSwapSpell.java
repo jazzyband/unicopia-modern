@@ -21,14 +21,17 @@ import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import net.fabricmc.fabric.api.entity.FakePlayer;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.world.GameMode;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.EntityHitResult;
 
 public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.EntityHitListener {
 
@@ -65,12 +68,12 @@ public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.Enti
                 caster.getSpellSlot().removeIf(getType());
 
                 if (!isValidTarget(master) || !isValidTarget(e)) {
-                    master.damage(caster.asServerWorld(), caster.asWorld().getDamageSources().magic(), Float.MAX_VALUE);
+                    master.hurtServer(caster.asServerWorld(), caster.asWorld().damageSources().magic(), Float.MAX_VALUE);
                     master.setHealth(0);
-                    e.damage(caster.asServerWorld(), caster.asWorld().getDamageSources().magic(), Float.MAX_VALUE);
+                    e.hurtServer(caster.asServerWorld(), caster.asWorld().damageSources().magic(), Float.MAX_VALUE);
                     e.setHealth(0);
                 } else {
-                    if (master instanceof ServerPlayerEntity sMaster && e instanceof ServerPlayerEntity sE) {
+                    if (master instanceof ServerPlayer sMaster && e instanceof ServerPlayer sE) {
                         swapPlayerData(sMaster, sE);
                     } else {
                         EntitySwap.ALL.accept(e, master);
@@ -120,7 +123,7 @@ public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.Enti
                     mimic.setHidden(true);
                     mimic.setDisguise(master);
 
-                    if (master instanceof ServerPlayerEntity sMaster && e instanceof ServerPlayerEntity sE) {
+                    if (master instanceof ServerPlayer sMaster && e instanceof ServerPlayer sE) {
                         swapPlayerData(sMaster, sE);
                     } else {
                         EntitySwap.ALL.accept(master, e);
@@ -142,7 +145,7 @@ public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.Enti
                 LivingEntity other = counterpart.get(caster.asWorld());
 
                 if (other == null) {
-                    caster.getOriginatingCaster().asEntity().damage(caster.asServerWorld(), caster.asWorld().getDamageSources().magic(), Float.MAX_VALUE);
+                    caster.getOriginatingCaster().asEntity().hurtServer(caster.asServerWorld(), caster.asWorld().damageSources().magic(), Float.MAX_VALUE);
                     destroy(caster);
                     return false;
                 }
@@ -155,7 +158,7 @@ public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.Enti
 
             if (!caster.asEntity().isAlive()) {
                 counterpart.ifPresent(caster.asWorld(), e -> {
-                    e.damage(caster.asServerWorld(), e.getDamageSources().magic(), Float.MAX_VALUE);
+                    e.hurtServer(caster.asServerWorld(), e.damageSources().magic(), Float.MAX_VALUE);
                 });
                 destroy(caster);
                 return false;
@@ -193,53 +196,53 @@ public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.Enti
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.put("counterpart", counterpart.toNBT(lookup));
         compound.putBoolean("initialized", initialized);
-        compound.putNullable("myStoredInventory", Inventory.CODEC, lookup.getOps(NbtOps.INSTANCE), myStoredInventory.orElse(null));
-        compound.putNullable("theirStoredInventory", Inventory.CODEC, lookup.getOps(NbtOps.INSTANCE), theirStoredInventory.orElse(null));
+        compound.storeNullable("myStoredInventory", Inventory.CODEC, lookup.createSerializationContext(NbtOps.INSTANCE), myStoredInventory.orElse(null));
+        compound.storeNullable("theirStoredInventory", Inventory.CODEC, lookup.createSerializationContext(NbtOps.INSTANCE), theirStoredInventory.orElse(null));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         counterpart.fromNBT(compound.getCompoundOrEmpty("counterpart"), lookup);
-        initialized = compound.getBoolean("initialized", false);
-        myStoredInventory = compound.get("myStoredInventory", Inventory.CODEC, lookup.getOps(NbtOps.INSTANCE));
-        theirStoredInventory = compound.get("theirStoredInventory", Inventory.CODEC, lookup.getOps(NbtOps.INSTANCE));
+        initialized = compound.getBooleanOr("initialized", false);
+        myStoredInventory = compound.read("myStoredInventory", Inventory.CODEC, lookup.createSerializationContext(NbtOps.INSTANCE));
+        theirStoredInventory = compound.read("theirStoredInventory", Inventory.CODEC, lookup.createSerializationContext(NbtOps.INSTANCE));
     }
 
-    private static void swapPlayerData(ServerPlayerEntity a, ServerPlayerEntity b) {
+    private static void swapPlayerData(ServerPlayer a, ServerPlayer b) {
         AlicornAmuletItem.updateAttributes(Living.living(a), 0);
         AlicornAmuletItem.updateAttributes(Living.living(b), 0);
 
-        final GameMode aMode = a.interactionManager.getGameMode();
-        final GameMode bMode = b.interactionManager.getGameMode();
+        final GameType aMode = a.gameMode.getGameModeForPlayer();
+        final GameType bMode = b.gameMode.getGameModeForPlayer();
 
-        final UUID aUUid = a.getUuid();
-        final UUID bUUid = b.getUuid();
+        final UUID aUUid = a.getUUID();
+        final UUID bUUid = b.getUUID();
 
-        final byte aModelBits = a.getDataTracker().get(PlayerAccess.getModelBitFlag());
-        final byte bModelBits = b.getDataTracker().get(PlayerAccess.getModelBitFlag());
+        final byte aModelBits = a.getEntityData().get(PlayerAccess.getModelBitFlag());
+        final byte bModelBits = b.getEntityData().get(PlayerAccess.getModelBitFlag());
 
-        final ServerPlayerEntity aClone = clonePlayer(a);
-        final ServerPlayerEntity bClone = clonePlayer(b);
+        final ServerPlayer aClone = clonePlayer(a);
+        final ServerPlayer bClone = clonePlayer(b);
 
-        aClone.getAbilities().creativeMode = a.getAbilities().creativeMode;
-        bClone.getAbilities().creativeMode = b.getAbilities().creativeMode;
+        aClone.getAbilities().instabuild = a.getAbilities().instabuild;
+        bClone.getAbilities().instabuild = b.getAbilities().instabuild;
 
-        a.copyFrom(bClone, true);
-        b.copyFrom(aClone, true);
+        a.restoreFrom(bClone, true);
+        b.restoreFrom(aClone, true);
 
-        a.setUuid(aUUid);
-        b.setUuid(bUUid);
+        a.setUUID(aUUid);
+        b.setUUID(bUUid);
 
-        a.getDataTracker().set(PlayerAccess.getModelBitFlag(), aModelBits);
-        b.getDataTracker().set(PlayerAccess.getModelBitFlag(), bModelBits);
+        a.getEntityData().set(PlayerAccess.getModelBitFlag(), aModelBits);
+        b.getEntityData().set(PlayerAccess.getModelBitFlag(), bModelBits);
 
-        a.interactionManager.changeGameMode(aMode);
-        b.interactionManager.changeGameMode(bMode);
+        a.gameMode.changeGameModeForPlayer(aMode);
+        b.gameMode.changeGameModeForPlayer(bMode);
 
         a.deathTime = 0;
         b.deathTime = 0;
@@ -249,30 +252,32 @@ public class MindSwapSpell extends MimicSpell implements ProjectileDelegate.Enti
         EntitySwap.PITCH.accept(a, b);
         EntitySwap.YAW.accept(a, b);
 
-        a.sendAbilitiesUpdate();
-        b.sendAbilitiesUpdate();
+        a.onUpdateAbilities();
+        b.onUpdateAbilities();
 
         Living.updateVelocity(a);
         Living.updateVelocity(b);
     }
 
-    private static ServerPlayerEntity clonePlayer(ServerPlayerEntity player) {
-        ServerPlayerEntity clone = new FakePlayer(player.getServerWorld(), player.getGameProfile()) {
+    private static ServerPlayer clonePlayer(ServerPlayer player) {
+        ServerPlayer clone = new FakePlayer(player.level(), player.getGameProfile()) {
             @Override
             public void tick() {
                 discard();
             }
 
             @Override
-            public void setUuid(UUID uuid) {
-                super.setUuid(UUID.randomUUID());
+            public void setUUID(UUID uuid) {
+                super.setUUID(UUID.randomUUID());
             }
         };
 
-        NbtCompound compound = player.writeNbt(new NbtCompound());
+        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, player.registryAccess());
+        player.saveWithoutId(output);
+        CompoundTag compound = output.buildResult();
         compound.remove("Dimension");
         compound.getCompoundOrEmpty("unicopia_caster").remove("spells");
-        clone.readNbt(compound);
+        clone.load(TagValueInput.create(ProblemReporter.DISCARDING, player.registryAccess(), compound));
         return clone;
     }
 }

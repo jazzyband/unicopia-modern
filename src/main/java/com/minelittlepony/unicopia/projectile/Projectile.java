@@ -3,84 +3,82 @@ package com.minelittlepony.unicopia.projectile;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.util.SoundEmitter;
-
-import net.minecraft.block.DispenserBlock;
-import net.minecraft.block.dispenser.ProjectileDispenserBehavior;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ProjectileItem;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.stat.Stats;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Position;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.dispenser.ProjectileDispenseBehavior;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
 import net.minecraft.util.Unit;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Position;
-import net.minecraft.world.World;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileItem;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.DispenserBlock;
 
-public interface Projectile extends ItemConvertible, ProjectileItem {
-    ProjectileItem.Settings SETTINGS = ProjectileItem.Settings
+public interface Projectile extends ItemLike, ProjectileItem {
+    ProjectileItem.DispenseConfig SETTINGS = ProjectileItem.DispenseConfig
             .builder()
             .uncertainty(0)
             .build();
 
     static void makeDispensable(Projectile projectile) {
-        DispenserBlock.registerBehavior(projectile.asItem(), new ProjectileDispenserBehavior(projectile.asItem()));
+        DispenserBlock.registerBehavior(projectile.asItem(), new ProjectileDispenseBehavior(projectile.asItem()));
     }
 
     @Override
-    default ProjectileEntity createEntity(World world, Position pos, ItemStack stack, Direction direction) {
-        ProjectileEntity entity = createProjectile(stack.copyWithCount(1), world, null);
-        entity.setPosition(pos.getX(), pos.getY(), pos.getZ());
-        if (entity instanceof PersistentProjectileEntity p) {
-            p.pickupType = PersistentProjectileEntity.PickupPermission.ALLOWED;
+    default net.minecraft.world.entity.projectile.Projectile asProjectile(Level world, Position pos, ItemStack stack, Direction direction) {
+        net.minecraft.world.entity.projectile.Projectile entity = createProjectile(stack.copyWithCount(1), world, null);
+        entity.setPos(pos.x(), pos.y(), pos.z());
+        if (entity instanceof AbstractArrow p) {
+            p.pickup = AbstractArrow.Pickup.ALLOWED;
         }
         return entity;
     }
 
     @Override
-    default ProjectileItem.Settings getProjectileSettings() {
+    default ProjectileItem.DispenseConfig createDispenseConfig() {
         return SETTINGS;
     }
 
-    default ActionResult triggerThrow(World world, PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
+    default InteractionResult triggerThrow(Level world, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
 
-        if (!world.isClient) {
+        if (!world.isClientSide()) {
             SoundEmitter.playSoundAt(player,
-                    getThrowSound(stack), SoundCategory.NEUTRAL,
+                    getThrowSound(stack), SoundSource.NEUTRAL,
                     0.5F,
-                    0.4F / (world.random.nextFloat() * 0.4F + 0.8F));
+                    0.4F / (world.getRandom().nextFloat() * 0.4F + 0.8F));
 
-            ItemStack projectileStack = stack.splitUnlessCreative(1, player);
+            ItemStack projectileStack = stack.consumeAndReturn(1, player);
             if (player.isCreative()) {
-                projectileStack.set(DataComponentTypes.INTANGIBLE_PROJECTILE, Unit.INSTANCE);
+                projectileStack.set(DataComponents.INTANGIBLE_PROJECTILE, Unit.INSTANCE);
             }
 
-            world.spawnEntity(createProjectile(projectileStack, world, player));
+            world.addFreshEntity(createProjectile(projectileStack, world, player));
         }
 
-        player.incrementStat(Stats.USED.getOrCreateStat(asItem()));
+        player.awardStat(Stats.ITEM_USED.get(asItem()));
 
         if (!player.isCreative()) {
-            stack.decrement(1);
+            stack.shrink(1);
         }
 
-        return ActionResult.SUCCESS_SERVER.withNewHandStack(stack);
+        return InteractionResult.SUCCESS_SERVER.heldItemTransformedTo(stack);
     }
 
-    default ProjectileEntity createProjectile(ItemStack stack, World world, @Nullable PlayerEntity player) {
+    default net.minecraft.world.entity.projectile.Projectile createProjectile(ItemStack stack, Level world, @Nullable Player player) {
         MagicProjectileEntity projectile = player == null ? new MagicProjectileEntity(world) : new MagicProjectileEntity(world, player);
         projectile.setItem(stack);
         projectile.setThrowDamage(getProjectileDamage(stack));
         projectile.setMaxAge(-1);
         if (player != null) {
-            projectile.setVelocity(player, player.getPitch(), player.getYaw(), 0, 1.5F, 1);
+            projectile.shootFromRotation(player, player.getXRot(), player.getYRot(), 0, 1.5F, 1);
         }
         return projectile;
     }

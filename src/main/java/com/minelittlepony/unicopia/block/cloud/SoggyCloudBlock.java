@@ -1,7 +1,20 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.block.state.StateUtil;
@@ -9,49 +22,26 @@ import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.state.StateManager;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-
 public class SoggyCloudBlock extends CloudBlock implements Soakable {
-    private static final MapCodec<SoggyCloudBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            CodecUtils.supplierOf(BlockState.CODEC).fieldOf("dry_block").forGetter(b -> b.dryBlock),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, SoggyCloudBlock::new));
 
     private final Supplier<BlockState> dryBlock;
 
-    public SoggyCloudBlock(Supplier<BlockState> dryBlock, Settings settings) {
-        super(false, settings.ticksRandomly());
-        setDefaultState(getDefaultState().with(MOISTURE, 7));
+    public SoggyCloudBlock(Supplier<BlockState> dryBlock, Properties settings) {
+        super(false, settings.randomTicks());
+        registerDefaultState(defaultBlockState().setValue(MOISTURE, 7));
         this.dryBlock = dryBlock;
     }
 
-    @Override
-    public MapCodec<? extends SoggyCloudBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(MOISTURE);
     }
 
     @Override
-    public ItemStack getPickStack(WorldView world, BlockPos pos, BlockState state, boolean includeData) {
-        return getStateWithMoisture(state, 0).getPickStack(world, pos, includeData);
+    public ItemStack getCloneItemStack(LevelReader world, BlockPos pos, BlockState state, boolean includeData) {
+        return getStateWithMoisture(state, 0).getCloneItemStack(world, pos, includeData);
     }
 
     @Nullable
@@ -60,22 +50,22 @@ public class SoggyCloudBlock extends CloudBlock implements Soakable {
         if (moisture <= 0) {
             return StateUtil.copyState(state, dryBlock.get());
         }
-        return StateUtil.copyState(state, getDefaultState()).with(MOISTURE, moisture);
+        return StateUtil.copyState(state, defaultBlockState()).setValue(MOISTURE, moisture);
     }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         return Soakable.tryCollectMoisture(stack, state, world, pos, player, hand, hit);
     }
 
     @Override
-    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
-        super.randomDisplayTick(state, world, pos, random);
+    public void animateTick(BlockState state, Level world, BlockPos pos, RandomSource random) {
+        super.animateTick(state, world, pos, random);
         Soakable.addMoistureParticles(state, world, pos, random);
     }
 
     @Override
-    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+    protected void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
         Soakable.tickMoisture(state, world, pos, random);
     }
 }

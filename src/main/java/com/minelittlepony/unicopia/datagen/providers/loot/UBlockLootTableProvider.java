@@ -19,70 +19,71 @@ import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.server.world.Tree;
 import com.minelittlepony.unicopia.server.world.UTreeGen;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricBlockLootTableProvider;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricBlockLootSubProvider;
 import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CarrotsBlock;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.block.SnowBlock;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.block.enums.BlockHalf;
-import net.minecraft.block.enums.SlabType;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.Items;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.condition.BlockStatePropertyLootCondition;
-import net.minecraft.loot.condition.EntityPropertiesLootCondition;
-import net.minecraft.loot.condition.LootConditionConsumingBuilder;
-import net.minecraft.loot.condition.RandomChanceLootCondition;
-import net.minecraft.loot.condition.TableBonusLootCondition;
-import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.entry.AlternativeEntry;
-import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.function.ApplyBonusLootFunction;
-import net.minecraft.loot.function.ConditionalLootFunction;
-import net.minecraft.loot.function.SetCountLootFunction;
-import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.loot.provider.number.LootNumberProvider;
-import net.minecraft.loot.provider.number.UniformLootNumberProvider;
-import net.minecraft.predicate.StatePredicate;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.IntProperty;
-import net.minecraft.state.property.Properties;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.StringIdentifiable;
+import net.fabricmc.fabric.mixin.datagen.loot.BlockLootSubProviderAccessor;
+import net.minecraft.advancements.predicates.StatePropertiesPredicate;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CarrotBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.entries.AlternativesEntry;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.ApplyBonusCount;
+import net.minecraft.world.level.storage.loot.functions.LootItemConditionalFunction;
+import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
+import net.minecraft.world.level.storage.loot.predicates.BonusLevelTableCondition;
+import net.minecraft.world.level.storage.loot.predicates.ConditionUserBuilder;
+import net.minecraft.world.level.storage.loot.predicates.MatchBlock;
+import net.minecraft.world.level.storage.loot.predicates.LootItemEntityPropertyCondition;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider;
 
-public class UBlockLootTableProvider extends FabricBlockLootTableProvider {
+
+public class UBlockLootTableProvider extends FabricBlockLootSubProvider {
     protected static final float[] SAPLING_DROP_CHANCE = new float[]{0.05F, 0.0625F, 0.083333336F, 0.1F};
     private static final float[] LEAVES_STICK_DROP_CHANCE = new float[]{0.02F, 0.022222223F, 0.025F, 0.033333335F, 0.1F};
 
-    private final CompletableFuture<RegistryWrapper.WrapperLookup> registryLookupFuture;
+    private final CompletableFuture<HolderLookup.Provider> registryLookupFuture;
 
-    public UBlockLootTableProvider(FabricDataOutput output, CompletableFuture<RegistryWrapper.WrapperLookup> registryLookup) {
+    public UBlockLootTableProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registryLookup) {
         super(output, registryLookup);
         registryLookupFuture = registryLookup;
     }
 
-    public <T> RegistryEntry<T> entryOf(RegistryKey<T> key) {
-        return registryLookupFuture.getNow(null).getOrThrow(key.getRegistryRef()).getOrThrow(key);
+    public <T> Holder<T> entryOf(ResourceKey<T> key) {
+        return registryLookupFuture.getNow(null).lookupOrThrow(key.registryKey()).getOrThrow(key);
     }
 
-    private ConditionalLootFunction.Builder<?> createBasePreservingFortuneBonusCondition() {
-        return ApplyBonusLootFunction.binomialWithBonusCount(entryOf(Enchantments.FORTUNE), 0.8714286F, 0);
+    private LootItemConditionalFunction.Builder<?> createBasePreservingFortuneBonusCondition() {
+        return ApplyBonusCount.addBonusBinomialDistributionCount(entryOf(Enchantments.FORTUNE), 0.8714286F, 0);
     }
 
-    private ConditionalLootFunction.Builder<?> createCropsFortuneBonusCondition() {
-        return ApplyBonusLootFunction.binomialWithBonusCount(entryOf(Enchantments.FORTUNE), 0.5714286F, 3);
+    private LootItemConditionalFunction.Builder<?> createCropsFortuneBonusCondition() {
+        return ApplyBonusCount.addBonusBinomialDistributionCount(entryOf(Enchantments.FORTUNE), 0.5714286F, 3);
     }
 
     @Override
@@ -114,135 +115,135 @@ public class UBlockLootTableProvider extends FabricBlockLootTableProvider {
             UBlocks.ZAP_FENCE_GATE, UBlocks.ZAP_FENCE,
             UBlocks.ZAP_LOG, UBlocks.ZAP_PLANKS, UBlocks.ZAP_STAIRS, UBlocks.ZAP_WOOD,
             UBlocks.WORM_BLOCK
-        ).forEach(this::addDrop);
+        ).forEach(this::dropSelf);
 
         // slabs
         List.of(
                 UBlocks.CHISELLED_CHITIN_SLAB, UBlocks.POLISHED_CHITIN_SLAB,
                 UBlocks.CLOUD_BRICK_SLAB, UBlocks.CLOUD_PLANK_SLAB,
                 UBlocks.PALM_SLAB, UBlocks.ZAP_SLAB, UBlocks.WAXED_ZAP_SLAB, UBlocks.GOLDEN_OAK_SLAB
-        ).forEach(slab -> addDrop(slab, this::slabDrops));
-        addDrop(UBlocks.CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 2));
-        addDrop(UBlocks.SOGGY_CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 2));
-        addDrop(UBlocks.DENSE_CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 4));
-        addDrop(UBlocks.ETCHED_CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 4));
+        ).forEach(slab -> add(slab, this::createSlabItemTable));
+        add(UBlocks.CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 2));
+        add(UBlocks.SOGGY_CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 2));
+        add(UBlocks.DENSE_CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 4));
+        add(UBlocks.ETCHED_CLOUD_SLAB, slab -> decomposingSlabDrops(slab, UItems.CLOUD_LUMP, 4));
 
         // fruit
         UModelProvider.FRUITS.forEach(block -> {
             if (block != UBlocks.GOLDEN_APPLE && block != UBlocks.BANANAS) {
-                addDrop(block, fortuneBonusDrops(block.asItem()));
+                add(block, fortuneBonusDrops(block.asItem()));
             }
         });
-        addDrop(UBlocks.GOLDEN_APPLE, LootTable.builder().pool(LootPool.builder()
-            .rolls(exactly(1))
-            .with(applyStateCondition(UBlocks.GOLDEN_APPLE, EnchantedFruitBlock.ENCHANTED, false, applyExplosionDecay(UBlocks.GOLDEN_APPLE, ItemEntry.builder(Items.GOLDEN_APPLE))).apply(createBasePreservingFortuneBonusCondition()))
-            .with(applyStateCondition(UBlocks.GOLDEN_APPLE, EnchantedFruitBlock.ENCHANTED, true, applyExplosionDecay(UBlocks.GOLDEN_APPLE, ItemEntry.builder(Items.ENCHANTED_GOLDEN_APPLE))).apply(createBasePreservingFortuneBonusCondition()))
+        add(UBlocks.GOLDEN_APPLE, LootTable.lootTable().withPool(LootPool.lootPool()
+            .setRolls(exactly(1))
+            .add(applyStateCondition(UBlocks.GOLDEN_APPLE, EnchantedFruitBlock.ENCHANTED, false, applyExplosionDecay(UBlocks.GOLDEN_APPLE, LootItem.lootTableItem(Items.GOLDEN_APPLE))).apply(createBasePreservingFortuneBonusCondition()))
+            .add(applyStateCondition(UBlocks.GOLDEN_APPLE, EnchantedFruitBlock.ENCHANTED, true, applyExplosionDecay(UBlocks.GOLDEN_APPLE, LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE))).apply(createBasePreservingFortuneBonusCondition()))
         ));
-        List.of(UBlocks.GREEN_APPLE_LEAVES, UBlocks.SOUR_APPLE_LEAVES, UBlocks.SWEET_APPLE_LEAVES, UBlocks.GOLDEN_OAK_LEAVES).forEach(block -> addDrop(block, b -> fruitLeavesDrops(b, Items.STICK)));
-        addDrop(UBlocks.GOLDEN_OAK_LEAVES, b -> fruitLeavesDrops(b, UItems.GOLDEN_STICK));
-        addDrop(UBlocks.MANGO_LEAVES, block -> leavesDrops(block, UTreeGen.MANGO_TREE.sapling().get(), 0.025F, 0.027777778F, 0.03125F, 0.041666668F, 0.1F)); // same chance as jungle
-        addDrop(UBlocks.ZAP_LEAVES, block -> leavesDrops(block, UTreeGen.ZAP_APPLE_TREE.sapling().get(), SAPLING_DROP_CHANCE));
-        addDrop(UBlocks.FLOWERING_ZAP_LEAVES, block -> leavesDrops(block, UTreeGen.ZAP_APPLE_TREE.sapling().get(), SAPLING_DROP_CHANCE));
-        addDrop(UBlocks.PALM_LEAVES, block -> leavesDrops(block, UTreeGen.BANANA_TREE.sapling().get(), SAPLING_DROP_CHANCE));
+        List.of(UBlocks.GREEN_APPLE_LEAVES, UBlocks.SOUR_APPLE_LEAVES, UBlocks.SWEET_APPLE_LEAVES, UBlocks.GOLDEN_OAK_LEAVES).forEach(block -> add(block, b -> fruitLeavesDrops(b, Items.STICK)));
+        add(UBlocks.GOLDEN_OAK_LEAVES, b -> fruitLeavesDrops(b, UItems.GOLDEN_STICK));
+        add(UBlocks.MANGO_LEAVES, block -> createLeavesDrops(block, UTreeGen.MANGO_TREE.sapling().get(), 0.025F, 0.027777778F, 0.03125F, 0.041666668F, 0.1F)); // same chance as jungle
+        add(UBlocks.ZAP_LEAVES, block -> createLeavesDrops(block, UTreeGen.ZAP_APPLE_TREE.sapling().get(), NORMAL_LEAVES_SAPLING_CHANCES));
+        add(UBlocks.FLOWERING_ZAP_LEAVES, block -> createLeavesDrops(block, UTreeGen.ZAP_APPLE_TREE.sapling().get(), NORMAL_LEAVES_SAPLING_CHANCES));
+        add(UBlocks.PALM_LEAVES, block -> createLeavesDrops(block, UTreeGen.BANANA_TREE.sapling().get(), NORMAL_LEAVES_SAPLING_CHANCES));
 
         Tree.REGISTRY.forEach(tree -> {
-            tree.sapling().ifPresent(this::addDrop);
-            tree.pot().ifPresent(this::addPottedPlantDrops);
+            tree.sapling().ifPresent(this::dropSelf);
+            tree.pot().ifPresent(this::dropPottedContents);
         });
 
         // jars
         List.of(
                 UBlocks.JAR, UBlocks.CLOUD_JAR, UBlocks.STORM_JAR, UBlocks.LIGHTNING_JAR, UBlocks.STORM_JAR
-        ).forEach(jar -> addDrop(jar, this::dropsWithSilkTouch));
+        ).forEach(jar -> add(jar, this::createSilkTouchOnlyTable));
 
         // doors
         List.of(
             UBlocks.CLOUD_DOOR, UBlocks.CRYSTAL_DOOR,
             UBlocks.DARK_OAK_DOOR, UBlocks.PALM_DOOR, UBlocks.STABLE_DOOR
-        ).forEach(door -> addDrop(door, this::doorDrops));
+        ).forEach(door -> add(door, this::createDoorTable));
 
         //beds
         List.of(
             UBlocks.CLOUD_BED, UBlocks.CLOTH_BED
-        ).forEach(bed -> addDrop(bed, b -> dropsWithProperty(b, BedBlock.PART, BedPart.HEAD)));
+        ).forEach(bed -> add(bed, b -> createSinglePropConditionTable(b, BedBlock.PART, BedPart.HEAD)));
 
-        addDrop(UBlocks.CHITIN_SPIKES, drops(UBlocks.CHITIN_SPIKES, UItems.CARAPACE, exactly(6)));
-        addDrop(UBlocks.CHITIN, drops(UBlocks.CHITIN, UItems.CARAPACE, exactly(9)));
-        addDrop(UBlocks.SURFACE_CHITIN, drops(UBlocks.SURFACE_CHITIN, UItems.CARAPACE, exactly(9)));
-        addDrop(UBlocks.CHISELLED_CHITIN_HULL, hullDrops(UBlocks.CHISELLED_CHITIN_HULL, UBlocks.CHITIN, UBlocks.CHISELLED_CHITIN));
-        addDrop(UBlocks.POLISHED_CHITIN_HULL, hullDrops(UBlocks.POLISHED_CHITIN_HULL, UBlocks.CHITIN, UBlocks.POLISHED_CHITIN));
+        add(UBlocks.CHITIN_SPIKES, createSingleItemTableWithSilkTouch(UBlocks.CHITIN_SPIKES, UItems.CARAPACE, exactly(6)));
+        add(UBlocks.CHITIN, createSingleItemTableWithSilkTouch(UBlocks.CHITIN, UItems.CARAPACE, exactly(9)));
+        add(UBlocks.SURFACE_CHITIN, createSingleItemTableWithSilkTouch(UBlocks.SURFACE_CHITIN, UItems.CARAPACE, exactly(9)));
+        add(UBlocks.CHISELLED_CHITIN_HULL, hullDrops(UBlocks.CHISELLED_CHITIN_HULL, UBlocks.CHITIN, UBlocks.CHISELLED_CHITIN));
+        add(UBlocks.POLISHED_CHITIN_HULL, hullDrops(UBlocks.POLISHED_CHITIN_HULL, UBlocks.CHITIN, UBlocks.POLISHED_CHITIN));
 
-        addDrop(UBlocks.SLIME_PUSTULE, LootTable.builder()
-                .pool(applyStateCondition(UBlocks.SLIME_PUSTULE, SlimePustuleBlock.SHAPE, SlimePustuleBlock.Shape.POD,
-                        addSurvivesExplosionCondition(UBlocks.SLIME_PUSTULE, LootPool.builder()
-                    .rolls(exactly(1))
-                    .with(ItemEntry.builder(UBlocks.SLIME_PUSTULE)).conditionally(createWithSilkTouchOrShearsCondition()))
+        add(UBlocks.SLIME_PUSTULE, LootTable.lootTable()
+                .withPool(applyStateCondition(UBlocks.SLIME_PUSTULE, SlimePustuleBlock.SHAPE, SlimePustuleBlock.Shape.POD,
+                        applyExplosionCondition(UBlocks.SLIME_PUSTULE, LootPool.lootPool()
+                    .setRolls(exactly(1))
+                    .add(LootItem.lootTableItem(UBlocks.SLIME_PUSTULE)).when(hasShearsOrSilkTouch()))
         )));
-        addDrop(UBlocks.SLIME, block -> LootTable.builder()
-                .pool(LootPool.builder().conditionally(EntityPropertiesLootCondition.create(LootContext.EntityTarget.THIS))
-                        .with(AlternativeEntry.builder(
-                                AlternativeEntry.builder(SnowBlock.LAYERS.getValues(), layer -> ItemEntry.builder(Items.SLIME_BALL)
-                                    .conditionally(BlockStatePropertyLootCondition.builder(block).properties(StatePredicate.Builder.create().exactMatch(SnowBlock.LAYERS, layer)))
-                                    .apply(SetCountLootFunction.builder(ConstantLootNumberProvider.create(layer.intValue())))
-                                ).conditionally(createWithoutSilkTouchCondition()),
-                                AlternativeEntry.builder(SnowBlock.LAYERS.getValues(), layer -> layer == 8
-                                    ? ItemEntry.builder(Blocks.SLIME_BLOCK)
-                                    : ItemEntry.builder(UBlocks.SLIME)
-                                        .apply(SetCountLootFunction.builder(ConstantLootNumberProvider.create(layer)))
-                                        .conditionally(BlockStatePropertyLootCondition.builder(block).properties(StatePredicate.Builder.create().exactMatch(SnowBlock.LAYERS, layer)))))
+        add(UBlocks.SLIME, block -> LootTable.lootTable()
+                .withPool(LootPool.lootPool().when(LootItemEntityPropertyCondition.entityPresent(LootContext.EntityTarget.THIS))
+                        .add(AlternativesEntry.alternatives(
+                                AlternativesEntry.alternatives(SnowLayerBlock.LAYERS.getPossibleValues(), layer -> LootItem.lootTableItem(Items.SLIME_BALL)
+                                    .when(MatchBlock.blockMatches(net.minecraft.core.registries.BuiltInRegistries.BLOCK, block, StatePropertiesPredicate.Builder.properties().hasProperty(SnowLayerBlock.LAYERS, layer)))
+                                    .apply(SetItemCountFunction.setCount(ContextIntProviders.exactly(layer.intValue())))
+                                ).when(doesNotHaveSilkTouch()),
+                                AlternativesEntry.alternatives(SnowLayerBlock.LAYERS.getPossibleValues(), layer -> layer == 8
+                                    ? LootItem.lootTableItem(Blocks.SLIME_BLOCK)
+                                    : LootItem.lootTableItem(UBlocks.SLIME)
+                                        .apply(SetItemCountFunction.setCount(ContextIntProviders.exactly(layer)))
+                                        .when(MatchBlock.blockMatches(net.minecraft.core.registries.BuiltInRegistries.BLOCK, block, StatePropertiesPredicate.Builder.properties().hasProperty(SnowLayerBlock.LAYERS, layer)))))
         )));
-        addDrop(UBlocks.MYSTERIOUS_EGG, LootTable.builder()
-            .pool(addSurvivesExplosionCondition(UBlocks.MYSTERIOUS_EGG, LootPool.builder()
-                .rolls(exactly(1))
-                .with(ItemEntry.builder(UBlocks.MYSTERIOUS_EGG))
-                    .apply(PileBlock.COUNT.getValues(), count -> applyStateCondition(UBlocks.MYSTERIOUS_EGG, PileBlock.COUNT, count, SetCountLootFunction.builder(exactly(count)))))));
+        add(UBlocks.MYSTERIOUS_EGG, LootTable.lootTable()
+            .withPool(applyExplosionCondition(UBlocks.MYSTERIOUS_EGG, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(LootItem.lootTableItem(UBlocks.MYSTERIOUS_EGG))
+                    .apply(PileBlock.COUNT.getPossibleValues(), count -> applyStateCondition(UBlocks.MYSTERIOUS_EGG, PileBlock.COUNT, count, SetItemCountFunction.setCount(exactly(count)))))));
 
-        addDrop(UBlocks.CLOUD, drops(UBlocks.CLOUD, UItems.CLOUD_LUMP, exactly(4)));
-        addDrop(UBlocks.CLOUD_STAIRS, drops(UBlocks.CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(6)));
+        add(UBlocks.CLOUD, createSingleItemTableWithSilkTouch(UBlocks.CLOUD, UItems.CLOUD_LUMP, exactly(4)));
+        add(UBlocks.CLOUD_STAIRS, createSingleItemTableWithSilkTouch(UBlocks.CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(6)));
 
-        addDrop(UBlocks.SOGGY_CLOUD, drops(UBlocks.CLOUD, UItems.CLOUD_LUMP, exactly(4)));
-        addDrop(UBlocks.SOGGY_CLOUD_STAIRS, drops(UBlocks.CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(6)));
+        add(UBlocks.SOGGY_CLOUD, createSingleItemTableWithSilkTouch(UBlocks.CLOUD, UItems.CLOUD_LUMP, exactly(4)));
+        add(UBlocks.SOGGY_CLOUD_STAIRS, createSingleItemTableWithSilkTouch(UBlocks.CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(6)));
 
-        addDrop(UBlocks.DENSE_CLOUD, drops(UBlocks.DENSE_CLOUD, UItems.CLOUD_LUMP, exactly(9)));
-        addDrop(UBlocks.DENSE_CLOUD_STAIRS, drops(UBlocks.DENSE_CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(13)));
-        addDrop(UBlocks.ETCHED_CLOUD, drops(UBlocks.ETCHED_CLOUD, UItems.CLOUD_LUMP, exactly(9)));
-        addDrop(UBlocks.ETCHED_CLOUD_STAIRS, drops(UBlocks.ETCHED_CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(13)));
+        add(UBlocks.DENSE_CLOUD, createSingleItemTableWithSilkTouch(UBlocks.DENSE_CLOUD, UItems.CLOUD_LUMP, exactly(9)));
+        add(UBlocks.DENSE_CLOUD_STAIRS, createSingleItemTableWithSilkTouch(UBlocks.DENSE_CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(13)));
+        add(UBlocks.ETCHED_CLOUD, createSingleItemTableWithSilkTouch(UBlocks.ETCHED_CLOUD, UItems.CLOUD_LUMP, exactly(9)));
+        add(UBlocks.ETCHED_CLOUD_STAIRS, createSingleItemTableWithSilkTouch(UBlocks.ETCHED_CLOUD_STAIRS, UItems.CLOUD_LUMP, exactly(13)));
 
         // recipe produces: 6 blocks -> 3 pillars means: 6/3 = 2
-        addDrop(UBlocks.CLOUD_PILLAR, drops(UBlocks.CLOUD_PILLAR, UBlocks.CLOUD, exactly(2)));
+        add(UBlocks.CLOUD_PILLAR, createSingleItemTableWithSilkTouch(UBlocks.CLOUD_PILLAR, UBlocks.CLOUD, exactly(2)));
 
-        addDrop(UBlocks.FROSTED_OBSIDIAN, Blocks.OBSIDIAN);
-        addDrop(UBlocks.APPLE_PIE, pieDrops(UBlocks.APPLE_PIE, UItems.APPLE_PIE, UItems.APPLE_PIE_HOOF));
+        dropOther(UBlocks.FROSTED_OBSIDIAN, Blocks.OBSIDIAN);
+        add(UBlocks.APPLE_PIE, pieDrops(UBlocks.APPLE_PIE, UItems.APPLE_PIE, UItems.APPLE_PIE_HOOF));
 
         // crops
         addTallCropDrops(UBlocks.OATS, UItems.OATS);
-        addDrop(UBlocks.BANANAS, LootTable.builder()
-            .pool(addSurvivesExplosionCondition(UBlocks.BANANAS, LootPool.builder()
-                .rolls(exactly(1))
-                .with(item(UItems.BANANA, between(6, 12F)).apply(createCropsFortuneBonusCondition()))
+        add(UBlocks.BANANAS, LootTable.lootTable()
+            .withPool(applyExplosionCondition(UBlocks.BANANAS, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(item(UItems.BANANA, between(6, 12)).apply(createCropsFortuneBonusCondition()))
             )));
-        addDrop(UBlocks.PINEAPPLE, LootTable.builder()
-            .pool(addSurvivesExplosionCondition(UBlocks.PINEAPPLE, LootPool.builder()
-                .rolls(exactly(1))
-                .with(item(UItems.PINEAPPLE, exactly(1))
+        add(UBlocks.PINEAPPLE, LootTable.lootTable()
+            .withPool(applyExplosionCondition(UBlocks.PINEAPPLE, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(item(UItems.PINEAPPLE, exactly(1))
                     .apply(createBasePreservingFortuneBonusCondition())
-                    .conditionally(BlockStatePropertyLootCondition.builder(UBlocks.PINEAPPLE).properties(StatePredicate.Builder.create()
-                        .exactMatch(Properties.BLOCK_HALF, BlockHalf.TOP)
-                        .exactMatch(Properties.AGE_7, Properties.AGE_7_MAX))))
+                    .when(MatchBlock.blockMatches(net.minecraft.core.registries.BuiltInRegistries.BLOCK, UBlocks.PINEAPPLE, StatePropertiesPredicate.Builder.properties()
+                        .hasProperty(BlockStateProperties.HALF, Half.TOP)
+                        .hasProperty(BlockStateProperties.AGE_7, BlockStateProperties.MAX_AGE_7))))
             )));
-        addDrop(UBlocks.ROCKS, applyExplosionDecay(UBlocks.ROCKS, LootTable.builder()
-                .pool(applyStateCondition(UBlocks.ROCKS, Properties.AGE_7, Properties.AGE_7_MAX, LootPool.builder()
-                    .rolls(exactly(1))
-                    .with(ItemEntry.builder(UItems.WEIRD_ROCK).conditionally(RandomChanceLootCondition.builder(0.25F)).apply(createCropsFortuneBonusCondition()))
-                    .with(ItemEntry.builder(UItems.ROCK).apply(createCropsFortuneBonusCondition()))))
-                .pool(LootPool.builder()
-                    .rolls(exactly(1))
-                    .with(ItemEntry.builder(UItems.PEBBLES)))
+        add(UBlocks.ROCKS, applyExplosionDecay(UBlocks.ROCKS, LootTable.lootTable()
+                .withPool(applyStateCondition(UBlocks.ROCKS, BlockStateProperties.AGE_7, BlockStateProperties.MAX_AGE_7, LootPool.lootPool()
+                    .setRolls(exactly(1))
+                    .add(LootItem.lootTableItem(UItems.WEIRD_ROCK).when(LootItemRandomChanceCondition.randomChance(0.25F)).apply(createCropsFortuneBonusCondition()))
+                    .add(LootItem.lootTableItem(UItems.ROCK).apply(createCropsFortuneBonusCondition()))))
+                .withPool(LootPool.lootPool()
+                    .setRolls(exactly(1))
+                    .add(LootItem.lootTableItem(UItems.PEBBLES)))
         ));
-        addDrop(UBlocks.GOLD_ROOT, applyExplosionDecay(UBlocks.GOLD_ROOT, LootTable.builder()
-            .pool(LootPool.builder().with(ItemEntry.builder(Items.GOLDEN_CARROT)))
-            .pool(applyStateCondition(UBlocks.GOLD_ROOT, CarrotsBlock.AGE, 7, LootPool.builder())
-                    .with(ItemEntry.builder(Items.GOLDEN_CARROT).apply(createCropsFortuneBonusCondition())))));
+        add(UBlocks.GOLD_ROOT, applyExplosionDecay(UBlocks.GOLD_ROOT, LootTable.lootTable()
+            .withPool(LootPool.lootPool().add(LootItem.lootTableItem(Items.GOLDEN_CARROT)))
+            .withPool(applyStateCondition(UBlocks.GOLD_ROOT, CarrotBlock.AGE, 7, LootPool.lootPool())
+                    .add(LootItem.lootTableItem(Items.GOLDEN_CARROT).apply(createCropsFortuneBonusCondition())))));
         /*
         addDrop(UBlocks.PLUNDER_VINE, applyExplosionDecay(UBlocks.PLUNDER_VINE, LootTable.builder()
                 .pool(LootPool.builder().rolls(exactly(1)).conditionally(RandomChanceLootCondition.builder(0.25F))
@@ -253,17 +254,17 @@ public class UBlockLootTableProvider extends FabricBlockLootTableProvider {
         */
 
         // hay
-        addDrop(UBlocks.HAY_BLOCK, b -> edibleBlockDrops(b, Items.WHEAT));
+        add(UBlocks.HAY_BLOCK, b -> edibleBlockDrops(b, Items.WHEAT));
 
         // shells
-        addDrop(UBlocks.CLAM_SHELL, shellDrops(UBlocks.CLAM_SHELL, UItems.CLAM_SHELL));
-        addDrop(UBlocks.SCALLOP_SHELL, shellDrops(UBlocks.SCALLOP_SHELL, UItems.SCALLOP_SHELL));
-        addDrop(UBlocks.TURRET_SHELL, shellDrops(UBlocks.TURRET_SHELL, UItems.TURRET_SHELL));
+        add(UBlocks.CLAM_SHELL, shellDrops(UBlocks.CLAM_SHELL, UItems.CLAM_SHELL));
+        add(UBlocks.SCALLOP_SHELL, shellDrops(UBlocks.SCALLOP_SHELL, UItems.SCALLOP_SHELL));
+        add(UBlocks.TURRET_SHELL, shellDrops(UBlocks.TURRET_SHELL, UItems.TURRET_SHELL));
 
-        var farmersDelightGenerator = new UExternalBlockLootTableProvider(lootTables, ResourceConditions.allModsLoaded("farmersdelight"));
+        var farmersDelightGenerator = new UExternalBlockLootTableProvider(((BlockLootSubProviderAccessor)this).getMap()::put, ResourceConditions.allModsLoaded("farmersdelight"));
 
-        farmersDelightGenerator.addDrop(Unicopia.id("rice_block"), b -> UExternalBlockLootTableProvider.edibleBlockDrops(b, Identifier.of("farmersdelight", "rice_panicle")));
-        farmersDelightGenerator.addDrop(Unicopia.id("straw_block"), b -> UExternalBlockLootTableProvider.edibleBlockDrops(b, Identifier.of("farmersdelight", "straw")));
+        farmersDelightGenerator.addDrop(Unicopia.id("rice_block"), b -> UExternalBlockLootTableProvider.edibleBlockDrops(b, Identifier.fromNamespaceAndPath("farmersdelight", "rice_panicle")));
+        farmersDelightGenerator.addDrop(Unicopia.id("straw_block"), b -> UExternalBlockLootTableProvider.edibleBlockDrops(b, Identifier.fromNamespaceAndPath("farmersdelight", "straw")));
 
         addStrippingDrops(UBlocks.GOLDEN_OAK_LOG, b -> simpleDrops(b, Items.GOLD_NUGGET, 4));
         addStrippingDrops(UBlocks.GOLDEN_OAK_WOOD, b -> simpleDrops(b, Items.GOLD_NUGGET, 6));
@@ -271,122 +272,122 @@ public class UBlockLootTableProvider extends FabricBlockLootTableProvider {
 
     private <T extends Block & StrippingLootable> void addStrippingDrops(T block, Function<T, LootTable.Builder> drops) {
         block.getStrippingLootTableKey().ifPresent(key -> {
-            this.lootTables.put(key, drops.apply(block));
+            ((BlockLootSubProviderAccessor)this).getMap().put(key, drops.apply(block));
         });
     }
 
-    private void addTallCropDrops(SegmentedCropBlock baseCrop, ItemConvertible crop) {
-        addDrop(baseCrop, applyExplosionDecay(baseCrop, LootTable.builder()
-            .pool(LootPool.builder()
-                .rolls(exactly(1))
-                .with(ItemEntry.builder(baseCrop.getSeedsItem()))))
-            .pool(applyStateCondition(baseCrop, baseCrop.getAgeProperty(), baseCrop.getMaxAge(), LootPool.builder()
-                .rolls(exactly(1))
-                .with(ItemEntry.builder(baseCrop.getSeedsItem()).apply(createCropsFortuneBonusCondition())))));
+    private void addTallCropDrops(SegmentedCropBlock baseCrop, ItemLike crop) {
+        add(baseCrop, applyExplosionDecay(baseCrop, LootTable.lootTable()
+            .withPool(LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(LootItem.lootTableItem(baseCrop.getBaseSeedId()))))
+            .withPool(applyStateCondition(baseCrop, baseCrop.getAgeProperty(), baseCrop.getMaxAge(), LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(LootItem.lootTableItem(baseCrop.getBaseSeedId()).apply(createCropsFortuneBonusCondition())))));
 
         SegmentedCropBlock stage = baseCrop;
         while ((stage = stage.getNext()) != null) {
-            addDrop(stage, applyExplosionDecay(stage, LootTable.builder()
-                .pool(LootPool.builder()
-                    .rolls(exactly(1))
-                    .with(applyStateCondition(stage, stage.getAgeProperty(), stage.getMaxAge(), ItemEntry.builder(crop))))));
+            add(stage, applyExplosionDecay(stage, LootTable.lootTable()
+                .withPool(LootPool.lootPool()
+                    .setRolls(exactly(1))
+                    .add(applyStateCondition(stage, stage.getAgeProperty(), stage.getMaxAge(), LootItem.lootTableItem(crop))))));
         }
     }
 
-    private LootTable.Builder simpleDrops(Block block, ItemConvertible drop, int count) {
-        return LootTable.builder()
-                .pool(applyExplosionDecay(block, LootPool.builder()
-                    .rolls(exactly(1))
-                    .with(item(drop, between(0, count)))));
+    private LootTable.Builder simpleDrops(Block block, ItemLike drop, int count) {
+        return LootTable.lootTable()
+                .withPool(applyExplosionDecay(block, LootPool.lootPool()
+                    .setRolls(exactly(1))
+                    .add(item(drop, between(0, count)))));
     }
 
-    private LootTable.Builder decomposingSlabDrops(Block slab, ItemConvertible drop, int count) {
-        return LootTable.builder()
-            .pool(applyExplosionDecay(slab, LootPool.builder()
-                .rolls(exactly(1))
-                .with(item(drop, exactly(count))
-                        .apply(applyStateCondition(slab, SlabBlock.TYPE, SlabType.DOUBLE, SetCountLootFunction.builder(exactly(count * 2)))))));
+    private LootTable.Builder decomposingSlabDrops(Block slab, ItemLike drop, int count) {
+        return LootTable.lootTable()
+            .withPool(applyExplosionDecay(slab, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(item(drop, exactly(count))
+                        .apply(applyStateCondition(slab, SlabBlock.TYPE, SlabType.DOUBLE, SetItemCountFunction.setCount(exactly(count * 2)))))));
     }
 
-    private LootTable.Builder fruitLeavesDrops(Block leaves, ItemConvertible stick) {
-        return LootTable.builder()
-            .pool(LootPool.builder()
-                .rolls(exactly(1))
-                .with(ItemEntry.builder(leaves).conditionally(createWithSilkTouchOrShearsCondition())))
-            .pool(applyExplosionDecay(leaves, LootPool.builder()
-                .rolls(exactly(1))
-                .conditionally(createWithoutShearsOrSilkTouchCondition())
-                .with(item(stick, between(1, 2)).conditionally(TableBonusLootCondition.builder(entryOf(Enchantments.FORTUNE), LEAVES_STICK_DROP_CHANCE)))));
+    private LootTable.Builder fruitLeavesDrops(Block leaves, ItemLike stick) {
+        return LootTable.lootTable()
+            .withPool(LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(LootItem.lootTableItem(leaves).when(hasShearsOrSilkTouch())))
+            .withPool(applyExplosionDecay(leaves, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .when(doesNotHaveShearsOrSilkTouch())
+                .add(item(stick, between(1, 2)).when(BonusLevelTableCondition.bonusLevelFlatChance(entryOf(Enchantments.FORTUNE), LEAVES_STICK_DROP_CHANCE)))));
     }
 
-    private LootTable.Builder hullDrops(Block hull, ItemConvertible inner, ItemConvertible outer) {
-        return LootTable.builder()
-            .pool(addSurvivesExplosionCondition(hull, LootPool.builder()
-                .rolls(exactly(1))
-                .with(item(hull, exactly(2)).conditionally(createWithoutSilkTouchCondition()))
-                .with(item(inner, exactly(2)).conditionally(createWithoutSilkTouchCondition()))
-                .with(item(outer, exactly(2)).conditionally(createSilkTouchCondition()))));
+    private LootTable.Builder hullDrops(Block hull, ItemLike inner, ItemLike outer) {
+        return LootTable.lootTable()
+            .withPool(applyExplosionCondition(hull, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(item(hull, exactly(2)).when(doesNotHaveSilkTouch()))
+                .add(item(inner, exactly(2)).when(doesNotHaveSilkTouch()))
+                .add(item(outer, exactly(2)).when(hasSilkTouch()))));
     }
 
-    private LootTable.Builder edibleBlockDrops(Block block, ItemConvertible drop) {
-        LootTable.Builder builder = LootTable.builder();
+    private LootTable.Builder edibleBlockDrops(Block block, ItemLike drop) {
+        LootTable.Builder builder = LootTable.lootTable();
         for (BooleanProperty segment : EdibleBlock.SEGMENTS) {
             builder
-                .pool(addSurvivesExplosionCondition(block, LootPool.builder()
-                    .rolls(exactly(1))
-                        .with(applyStateCondition(block, segment, true, ItemEntry.builder(drop)))));
+                .withPool(applyExplosionCondition(block, LootPool.lootPool()
+                    .setRolls(exactly(1))
+                        .add(applyStateCondition(block, segment, true, LootItem.lootTableItem(drop)))));
         }
         return builder;
     }
 
     private LootTable.Builder pieDrops(Block block, Item drop, Item stomped) {
-        return LootTable.builder()
-            .pool(applyExplosionDecay(block, LootPool.builder()
-                .rolls(exactly(1)).conditionally(createSilkTouchCondition())
-                .with(applyStateCondition(block, PieBlock.STOMPED, false, ItemEntry.builder(drop)))
-                .with(applyStateCondition(block, PieBlock.STOMPED, true, ItemEntry.builder(stomped)))));
+        return LootTable.lootTable()
+            .withPool(applyExplosionDecay(block, LootPool.lootPool()
+                .setRolls(exactly(1)).when(hasSilkTouch())
+                .add(applyStateCondition(block, PieBlock.STOMPED, false, LootItem.lootTableItem(drop)))
+                .add(applyStateCondition(block, PieBlock.STOMPED, true, LootItem.lootTableItem(stomped)))));
     }
 
     private LootTable.Builder shellDrops(Block block, Item shell) {
-        return LootTable.builder()
-            .pool(applyExplosionDecay(block, LootPool.builder()
-                .rolls(exactly(1))
-                .with(ItemEntry.builder(shell))
-                    .apply(ShellsBlock.COUNT.getValues(), count -> applyStateCondition(block, ShellsBlock.COUNT, count, SetCountLootFunction.builder(exactly(count))))
+        return LootTable.lootTable()
+            .withPool(applyExplosionDecay(block, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(LootItem.lootTableItem(shell))
+                    .apply(ShellsBlock.COUNT.getPossibleValues(), count -> applyStateCondition(block, ShellsBlock.COUNT, count, SetItemCountFunction.setCount(exactly(count))))
                     .apply(createBasePreservingFortuneBonusCondition())));
     }
 
 
-    public LootTable.Builder fortuneBonusDrops(ItemConvertible drop) {
-        return LootTable.builder().pool(addSurvivesExplosionCondition(drop, LootPool.builder()
-                .rolls(exactly(1))
-                .with(ItemEntry.builder(drop).apply(createBasePreservingFortuneBonusCondition()))));
+    public LootTable.Builder fortuneBonusDrops(ItemLike drop) {
+        return LootTable.lootTable().withPool(applyExplosionCondition(drop, LootPool.lootPool()
+                .setRolls(exactly(1))
+                .add(LootItem.lootTableItem(drop).apply(createBasePreservingFortuneBonusCondition()))));
     }
 
-    public static ConstantLootNumberProvider exactly(float n) {
-        return ConstantLootNumberProvider.create(n);
+    public static net.minecraft.core.Holder<net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider> exactly(int n) {
+        return ContextIntProviders.exactly(n);
     }
 
-    public static UniformLootNumberProvider between(float from, float to) {
-        return UniformLootNumberProvider.create(from, to);
+    public static net.minecraft.core.Holder<net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider> between(int from, int to) {
+        return ContextIntProviders.between(from, to);
     }
 
-    public static ItemEntry.Builder<?> item(ItemConvertible item, LootNumberProvider count) {
-        return ItemEntry.builder(item).apply(SetCountLootFunction.builder(count));
+    public static LootItem.Builder<?> item(ItemLike item, Holder<ContextIntProvider> count) {
+        return LootItem.lootTableItem(item).apply(SetItemCountFunction.setCount(count));
     }
 
-    public static <T extends LootConditionConsumingBuilder<T>, P extends Comparable<P> & StringIdentifiable> T applyStateCondition(Block block,
-            Property<P> property, P value, LootConditionConsumingBuilder<T> builder) {
-        return builder.conditionally(BlockStatePropertyLootCondition.builder(block).properties(StatePredicate.Builder.create().exactMatch(property, value)));
+    public static <T extends ConditionUserBuilder<T>, P extends Comparable<P> & StringRepresentable> T applyStateCondition(Block block,
+            Property<P> property, P value, ConditionUserBuilder<T> builder) {
+        return builder.when(MatchBlock.blockMatches(net.minecraft.core.registries.BuiltInRegistries.BLOCK, block, StatePropertiesPredicate.Builder.properties().hasProperty(property, value)));
     }
 
-    public static <T extends LootConditionConsumingBuilder<T>> T applyStateCondition(Block block,
-            BooleanProperty property, boolean value, LootConditionConsumingBuilder<T> builder) {
-        return builder.conditionally(BlockStatePropertyLootCondition.builder(block).properties(StatePredicate.Builder.create().exactMatch(property, value)));
+    public static <T extends ConditionUserBuilder<T>> T applyStateCondition(Block block,
+            BooleanProperty property, boolean value, ConditionUserBuilder<T> builder) {
+        return builder.when(MatchBlock.blockMatches(net.minecraft.core.registries.BuiltInRegistries.BLOCK, block, StatePropertiesPredicate.Builder.properties().hasProperty(property, value)));
     }
 
-    public static <T extends LootConditionConsumingBuilder<T>> T applyStateCondition(Block block,
-            IntProperty property, int value, LootConditionConsumingBuilder<T> builder) {
-        return builder.conditionally(BlockStatePropertyLootCondition.builder(block).properties(StatePredicate.Builder.create().exactMatch(property, value)));
+    public static <T extends ConditionUserBuilder<T>> T applyStateCondition(Block block,
+            IntegerProperty property, int value, ConditionUserBuilder<T> builder) {
+        return builder.when(MatchBlock.blockMatches(net.minecraft.core.registries.BuiltInRegistries.BLOCK, block, StatePropertiesPredicate.Builder.properties().hasProperty(property, value)));
     }
 }

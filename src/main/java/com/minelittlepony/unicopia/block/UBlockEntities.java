@@ -4,11 +4,11 @@ import com.minelittlepony.unicopia.block.cloud.CloudBedBlock;
 import com.minelittlepony.unicopia.block.cloud.CloudChestBlock;
 
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 public interface UBlockEntities {
     BlockEntityType<WeatherVaneBlock.WeatherVane> WEATHER_VANE = create("weather_vane", FabricBlockEntityTypeBuilder.create(WeatherVaneBlock.WeatherVane::new, UBlocks.WEATHER_VANE));
@@ -19,7 +19,7 @@ public interface UBlockEntities {
     BlockEntityType<CrystalDoorBlock.TileData> CRYSTAL_DOOR = create("crystal_door", FabricBlockEntityTypeBuilder.create(CrystalDoorBlock.TileData::new, UBlocks.CRYSTAL_DOOR));
 
     static <T extends BlockEntity> BlockEntityType<T> create(String id, FabricBlockEntityTypeBuilder<T> builder) {
-        return Registry.register(Registries.BLOCK_ENTITY_TYPE, id, builder.build());
+        return Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, builder.build());
     }
 
     static void bootstrap() {}

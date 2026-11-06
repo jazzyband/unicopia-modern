@@ -1,0 +1,44 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:many",
+      "afflictions": [
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 1
+          },
+          "chance": 8,
+          "effect": "minecraft:poison",
+          "seconds": {
+            "max": 70,
+            "min": 45
+          }
+        },
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 1
+          },
+          "chance": 5,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 130,
+            "min": 20
+          }
+        }
+      ]
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 4,
+      "saturation": 0.8
+    }
+  },
+  "tags": [
+    "c:foods/rotten_insect"
+  ]
+}

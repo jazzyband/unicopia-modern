@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/trident_in_hand",
+  "textures": {
+    "layer0": "unicopia:item/stone_polearm"
+  }
+}

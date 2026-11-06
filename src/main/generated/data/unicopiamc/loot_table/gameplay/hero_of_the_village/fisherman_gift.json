@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:pearl_necklace"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:shelly"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

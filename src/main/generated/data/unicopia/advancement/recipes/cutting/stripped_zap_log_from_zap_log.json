@@ -1,0 +1,33 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_zap_log": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:zap_log"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_zap_log"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cutting/stripped_zap_log_from_zap_log"
+    ]
+  }
+}

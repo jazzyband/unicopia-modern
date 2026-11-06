@@ -12,16 +12,16 @@ import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookChapterList.Dra
 import com.minelittlepony.unicopia.container.SpellbookState;
 import com.minelittlepony.unicopia.container.spellbook.Flow;
 import com.minelittlepony.unicopia.container.spellbook.SpellbookChapter.Page;
-import com.minelittlepony.unicopia.container.spellbook.SpellbookRecipes;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.*;
+import org.joml.Matrix3x2fStack;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 public class DynamicContent implements Content {
-    private static final Text UNKNOWN = Text.of("???");
+    private static final Component UNKNOWN = Component.nullToEmpty("???");
 
     private SpellbookState.PageState state = new SpellbookState.PageState();
     private final List<GuiPage> pages;
@@ -31,17 +31,17 @@ public class DynamicContent implements Content {
     private final Panel leftPanel = new Panel(this);
     private final Panel rightPanel = new Panel(this);
 
-    public DynamicContent(List<Page> pages, SpellbookRecipes recipes) {
-        this.pages = pages.stream().map(p -> new GuiPage(p, recipes)).toList();
+    public DynamicContent(List<Page> pages) {
+        this.pages = pages.stream().map(GuiPage::new).toList();
     }
 
     @Override
-    public void draw(DrawContext context, int mouseX, int mouseY, IViewRoot container) {
+    public void draw(GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
         int pageIndex = state.getOffset() * 2;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
-        Text pageText = Text.translatable("%s/%s", (pageIndex / 2) + 1, (int)Math.ceil(pages.size() / 2F));
-        context.drawText(client.textRenderer, pageText, (int)(337 - client.textRenderer.getWidth(pageText) / 2F), 190, MagicText.getColor(), false);
+        Component pageText = Component.translatable("%s/%s", (pageIndex / 2) + 1, (int)Math.ceil(pages.size() / 2F));
+        context.text(client.font, pageText, (int)(337 - client.font.width(pageText) / 2F), 190, MagicText.getColor(), false);
     }
 
     @Override
@@ -100,9 +100,9 @@ public class DynamicContent implements Content {
 
         private Bounds bounds = Bounds.empty();
 
-        public GuiPage(Page page, SpellbookRecipes recipes) {
+        public GuiPage(Page page) {
             this.page = page;
-            elements = page.elements().stream().map(i -> PageElement.of(i, recipes)).toList();
+            elements = page.elements().stream().map(PageElement::of).toList();
         }
 
         protected int getLineLimitAt(int yPosition) {
@@ -139,21 +139,21 @@ public class DynamicContent implements Content {
             compiled = false;
         }
 
-        public void drawHeader(DrawContext context, int mouseX, int mouseY) {
+        public void drawHeader(GuiGraphicsExtractor context, int mouseX, int mouseY) {
             if (elements.isEmpty()) {
                 return;
             }
             int level = getLevel();
-            boolean needsMoreXp = level < 0 || Pony.of(MinecraftClient.getInstance().player).getLevel().get() < level;
+            boolean needsMoreXp = level < 0 || Pony.of(Minecraft.getInstance().player).getLevel().get() < level;
             int x = bounds.left;
             int y = bounds.top - 16;
 
             DrawableUtil.drawScaledText(context, needsMoreXp ? UNKNOWN : page.title(), x, y, 1.3F, MagicText.getColor());
-            DrawableUtil.drawScaledText(context, Text.translatable("gui.unicopia.spellbook.page.level_requirement", level < 0 ? "???" : "" + (level + 1)).formatted(Formatting.DARK_GREEN), x, y + 12, 0.8F, MagicText.getColor());
+            DrawableUtil.drawScaledText(context, Component.translatable("gui.unicopia.spellbook.page.level_requirement", level < 0 ? "???" : "" + (level + 1)).withStyle(ChatFormatting.DARK_GREEN), x, y + 12, 0.8F, MagicText.getColor());
         }
 
         @Override
-        public void draw(DrawContext context, int mouseX, int mouseY, IViewRoot container) {
+        public void draw(GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
 
             if (elements.isEmpty()) {
                 return;
@@ -173,25 +173,25 @@ public class DynamicContent implements Content {
                 bounds.height = textHeight == 0 ? 0 : relativeY;
             }
 
-            MatrixStack matrices = context.getMatrices();
+            Matrix3x2fStack matrices = context.pose();
 
-            matrices.push();
-            matrices.translate(0, -8, 0);
+            matrices.pushMatrix();
+            matrices.translate(0, -8);
             elements.stream().filter(PageElement::isFloating).forEach(element -> {
-                matrices.push();
+                matrices.pushMatrix();
                 element.bounds().translate(matrices);
                 element.draw(this, context, mouseX, mouseY, container);
-                matrices.pop();
+                matrices.popMatrix();
             });
 
-            matrices.push();
+            matrices.pushMatrix();
             elements.stream().filter(PageElement::isInline).forEach(element -> {
                 element.draw(this, context, mouseX, mouseY, container);
-                matrices.translate(0, element.bounds().height, 0);
+                matrices.translate(0, element.bounds().height);
             });
-            matrices.pop();
+            matrices.popMatrix();
 
-            matrices.pop();
+            matrices.popMatrix();
         }
 
         @Override

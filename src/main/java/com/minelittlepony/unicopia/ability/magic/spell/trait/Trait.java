@@ -9,15 +9,16 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.command.argument.EnumArgumentType;
-import net.minecraft.component.type.AttributeModifiersComponent;
-import net.minecraft.item.Item;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.StringIdentifiable;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.arguments.StringRepresentableArgument;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 public enum Trait implements CommandArgumentEnum<Trait> {
     /**
@@ -62,47 +63,47 @@ public enum Trait implements CommandArgumentEnum<Trait> {
 
     private static final Trait[] VALUES = values();
     private static final Map<Identifier, Trait> IDS = Arrays.stream(values()).collect(Collectors.toMap(Trait::getId, Function.identity()));
-    private static final EnumCodec<Trait> NAME_CODEC = StringIdentifiable.createCodec(Trait::values, n -> n.toLowerCase(Locale.ROOT));
+    private static final EnumCodec<Trait> NAME_CODEC = StringRepresentable.fromEnumWithMapping(Trait::values, n -> n.toLowerCase(Locale.ROOT));
     private static final Codec<Trait> ID_CODEC = Identifier.CODEC.xmap(id -> IDS.get(id), Trait::getId);
     public static final Codec<Trait> CODEC = Codec.xor(NAME_CODEC, ID_CODEC).xmap(Either::unwrap, Either::right);
     public static final Codec<Set<Trait>> SET_CODEC = CODEC.listOf().xmap(
             l -> l.stream().distinct().collect(Collectors.toSet()),
             s -> s.stream().toList()
     );
-    public static final PacketCodec<ByteBuf, Trait> PACKET_CODEC = PacketCodecs.indexed(i -> VALUES[i], Trait::ordinal);
+    public static final StreamCodec<ByteBuf, Trait> PACKET_CODEC = ByteBufCodecs.idMapper(i -> VALUES[i], Trait::ordinal);
 
     private final Identifier id;
     private final Identifier sprite;
     private final TraitGroup group;
 
-    private final Text tooltip;
-    private final Text obfuscatedTooltip;
-    private final List<Text> tooltipLines;
+    private final Component tooltip;
+    private final Component obfuscatedTooltip;
+    private final List<Component> tooltipLines;
 
     Trait(TraitGroup group) {
         this.id = Unicopia.id(name().toLowerCase(Locale.ROOT));
         this.sprite = Unicopia.id("textures/gui/trait/" + name().toLowerCase(Locale.ROOT) + ".png");
         this.group = group;
 
-        Formatting corruptionColor = getGroup().getCorruption() < -0.01F
-                ? Formatting.GREEN
+        ChatFormatting corruptionColor = getGroup().getCorruption() < -0.01F
+                ? ChatFormatting.GREEN
                 : getGroup().getCorruption() > 0.25F
-                    ? Formatting.RED
-                    : Formatting.WHITE;
+                    ? ChatFormatting.RED
+                    : ChatFormatting.WHITE;
 
         tooltipLines = List.of(
-            Text.translatable("gui.unicopia.trait.group", getGroup().name().toLowerCase(Locale.ROOT)).formatted(Formatting.ITALIC, Formatting.GRAY),
-            Text.empty(),
-            Text.empty(),
-            Text.translatable("trait." + getId().getNamespace() + "." + getId().getPath() + ".description").formatted(Formatting.GRAY),
-            Text.empty(),
-            Text.translatable("gui.unicopia.trait.corruption", AttributeModifiersComponent.DECIMAL_FORMAT.format(getGroup().getCorruption())).formatted(Formatting.ITALIC, corruptionColor)
+            Component.translatable("gui.unicopia.trait.group", getGroup().name().toLowerCase(Locale.ROOT)).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY),
+            Component.empty(),
+            Component.empty(),
+            Component.translatable("trait." + getId().getNamespace() + "." + getId().getPath() + ".description").withStyle(ChatFormatting.GRAY),
+            Component.empty(),
+            Component.translatable("gui.unicopia.trait.corruption", ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(getGroup().getCorruption())).withStyle(ChatFormatting.ITALIC, corruptionColor)
         );
 
-        MutableText tooltipText = getName().copy();
+        MutableComponent tooltipText = getName().copy();
         tooltipLines.forEach(line -> tooltipText.append(line).append("\n"));
         this.tooltip = tooltipText;
-        this.obfuscatedTooltip = tooltipText.copy().formatted(Formatting.OBFUSCATED);
+        this.obfuscatedTooltip = tooltipText.copy().withStyle(ChatFormatting.OBFUSCATED);
 
     }
 
@@ -111,7 +112,7 @@ public enum Trait implements CommandArgumentEnum<Trait> {
     }
 
     @Override
-    public String asString() {
+    public String getSerializedName() {
         return getId().getPath();
     }
 
@@ -123,23 +124,23 @@ public enum Trait implements CommandArgumentEnum<Trait> {
         return sprite;
     }
 
-    public Text getName() {
-        return Text.translatable("gui.unicopia.trait.label", getShortName()).formatted(Formatting.YELLOW);
+    public Component getName() {
+        return Component.translatable("gui.unicopia.trait.label", getShortName()).withStyle(ChatFormatting.YELLOW);
     }
 
-    public Text getShortName() {
-        return Text.translatable("trait." + getId().getNamespace() + "." + getId().getPath() + ".name");
+    public Component getShortName() {
+        return Component.translatable("trait." + getId().getNamespace() + "." + getId().getPath() + ".name");
     }
 
-    public List<Text> getTooltipLines() {
+    public List<Component> getTooltipLines() {
         return tooltipLines;
     }
 
-    public Text getTooltip() {
+    public Component getTooltip() {
         return tooltip;
     }
 
-    public Text getObfuscatedTooltip() {
+    public Component getObfuscatedTooltip() {
         return obfuscatedTooltip;
     }
 
@@ -156,18 +157,18 @@ public enum Trait implements CommandArgumentEnum<Trait> {
     }
 
     public static Optional<Trait> of(String name) {
-        Trait trait = NAME_CODEC.byId(name);
+        Trait trait = NAME_CODEC.byName(name);
         if (trait == null) {
             return Optional.ofNullable(Identifier.tryParse(name)).map(IDS::get);
         }
         return Optional.ofNullable(trait);
     }
 
-    public static EnumArgumentType<Trait> argument() {
+    public static StringRepresentableArgument<Trait> argument() {
         return new ArgumentType();
     }
 
-    public static class ArgumentType extends EnumArgumentType<Trait> {
+    public static class ArgumentType extends StringRepresentableArgument<Trait> {
         protected ArgumentType() {
             super(NAME_CODEC, Trait::values);
         }

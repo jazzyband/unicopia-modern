@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": "minecraft:tool/can_silk_touch",
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:apple_pie",
+            "state": {
+              "stomped": "false"
+            }
+          },
+          "name": "unicopia:apple_pie"
+        },
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:apple_pie",
+            "state": {
+              "stomped": "true"
+            }
+          },
+          "name": "unicopia:apple_pie_hoof"
+        }
+      ],
+      "modifier": {
+        "type": "minecraft:explosion_decay"
+      },
+      "rolls": 1
+    }
+  ]
+}

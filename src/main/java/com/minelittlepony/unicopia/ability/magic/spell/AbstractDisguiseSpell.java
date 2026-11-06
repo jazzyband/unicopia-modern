@@ -7,12 +7,11 @@ import com.minelittlepony.unicopia.entity.behaviour.Disguise;
 import com.minelittlepony.unicopia.entity.behaviour.EntityAppearance;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.projectile.ProjectileImpactListener;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 
 /**
  * Base implementation for a spell that changes the player's appearance.
@@ -28,7 +27,7 @@ public abstract class AbstractDisguiseSpell extends AbstractSpell implements Dis
     @Override
     protected void onDestroyed(Caster<?> caster) {
         super.onDestroyed(caster);
-        caster.asEntity().calculateDimensions();
+        caster.asEntity().refreshDimensions();
         caster.asEntity().setInvisible(false);
         if (caster instanceof Pony pony) {
             pony.setInvisible(false);
@@ -42,7 +41,7 @@ public abstract class AbstractDisguiseSpell extends AbstractSpell implements Dis
     }
 
     @Override
-    public boolean onProjectileImpact(ProjectileEntity projectile) {
+    public boolean onProjectileImpact(Projectile projectile) {
         return disguise.getEntity() == projectile;
     }
 
@@ -52,19 +51,19 @@ public abstract class AbstractDisguiseSpell extends AbstractSpell implements Dis
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         disguise.toNBT(compound, lookup);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         disguise.fromNBT(compound, lookup);
     }
 
     public static Entity getAppearance(Entity e) {
-        return e instanceof PlayerEntity ? Pony.of((PlayerEntity)e)
+        return e instanceof Player ? Pony.of((Player)e)
                 .getSpellSlot()
                 .get(SpellPredicate.IS_DISGUISE)
                 .map(AbstractDisguiseSpell::getAppearance)

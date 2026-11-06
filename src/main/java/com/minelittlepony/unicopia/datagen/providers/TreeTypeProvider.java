@@ -1,7 +1,7 @@
 package com.minelittlepony.unicopia.datagen.providers;
 
 import java.util.concurrent.CompletableFuture;
-import com.minelittlepony.unicopia.Debug;
+
 import com.minelittlepony.unicopia.UConventionalTags;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.ability.data.tree.TreeTypeLoader;
@@ -10,20 +10,21 @@ import com.minelittlepony.unicopia.block.UBlocks;
 import com.minelittlepony.unicopia.block.UWoodTypes;
 import com.minelittlepony.unicopia.datagen.DataCollector;
 import com.minelittlepony.unicopia.item.UItems;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalItemTags;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.WoodType;
+import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.DataWriter;
-import net.minecraft.item.Items;
-import net.minecraft.util.Identifier;
+import net.minecraft.data.PackOutput;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.WoodType;
 
 public class TreeTypeProvider implements DataProvider {
     private final DataCollector<TreeTypeDef> collector;
 
-    public TreeTypeProvider(FabricDataOutput output) {
-        collector = new DataCollector<>(output.getResolver(TreeTypeLoader.REGISTRY_KEY), TreeTypeDef.CODEC);
+    public TreeTypeProvider(FabricPackOutput output) {
+        collector = new DataCollector<>(output.createPathProvider(PackOutput.Target.DATA_PACK, "tree_types"), TreeTypeDef.CODEC);
     }
 
     @Override
@@ -32,16 +33,15 @@ public class TreeTypeProvider implements DataProvider {
     }
 
     @Override
-    public CompletableFuture<?> run(DataWriter writer) {
+    public CompletableFuture<?> run(CachedOutput writer) {
         var exporter = collector.prime();
         generate((id, treeType) -> exporter.accept(id, treeType.build()));
-        Debug.checkTreeTypeRegistrations(collector::isDefined);
         return collector.upload(writer);
     }
 
     interface Collector {
         default void accept(WoodType type, TreeTypeLoader.TreeTypeDef.Builder builder) {
-            accept(Identifier.of(type.name()), builder);
+            accept(Identifier.parse(type.name()), builder);
         }
 
         void accept(Identifier id, TreeTypeLoader.TreeTypeDef.Builder builder);
@@ -55,7 +55,7 @@ public class TreeTypeProvider implements DataProvider {
                 .drop(2, UItems.SWEET_APPLE)
                 .drop(5, UItems.GREEN_APPLE)
         );
-        exporter.accept(Identifier.ofVanilla("azalea"), TreeTypeLoader.TreeTypeDef.builder()
+        exporter.accept(Identifier.withDefaultNamespace("azalea"), TreeTypeLoader.TreeTypeDef.builder()
                 .logs(Blocks.OAK_LOG, Blocks.OAK_WOOD).leaves(Blocks.AZALEA_LEAVES, Blocks.FLOWERING_AZALEA_LEAVES)
                 .rarity(5)
                 .drop(1, UItems.SOUR_APPLE)
@@ -106,34 +106,6 @@ public class TreeTypeProvider implements DataProvider {
                 .drop(1, UItems.ROTTEN_APPLE)
                 .drop(2, UConventionalTags.Items.ACORNS)
                 .drop(3, ConventionalItemTags.WOODEN_RODS)
-        );
-        exporter.accept(WoodType.PALE_OAK, TreeTypeLoader.TreeTypeDef.builder()
-                .logs(Blocks.PALE_OAK_LOG, Blocks.PALE_OAK_WOOD).leaves(Blocks.PALE_OAK_LEAVES)
-                .rarity(3).wideTrunk()
-                .drop(1, UItems.ROTTEN_APPLE)
-                .drop(2, Items.PALE_HANGING_MOSS)
-                .drop(3, ConventionalItemTags.WOODEN_RODS)
-        );
-        exporter.accept(WoodType.WARPED, TreeTypeLoader.TreeTypeDef.builder()
-                .logs(Blocks.WARPED_STEM, Blocks.WARPED_HYPHAE).leaves(Blocks.WARPED_WART_BLOCK)
-                .rarity(2)
-                .drop(3, Items.WARPED_FUNGUS)
-                .drop(1, ConventionalItemTags.WOODEN_RODS)
-        );
-        exporter.accept(WoodType.CRIMSON, TreeTypeLoader.TreeTypeDef.builder()
-                .logs(Blocks.CRIMSON_STEM, Blocks.CRIMSON_HYPHAE).leaves(Blocks.NETHER_WART_BLOCK)
-                .rarity(2)
-                .drop(1, Items.CRIMSON_FUNGUS)
-                .drop(2, Items.NETHER_WART)
-        );
-        exporter.accept(WoodType.BAMBOO, TreeTypeLoader.TreeTypeDef.builder()
-                .logs(Blocks.BAMBOO_BLOCK)
-        );
-        exporter.accept(UWoodTypes.ZAP, TreeTypeLoader.TreeTypeDef.builder()
-                .logs(UBlocks.ZAP_LOG, UBlocks.ZAP_WOOD).leaves(UBlocks.ZAP_LEAVES, UBlocks.FLOWERING_ZAP_LEAVES)
-        );
-        exporter.accept(UWoodTypes.GOLDEN_OAK, TreeTypeLoader.TreeTypeDef.builder()
-                .logs(UBlocks.GOLDEN_OAK_LOG, UBlocks.GOLDEN_OAK_WOOD).leaves(UBlocks.GOLDEN_OAK_LEAVES)
         );
         exporter.accept(UWoodTypes.PALM, TreeTypeLoader.TreeTypeDef.builder()
                 .logs(UBlocks.PALM_LOG, UBlocks.PALM_WOOD).leaves(UBlocks.PALM_LEAVES)

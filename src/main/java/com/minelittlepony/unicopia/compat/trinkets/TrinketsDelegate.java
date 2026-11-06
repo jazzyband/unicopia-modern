@@ -9,15 +9,14 @@ import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.container.SpellbookScreenHandler;
 
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public interface TrinketsDelegate {
     SlotKey MAIN_GLOVE = SlotKey.of("hand", "glove");
@@ -30,14 +29,11 @@ public interface TrinketsDelegate {
     TrinketsDelegate EMPTY = new TrinketsDelegate() {};
 
     static TrinketsDelegate getInstance(@Nullable LivingEntity entity) {
-        if (!hasTrinkets() || (entity != null && !(entity instanceof PlayerEntity))) {
-            return EMPTY;
-        }
-        return TrinketsDelegateImpl.INSTANCE;
+        return EMPTY;
     }
 
     static boolean hasTrinkets() {
-        return FabricLoader.getInstance().isModLoaded("accessories");
+        return false;
     }
 
     default void bootstrap() {
@@ -45,21 +41,21 @@ public interface TrinketsDelegate {
     }
 
     default boolean equipStack(LivingEntity entity, ItemStack stack) {
-        EquipmentSlot eq = entity.getPreferredEquipmentSlot(stack);
-        if (!entity.getEquippedStack(eq).isEmpty()) {
+        EquipmentSlot eq = entity.getEquipmentSlotForItem(stack);
+        if (!entity.getItemBySlot(eq).isEmpty()) {
             return false;
         }
 
-        entity.equipStack(eq, stack.split(1));
-        if (entity instanceof MobEntity mob) {
-            mob.setEquipmentDropChance(eq, 2.0f);
-            mob.setPersistent();
+        entity.setItemSlot(eq, stack.split(1));
+        if (entity instanceof Mob mob) {
+            mob.setDropChance(eq, 2.0f);
+            mob.setPersistenceRequired();
         }
         return true;
     }
 
     default Stream<EquippedStack> getEquipped(LivingEntity entity, SlotKey slot, TagKey<Item> tag) {
-        return getEquipped(entity, slot, stack -> stack.isIn(tag));
+        return getEquipped(entity, slot, stack -> stack.is(tag));
     }
 
     default Stream<EquippedStack> getEquipped(LivingEntity entity, SlotKey slot) {
@@ -68,13 +64,13 @@ public interface TrinketsDelegate {
 
     default Stream<EquippedStack> getEquipped(LivingEntity entity, SlotKey slot, @Nullable Predicate<ItemStack> predicate) {
 
-        if (slot == FACE && (predicate == null || predicate.test(entity.getEquippedStack(EquipmentSlot.HEAD)))) {
+        if (slot == FACE && (predicate == null || predicate.test(entity.getItemBySlot(EquipmentSlot.HEAD)))) {
             return Stream.of(new EquippedStack(entity, EquipmentSlot.HEAD));
         }
-        if ((slot == NECKLACE || slot == MAIN_GLOVE) && (predicate == null || predicate.test(entity.getEquippedStack(EquipmentSlot.CHEST)))) {
+        if ((slot == NECKLACE || slot == MAIN_GLOVE) && (predicate == null || predicate.test(entity.getItemBySlot(EquipmentSlot.CHEST)))) {
             return Stream.of(new EquippedStack(entity, EquipmentSlot.CHEST));
         }
-        if (slot == SECONDARY_GLOVE && (predicate == null || predicate.test(entity.getEquippedStack(EquipmentSlot.OFFHAND)))) {
+        if (slot == SECONDARY_GLOVE && (predicate == null || predicate.test(entity.getItemBySlot(EquipmentSlot.OFFHAND)))) {
             return Stream.of(new EquippedStack(entity, EquipmentSlot.OFFHAND));
         }
 
@@ -93,11 +89,11 @@ public interface TrinketsDelegate {
         return false;
     }
 
-    record EquippedStack(ItemStack stack, Runnable sendUpdate, Consumer<ItemStack> updater, Consumer<Item> breakStatusSender) {
+    record EquippedStack(ItemStack stack, Runnable sendUpdate, Consumer<ItemStack> updater, Consumer<ItemStack> breakStatusSender) {
         public static final EquippedStack EMPTY = new EquippedStack(ItemStack.EMPTY, () -> {}, s -> {}, l -> {});
 
         EquippedStack(LivingEntity entity, EquipmentSlot slot) {
-            this(entity.getEquippedStack(slot), () -> {}, s -> entity.equipStack(slot, s), item -> entity.sendEquipmentBreakStatus(item, slot));
+            this(entity.getItemBySlot(slot), () -> {}, s -> entity.setItemSlot(slot, s), item -> entity.onEquippedItemBroken(item, slot));
         }
 
         public boolean isEmpty() {

@@ -9,50 +9,50 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.server.world.ZapAppleStageStore;
 import com.mojang.serialization.MapCodec;
 
-import net.minecraft.block.*;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.TintedParticleLeavesBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class BaseZapAppleLeavesBlock extends TintedParticleLeavesBlock implements TintedBlock, ZapStagedBlock, ElectrifiedBlock {
-    private static final MapCodec<BaseZapAppleLeavesBlock> CODEC = createCodec(BaseZapAppleLeavesBlock::new);
 
-    public static Settings settings() {
-        return Settings.create()
+    public static Properties settings() {
+        return Properties.of()
                 .mapColor(UMapColors.ZAP_LEAVES)
                 .strength(500, 1200)
-                .ticksRandomly()
-                .sounds(BlockSoundGroup.AZALEA_LEAVES)
-                .nonOpaque()
-                .allowsSpawning(BlockConstructionUtils::canSpawnOnLeaves)
-                .suffocates(BlockConstructionUtils::never)
-                .blockVision(BlockConstructionUtils::never);
+                .randomTicks()
+                .sound(SoundType.AZALEA_LEAVES)
+                .noOcclusion()
+                .isValidSpawn(BlockConstructionUtils::canSpawnOnLeaves)
+                .isSuffocating(BlockConstructionUtils::never)
+                .isViewBlocking(BlockConstructionUtils::never);
     }
 
-    public BaseZapAppleLeavesBlock(Settings settings) {
+    public BaseZapAppleLeavesBlock(Properties settings) {
         super(0.01F, settings);
     }
 
-    @Override
-    public MapCodec<? extends BaseZapAppleLeavesBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
-        if (state.get(PERSISTENT) || oldState.isOf(state.getBlock())) {
+    public void onPlace(BlockState state, Level world, BlockPos pos, BlockState oldState, boolean notify) {
+        if (state.getValue(PERSISTENT) || oldState.is(state.getBlock())) {
             return;
         }
         updateStage(state, world, pos);
     }
 
     @Override
-    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        super.scheduledTick(state, world, pos, random);
-        if (state.get(PERSISTENT)) {
+    public void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        super.tick(state, world, pos, random);
+        if (state.getValue(PERSISTENT)) {
             return;
         }
         tryAdvanceStage(state, world, pos, random);
@@ -65,12 +65,12 @@ public class BaseZapAppleLeavesBlock extends TintedParticleLeavesBlock implement
 
     @Deprecated
     @Override
-    public float calcBlockBreakingDelta(BlockState state, PlayerEntity player, BlockView world, BlockPos pos) {
-        if (state.get(PERSISTENT)) {
-            return Blocks.OAK_LEAVES.getDefaultState().calcBlockBreakingDelta(player, world, pos);
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter world, BlockPos pos) {
+        if (state.getValue(PERSISTENT)) {
+            return Blocks.OAK_LEAVES.defaultBlockState().getDestroyProgress(player, world, pos);
         }
 
-        float delta = super.calcBlockBreakingDelta(state, player, world, pos);
+        float delta = super.getDestroyProgress(state, player, world, pos);
 
         if (Pony.of(player).getCompositeRace().canUseEarth()) {
             delta *= 50;
@@ -80,16 +80,16 @@ public class BaseZapAppleLeavesBlock extends TintedParticleLeavesBlock implement
             delta *= 5;
         }
 
-        return MathHelper.clamp(delta, 0, 0.9F);
+        return Mth.clamp(delta, 0, 0.9F);
     }
 
     @Override
-    public void onBlockBreakStart(BlockState state, World world, BlockPos pos, PlayerEntity player) {
+    public void attack(BlockState state, Level world, BlockPos pos, Player player) {
         triggerLightning(state, world, pos);
     }
 
     @Override
-    public int getTint(BlockState state, @Nullable BlockRenderView world, @Nullable BlockPos pos, int foliageColor) {
+    public int getTint(BlockState state, @Nullable BlockAndTintGetter world, @Nullable BlockPos pos, int foliageColor) {
         if (pos == null) {
             return 0x4C7EFA;
         }

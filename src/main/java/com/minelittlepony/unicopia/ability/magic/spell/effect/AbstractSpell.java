@@ -8,11 +8,10 @@ import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.network.track.TrackableDataType;
 import com.minelittlepony.unicopia.server.world.Ether;
-
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtException;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Uuids;
 
 public abstract class AbstractSpell implements Spell {
 
@@ -100,20 +99,20 @@ public abstract class AbstractSpell implements Spell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         compound.putBoolean("dying", dying.get());
         compound.putBoolean("dead", dead.get());
         compound.putBoolean("hidden", hidden.get());
-        compound.put("uuid", Uuids.CODEC, uuid);
+        compound.store("uuid", UUIDUtil.AUTHLIB_CODEC, uuid);
         compound.put("traits", getTraits().toNbt());
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-        uuid = compound.get("uuid", Uuids.CODEC).orElseThrow(() -> new NbtException("Spell should have an id"));
-        dying.set(compound.getBoolean("dying", false));
-        dead.set(compound.getBoolean("dead", false));
-        hidden.set(compound.getBoolean("hidden", false));
+    public void fromNBT(CompoundTag compound, Provider lookup) {
+        uuid = compound.read("uuid", UUIDUtil.AUTHLIB_CODEC).orElseThrow(() -> new NbtException("Spell should have an id"));
+        dying.set(compound.getBooleanOr("dying", false));
+        dead.set(compound.getBooleanOr("dead", false));
+        hidden.set(compound.getBooleanOr("hidden", false));
     }
 
     @Override

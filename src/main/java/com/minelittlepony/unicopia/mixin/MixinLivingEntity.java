@@ -20,37 +20,37 @@ import com.minelittlepony.unicopia.entity.behaviour.EntityAppearance;
 import com.minelittlepony.unicopia.entity.duck.*;
 
 import net.fabricmc.fabric.api.util.TriState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.Vec3;
 
 @Mixin(LivingEntity.class)
-abstract class MixinLivingEntity extends Entity implements LivingEntityDuck {
+abstract class MixinLivingEntity extends Entity implements LivingEntityDuck, Equine.Container<Living<?>> {
     @Shadow
-    protected ItemStack activeItemStack;
+    protected ItemStack useItem;
     @Shadow
-    protected int itemUseTimeLeft;
+    protected int useItemRemaining;
     @Shadow
     protected boolean dead;
 
     @Shadow
-    private Optional<BlockPos> climbingPos;
+    private Optional<BlockPos> lastClimbablePos;
 
     private Equine<?> caster;
 
     private MixinLivingEntity() { super(null, null); }
 
     @Shadow
-    protected abstract void setLivingFlag(int mask, boolean value);
+    protected abstract void setLivingEntityFlag(int mask, boolean value);
 
     @Override
     public Equine<?> create() {
@@ -72,39 +72,31 @@ abstract class MixinLivingEntity extends Entity implements LivingEntityDuck {
     public abstract boolean isJumping();
 
     @Override
-    @Accessor("leaningPitch")
+    @Accessor("swimAmount")
     public abstract float getLeaningPitch();
 
     @Override
-    @Accessor("leaningPitch")
+    @Accessor("swimAmount")
     public abstract void setLeaningPitch(float pitch);
 
     @Override
-    @Accessor("lastLeaningPitch")
+    @Accessor("swimAmountO")
     public abstract float getLastLeaningPitch();
 
     @Override
-    @Accessor("lastLeaningPitch")
+    @Accessor("swimAmountO")
     public abstract void setLastLeaningPitch(float pitch);
 
-    @Inject(method = "createLivingAttributes()Lnet/minecraft/entity/attribute/DefaultAttributeContainer$Builder;", at = @At("RETURN"))
-    private static void onCreateAttributes(CallbackInfoReturnable<DefaultAttributeContainer.Builder> info) {
+    @Inject(method = "createLivingAttributes()Lnet/minecraft/world/entity/ai/attributes/AttributeSupplier$Builder;", at = @At("RETURN"))
+    private static void onCreateAttributes(CallbackInfoReturnable<AttributeSupplier.Builder> info) {
         Creature.registerAttributes(info.getReturnValue());
     }
 
-    @ModifyReturnValue(method = "dropItem(Lnet/minecraft/item/ItemStack;ZZ)Lnet/minecraft/entity/ItemEntity;", at = @At("RETURN"))
-    private @Nullable ItemEntity onDropItem(@Nullable ItemEntity item) {
-        if (item != null) {
-            get().onDropItem(item);
-        }
-        return item;
-    }
-
-    @Inject(method = "isClimbing()Z", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "onClimbable()Z", at = @At("HEAD"), cancellable = true)
     public void onIsClimbing(CallbackInfoReturnable<Boolean> info) {
         if (horizontalCollision) {
             get().chooseClimbingPos().ifPresent(pos -> {
-                climbingPos = Optional.of(pos);
+                lastClimbablePos = Optional.of(pos);
                 info.setReturnValue(true);
             });
         }
@@ -122,15 +114,15 @@ abstract class MixinLivingEntity extends Entity implements LivingEntityDuck {
             });
     }
 
-    @Inject(method = "canSee(Lnet/minecraft/entity/Entity;Lnet/minecraft/world/RaycastContext$ShapeType;Lnet/minecraft/world/RaycastContext$FluidHandling;D)Z", at = @At("HEAD"), cancellable = true)
-    private void onCanSee(Entity entity, RaycastContext.ShapeType shapeType, RaycastContext.FluidHandling fluidHandling, double entityY, CallbackInfoReturnable<Boolean> info) {
+    @Inject(method = "hasLineOfSight(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/level/ClipContext$Block;Lnet/minecraft/world/level/ClipContext$Fluid;D)Z", at = @At("HEAD"), cancellable = true)
+    private void onCanSee(Entity entity, ClipContext.Block shapeType, ClipContext.Fluid fluidHandling, double entityY, CallbackInfoReturnable<Boolean> info) {
         if (!get().canBeSeenBy(entity)) {
             info.setReturnValue(false);
         }
     }
 
-    @ModifyReturnValue(method = "applyFluidMovingSpeed", at = @At("RETURN"))
-    private Vec3d applyFluidMovingSpeed(Vec3d speed, double gravity, boolean falling, Vec3d motion) {
+    @ModifyReturnValue(method = "getFluidFallingAdjustedMovement", at = @At("RETURN"))
+    private Vec3 applyFluidMovingSpeed(Vec3 speed, double gravity, boolean falling, Vec3 motion) {
         return get().adjustMovementSpeedInWater(speed).orElse(speed);
     }
 
@@ -152,34 +144,34 @@ abstract class MixinLivingEntity extends Entity implements LivingEntityDuck {
         Creature.boostrap();
     }
 
-    @Inject(method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z", at = @At("HEAD"), cancellable = true)
-    private void onDamage(ServerWorld world, DamageSource source, float amount, CallbackInfoReturnable<Boolean> info) {
+    @Inject(method = "hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z", at = @At("HEAD"), cancellable = true)
+    private void onDamage(ServerLevel world, DamageSource source, float amount, CallbackInfoReturnable<Boolean> info) {
         get().onDamage(world, source, amount).ifPresent(info::setReturnValue);
     }
 
-    @Inject(method = "tryUseDeathProtector(Lnet/minecraft/entity/damage/DamageSource;)Z", at = @At("RETURN"))
+    @Inject(method = "checkTotemDeathProtection(Lnet/minecraft/world/damagesource/DamageSource;)Z", at = @At("RETURN"))
     private void onOnDeath(DamageSource source, CallbackInfoReturnable<Boolean> info) {
         if (!isRemoved() && !dead) {
             get().onDeath(source, info.getReturnValue());
         }
     }
 
-    @Inject(method = "onAttacking(Lnet/minecraft/entity/Entity;)V", at = @At("HEAD"))
+    @Inject(method = "setLastHurtMob(Lnet/minecraft/world/entity/Entity;)V", at = @At("HEAD"))
     private void onOnAttacking(Entity target, CallbackInfo info) {
         get().onAttacking(target);
     }
 
-    @ModifyVariable(method = "handleFallDamage(DFLnet/minecraft/entity/damage/DamageSource;)Z", at = @At("HEAD"), ordinal = 0, argsOnly = true)
+    @ModifyVariable(method = "causeFallDamage(DFLnet/minecraft/world/damagesource/DamageSource;)Z", at = @At("HEAD"), ordinal = 0, argsOnly = true)
     private double onHandleFallDamage(double distance, double distanceAgain, float damagePerDistance, DamageSource cause) {
         return get().onImpact(distance, damagePerDistance, cause);
     }
 
-    @Inject(method = "onDismounted(Lnet/minecraft/entity/Entity;)V", at = @At("HEAD"))
+    @Inject(method = "dismountVehicle(Lnet/minecraft/world/entity/Entity;)V", at = @At("HEAD"))
     private void onOnDismounted(Entity vehicle, CallbackInfo info) {
         get().onDismounted(vehicle);
     }
 
-    @ModifyReturnValue(method = "hurtByWater()Z", at = @At("RETURN"))
+    @ModifyReturnValue(method = "isSensitiveToWater()Z", at = @At("RETURN"))
     private boolean onCanBeHurtByWater(boolean hurt) {
         TriState hurtByWater = get().canBeHurtByWater();
         if (hurtByWater != TriState.DEFAULT) {
@@ -188,31 +180,24 @@ abstract class MixinLivingEntity extends Entity implements LivingEntityDuck {
         return hurt;
     }
 
-    @Inject(method = "writeCustomDataToNbt(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("HEAD"))
-    private void onWriteCustomDataToTag(NbtCompound tag, CallbackInfo info) {
-        tag.put("unicopia_caster", get().toNBT(getWorld().getRegistryManager()));
+    @Inject(method = "addAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueOutput;)V", at = @At("HEAD"))
+    private void onWriteCustomDataToTag(net.minecraft.world.level.storage.ValueOutput tag, CallbackInfo info) {
+        tag.store("unicopia_caster", CompoundTag.CODEC, get().toNBT(level().registryAccess()));
     }
 
-    @Inject(method = "readCustomDataFromNbt(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("HEAD"))
-    private void onReadCustomDataFromTag(NbtCompound tag, CallbackInfo info) {
-        if (tag.contains("unicopia_caster")) {
-            get().fromNBT(tag.getCompoundOrEmpty("unicopia_caster"), getWorld().getRegistryManager());
-        }
-    }
-
-    @Inject(method = "tickMovement", at = @At("HEAD"))
-    public void beforeMovementTick(CallbackInfo info) {
-        get().getTransportation().tickMovement();
+    @Inject(method = "readAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueInput;)V", at = @At("HEAD"))
+    private void onReadCustomDataFromTag(net.minecraft.world.level.storage.ValueInput tag, CallbackInfo info) {
+        tag.read("unicopia_caster", CompoundTag.CODEC).ifPresent(data -> get().fromNBT(data, level().registryAccess()));
     }
 
     @Override
-    public void updateItemUsage(Hand hand, ItemStack stack, int time) {
-        activeItemStack = stack;
-        itemUseTimeLeft = time;
+    public void updateItemUsage(InteractionHand hand, ItemStack stack, int time) {
+        useItem = stack;
+        useItemRemaining = time;
 
-        if (!getWorld().isClient) {
-            setLivingFlag(1, !stack.isEmpty());
-            setLivingFlag(2, hand == Hand.OFF_HAND);
+        if (!level().isClientSide()) {
+            setLivingEntityFlag(1, !stack.isEmpty());
+            setLivingEntityFlag(2, hand == InteractionHand.OFF_HAND);
         }
     }
 }

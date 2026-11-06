@@ -1,0 +1,7 @@
+{
+  "type": "unicopia:cloud_shaping",
+  "ingredient": "unicopia:cloud_planks",
+  "result": {
+    "id": "unicopia:cloud_plank_stairs"
+  }
+}

@@ -20,7 +20,7 @@ public class LandingEventHandler implements Tickable {
     }
 
     public void setCallback(LandingEventHandler.Callback callback) {
-        if (living.asEntity().isOnGround()) {
+        if (living.asEntity().onGround()) {
             callback.dispatch(0F);
         } else {
             updateCallback(callback);
@@ -38,7 +38,7 @@ public class LandingEventHandler implements Tickable {
         }
         prevY = living.asEntity().getY();
 
-        if (living.asEntity().isOnGround() && living.landedChanged()) {
+        if (living.asEntity().onGround() && living.landedChanged()) {
             fire(prevFallDistance);
         }
         prevFallDistance = living.asEntity().fallDistance;

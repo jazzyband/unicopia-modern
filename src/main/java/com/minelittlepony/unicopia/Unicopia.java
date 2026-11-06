@@ -9,10 +9,10 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.minelittlepony.unicopia.ability.Abilities;
@@ -65,15 +65,11 @@ public class Unicopia implements ModInitializer {
     }
 
     public static Identifier id(String name) {
-        return Identifier.of(DEFAULT_NAMESPACE, name);
+        return Identifier.fromNamespaceAndPath(DEFAULT_NAMESPACE, name);
     }
 
-    public static <T> RegistryKey<T> key(RegistryKey<Registry<T>> registry, String name) {
-        return RegistryKey.of(registry, id(name));
-    }
-
-    public static <T> RegistryKey<Registry<T>> key(String name) {
-        return RegistryKey.ofRegistry(id(name));
+    public static <T> ResourceKey<T> key(ResourceKey<Registry<T>> registry, String name) {
+        return ResourceKey.create(registry, id(name));
     }
 
     @Override
@@ -85,7 +81,7 @@ public class Unicopia implements ModInitializer {
         Commands.bootstrap();
         TrinketsDelegate.getInstance(null).bootstrap();
 
-        ServerTickEvents.END_WORLD_TICK.register(w -> {
+        ServerTickEvents.END_LEVEL_TICK.register(w -> {
             ((BlockDestructionManager.Source)w).getDestructionManager().tick();
             ZapAppleStageStore.get(w).tick(w);
             WeatherConditions.get(w).tick(w);
@@ -103,9 +99,11 @@ public class Unicopia implements ModInitializer {
         UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> Pony.of(player).interact(hand, entity, hitResult));
         AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> Pony.of(player).onStartedBreakingBlock(hand, pos, direction));
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> Pony.of(player).onAttackEntity(hand, entity, hitResult));
-        EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, pos, isDay) -> Pony.of(player).canSleepNow(isDay));
+        EntitySleepEvents.ALLOW_SLEEPING.register((player, pos) ->
+                Pony.of(player).canSleepNow(player.level().isBrightOutside()) == net.minecraft.world.InteractionResult.FAIL
+                        ? net.minecraft.world.entity.player.Player.BedSleepingProblem.OTHER_PROBLEM : null);
 
-        registerServerDataReloaders(ResourceManagerHelper.get(ResourceType.SERVER_DATA));
+        registerServerDataReloaders(ResourceManagerHelper.get(PackType.SERVER_DATA));
 
         UGameEvents.bootstrap();
         UBlocks.bootstrap();
@@ -126,10 +124,10 @@ public class Unicopia implements ModInitializer {
     }
 
     private void registerServerDataReloaders(ResourceManagerHelper registry) {
-        registry.registerReloadListener(TreeTypeLoader.REGISTRY_KEY.getValue(), TreeTypeLoader.INSTANCE::createReloader);
-        registry.registerReloadListener(TraitLoader.REGISTRY_KEY.getValue(), TraitLoader::new);
-        registry.registerReloadListener(StateMapLoader.REGISTRY_KEY.getValue(), StateMapLoader.INSTANCE::createReloader);
-        registry.registerReloadListener(SpellbookChapterLoader.REGISTRY_KEY.getValue(), SpellbookChapterLoader.INSTANCE::createReloader);
-        registry.registerReloadListener(DietsLoader.ID, DietsLoader::new);
+        registry.registerReloadListener(TreeTypeLoader.INSTANCE);
+        registry.registerReloadListener(new TraitLoader());
+        registry.registerReloadListener(StateMapLoader.INSTANCE);
+        registry.registerReloadListener(SpellbookChapterLoader.INSTANCE);
+        registry.registerReloadListener(new DietsLoader());
     }
 }

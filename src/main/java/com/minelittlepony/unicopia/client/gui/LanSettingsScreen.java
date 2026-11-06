@@ -1,5 +1,11 @@
 package com.minelittlepony.unicopia.client.gui;
 
+import java.util.Set;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.network.chat.Component;
 import com.minelittlepony.common.client.gui.GameGui;
 import com.minelittlepony.common.client.gui.ScrollContainer;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
@@ -9,16 +15,9 @@ import com.minelittlepony.common.client.gui.element.Toggle;
 import com.minelittlepony.common.client.gui.packing.GridPacker;
 import com.minelittlepony.common.client.gui.sprite.TextureSprite;
 import com.minelittlepony.common.client.gui.style.Style;
-import com.minelittlepony.unicopia.AllowList;
 import com.minelittlepony.unicopia.Config;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.Unicopia;
-
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.server.integrated.IntegratedServer;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 
 public class LanSettingsScreen extends GameGui {
 
@@ -32,8 +31,11 @@ public class LanSettingsScreen extends GameGui {
 
     private final ScrollContainer content = new ScrollContainer();
 
+    private boolean forceShowWhitelist;
+    private boolean forceHideWhitelist;
+
     public LanSettingsScreen(Screen parent) {
-        super(Text.translatable("unicopia.options.title"), parent);
+        super(Component.translatable("unicopia.options.title"), parent);
 
         content.margin.setVertical(30);
         content.getContentPadding().setHorizontal(10);
@@ -50,7 +52,7 @@ public class LanSettingsScreen extends GameGui {
 
         int LEFT = content.width / 2 - 100;
 
-        IntegratedServer server = client.getServer();
+        IntegratedServer server = minecraft.getSingleplayerServer();
 
         // In game
         //      Singleplayer server != null && !server.isRemote();
@@ -59,7 +61,7 @@ public class LanSettingsScreen extends GameGui {
         // Out of game
         //      server == null
 
-        final boolean canEditWhitelist = client.world == null || server != null;
+        final boolean canEditWhitelist = minecraft.level == null || server != null;
 
         getChildElements().add(content);
 
@@ -76,25 +78,34 @@ public class LanSettingsScreen extends GameGui {
         content.addButton(new Toggle(LEFT, row += 20, config.enableCheats.get()))
             .onChange(v -> {
                 config.enableCheats.set(v);
-                config.save();
                 return v;
             })
             .getStyle().setText("unicopia.options.cheats");
 
-        content.addButton(new Toggle(LEFT, row += 20, AllowList.INSTANCE.isEnabled()))
-            .onChange(v -> {
-                if (!v) {
-                    AllowList.INSTANCE.disable(server);
+        Set<String> whitelist = config.speciesWhiteList.get();
+        boolean whitelistEnabled = (forceShowWhitelist || !whitelist.isEmpty()) && !forceHideWhitelist;
+
+        if (whitelist.isEmpty() && forceShowWhitelist) {
+            for (Race r : Race.REGISTRY) {
+                if (!r.isUnset()) {
+                    whitelist.add(r.getId().toString());
                 }
+            }
+        }
+
+        content.addButton(new Toggle(LEFT, row += 20, whitelistEnabled))
+            .onChange(v -> {
+                forceShowWhitelist = v;
+                forceHideWhitelist = !v;
                 init();
                 return v;
             })
             .setEnabled(canEditWhitelist)
             .getStyle().setText("unicopia.options.whitelist");
 
-        if (AllowList.INSTANCE.isEnabled()) {
+        if (whitelistEnabled) {
 
-            content.addButton(new Label(LEFT, row += 20)).getStyle().setText(Text.translatable("unicopia.options.whitelist.details").formatted(Formatting.DARK_GREEN));
+            content.addButton(new Label(LEFT, row += 20)).getStyle().setText(Component.translatable("unicopia.options.whitelist.details").withStyle(ChatFormatting.DARK_GREEN));
 
             row += 20;
             WHITELIST_GRID_PACKER.start();
@@ -103,12 +114,12 @@ public class LanSettingsScreen extends GameGui {
                 if (!race.isUnset() && race.availability().isGrantable()) {
                     Bounds bound = WHITELIST_GRID_PACKER.next();
 
-                    Button button = content.addButton(new Toggle(LEFT + bound.left + 10, row + bound.top, AllowList.INSTANCE.permits(race)))
+                    Button button = content.addButton(new Toggle(LEFT + bound.left + 10, row + bound.top, whitelist.contains(race.getId().toString())))
                         .onChange(v -> {
                             if (v) {
-                                AllowList.INSTANCE.add(server, race);
+                                whitelist.add(race.getId().toString());
                             } else {
-                                AllowList.INSTANCE.remove(server, race);
+                                whitelist.remove(race.getId().toString());
                             }
                             return v;
                         })
@@ -122,9 +133,17 @@ public class LanSettingsScreen extends GameGui {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        super.render(context, mouseX, mouseY, tickDelta);
-        content.render(context, mouseX, mouseY, tickDelta);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+        super.extractRenderState(context, mouseX, mouseY, tickDelta);
+        content.extractRenderState(context, mouseX, mouseY, tickDelta);
+    }
+
+    @Override
+    public void removed() {
+        if (forceHideWhitelist) {
+            config.speciesWhiteList.get().clear();
+        }
+        config.save();
     }
 
     public static Style createStyle(Race race) {

@@ -8,12 +8,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.entity.Living;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.mob.WardenEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.warden.Warden;
 
-@Mixin(WardenEntity.class)
+@Mixin(Warden.class)
 abstract class MixinWardenEntity {
-    @Inject(method = "isValidTarget", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "canTargetEntity", at = @At("HEAD"), cancellable = true)
     public void onIsValidTarget(@Nullable Entity entity, CallbackInfoReturnable<Boolean> info) {
         if (Living.getOrEmpty(entity).filter(l -> l.getCompositeRace().includes(Race.KIRIN)).isPresent()) {
             info.setReturnValue(false);

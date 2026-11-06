@@ -8,32 +8,32 @@ import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.Projectile;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldEvents;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 
 public class WeatherJarItem extends BlockItem implements Projectile, ProjectileDelegate.HitListener {
     private final Type type;
 
-    public WeatherJarItem(Block block, Item.Settings settings, Type type) {
-        super(block, settings);
+    public WeatherJarItem(Block block, Item.Properties settings, Type type) {
+        super(block, settings.overrideDescription(block.getDescriptionId()));
         this.type = type;
         Projectile.makeDispensable(this);
     }
@@ -49,8 +49,8 @@ public class WeatherJarItem extends BlockItem implements Projectile, ProjectileD
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity player, Hand hand) {
-        if (player.shouldCancelInteraction()) {
+    public InteractionResult use(Level world, Player player, InteractionHand hand) {
+        if (player.isSecondaryUseActive()) {
             return super.use(world, player, hand);
         }
         return triggerThrow(world, player, hand);
@@ -58,12 +58,12 @@ public class WeatherJarItem extends BlockItem implements Projectile, ProjectileD
 
     @Override
     public void onImpact(MagicProjectileEntity projectile) {
-        releaseContents(projectile.getWorld(), projectile.getBlockPos());
+        releaseContents(projectile.level(), projectile.blockPosition());
     }
 
-    public void releaseContents(World world, BlockPos pos) {
-        if (!world.isClient()) {
-            ServerWorld sw = (ServerWorld)world;
+    public void releaseContents(Level world, BlockPos pos) {
+        if (!world.isClientSide()) {
+            ServerLevel sw = (ServerLevel)world;
 
             if (type == Type.RAIN || type == Type.THUNDER) {
                 // clear weather time = number of ticks for which the weather is clear
@@ -81,53 +81,58 @@ public class WeatherJarItem extends BlockItem implements Projectile, ProjectileD
                 // when rain time is <= 0
                 //   - randomly pick a new value for rain time
 
-                sw.setWeather(0, 0, type == Type.RAIN, type == Type.THUNDER);
+                var weather = sw.getWeatherData();
+                weather.setClearWeatherTime(0);
+                weather.setRainTime(0);
+                weather.setThunderTime(0);
+                weather.setRaining(type == Type.RAIN || type == Type.THUNDER);
+                weather.setThundering(type == Type.THUNDER);
 
                 if (type == Type.THUNDER) {
-                    for (int i = world.random.nextInt(7); i > 0; i--) {
+                    for (int i = world.getRandom().nextInt(7); i > 0; i--) {
                         AwaitTickQueue.scheduleTask(world, w -> {
-                            LightningEntity bolt = EntityType.LIGHTNING_BOLT.create(world, SpawnReason.EVENT);
-                            bolt.setCosmetic(true);
-                            bolt.refreshPositionAfterTeleport(Vec3d.ofBottomCenter(world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, world.getRandomPosInChunk(
-                                    ChunkSectionPos.getBlockCoord(ChunkSectionPos.getSectionCoord(pos.getX())),
+                            LightningBolt bolt = EntityTypes.LIGHTNING_BOLT.create(world, EntitySpawnReason.EVENT);
+                            bolt.setVisualOnly(true);
+                            bolt.snapTo(Vec3.atBottomCenterOf(world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, world.getBlockRandomPos(
+                                    SectionPos.sectionToBlockCoord(SectionPos.blockToSectionCoord(pos.getX())),
                                     0,
-                                    ChunkSectionPos.getBlockCoord(ChunkSectionPos.getSectionCoord(pos.getZ())),
+                                    SectionPos.sectionToBlockCoord(SectionPos.blockToSectionCoord(pos.getZ())),
                                     15
-                            )).up(32)));
-                            world.spawnEntity(bolt);
-                        }, 15 + world.random.nextInt(12));
+                            )).above(32)));
+                            world.addFreshEntity(bolt);
+                        }, 15 + world.getRandom().nextInt(12));
                     }
                 }
             }
 
             if (type == Type.LIGHTNING) {
-                LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(world, SpawnReason.EVENT);
-                lightning.refreshPositionAfterTeleport(pos.getX(), pos.getY(), pos.getZ());
+                LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(world, EntitySpawnReason.EVENT);
+                lightning.snapTo(pos.getX(), pos.getY(), pos.getZ());
 
-                world.spawnEntity(lightning);
+                world.addFreshEntity(lightning);
             }
         }
 
-        Vec3d centerPos = pos.toCenterPos();
+        Vec3 centerPos = Vec3.atCenterOf(pos);
 
         if (type == Type.LIGHTNING) {
-            ParticleUtils.spawnParticle(world, LightningBoltParticleEffect.DEFAULT, centerPos, Vec3d.ZERO);
+            ParticleUtils.spawnParticle(world, LightningBoltParticleEffect.DEFAULT, centerPos, Vec3.ZERO);
         }
 
         if (type == Type.RAIN || type == Type.THUNDER) {
-            world.syncWorldEvent(WorldEvents.SPLASH_POTION_SPLASHED, pos, type == Type.THUNDER ? 0x888888 : 0xF8F8F8);
+            world.levelEvent(LevelEvent.PARTICLES_SPELL_POTION_SPLASH, pos, type == Type.THUNDER ? 0x888888 : 0xF8F8F8);
 
-            for (int i = world.random.nextInt(3) + 1; i >= 0; i--) {
+            for (int i = world.getRandom().nextInt(3) + 1; i >= 0; i--) {
                 ParticleUtils.spawnParticle(world, UParticles.CLOUDS_ESCAPING,
-                        centerPos.getX(), centerPos.getY(), centerPos.getZ(),
-                        world.random.nextFloat() - 0.5,
+                        centerPos.x(), centerPos.y(), centerPos.z(),
+                        world.getRandom().nextFloat() - 0.5,
                         0,
-                        world.random.nextFloat() - 0.5
+                        world.getRandom().nextFloat() - 0.5
                 );
             }
         }
 
-        world.syncWorldEvent(WorldEvents.BLOCK_BROKEN, pos, Block.getRawIdFromState(Blocks.GLASS.getDefaultState()));
+        world.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, pos, Block.getId(Blocks.GLASS.defaultBlockState()));
     }
 
     public enum Type {

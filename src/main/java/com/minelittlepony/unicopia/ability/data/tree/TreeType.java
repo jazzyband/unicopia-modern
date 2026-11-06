@@ -6,16 +6,17 @@ import com.minelittlepony.unicopia.util.Weighted;
 
 import java.util.Objects;
 import java.util.Optional;
-import net.minecraft.block.BlockState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
+import java.util.Set;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 public interface TreeType {
-    TreeType NONE = new TreeTypeImpl(Unicopia.id("none"), TreeTypeLoader.TreeTypeDef.EMPTY, Weighted.of());
+    TreeType NONE = new TreeTypeImpl(Unicopia.id("none"), false, Set.of(), Set.of(), Weighted.of(), 0, 0.5F);
 
-    static TreeType at(BlockPos pos, World world) {
+    static TreeType at(BlockPos pos, Level world) {
         return TreeTypes.get(world.getBlockState(pos), pos, world);
     }
 
@@ -39,7 +40,7 @@ public interface TreeType {
             }
 
             @Override
-            public ItemStack pickRandomStack(Random random, BlockState state) {
+            public ItemStack pickRandomStack(RandomSource random, BlockState state) {
                 return (isLeaves(state) ? leaves : logs).pickRandomStack(random, state);
             }
 
@@ -63,7 +64,7 @@ public interface TreeType {
         return isLeaves(state) || isLog(state);
     }
 
-    ItemStack pickRandomStack(Random random, BlockState state);
+    ItemStack pickRandomStack(RandomSource random, BlockState state);
 
     boolean isWide();
 
@@ -75,7 +76,7 @@ public interface TreeType {
     /**
      * Counts the number of logs and leaves present in the targeted tree.
      */
-    default Optional<Tree> collectBlocks(World w, BlockPos pos) {
+    default Optional<Tree> collectBlocks(Level w, BlockPos pos) {
         if (this == NONE) {
             return Optional.empty();
         }

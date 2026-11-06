@@ -1,0 +1,21 @@
+{
+  "model": {
+    "type": "minecraft:composite",
+    "models": [
+      {
+        "type": "minecraft:model",
+        "model": "unicopia:item/magic_staff_base"
+      },
+      {
+        "type": "minecraft:model",
+        "model": "unicopia:item/magic_staff_magic",
+        "tints": [
+          {
+            "type": "unicopia:spell",
+            "default": -1
+          }
+        ]
+      }
+    ]
+  }
+}

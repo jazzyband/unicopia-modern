@@ -1,11 +1,10 @@
 package com.minelittlepony.unicopia.client.sound;
 
 import java.util.function.Predicate;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 
 public class MotionBasedSoundInstance<E extends Entity> extends FadeOutSoundInstance {
     // Tune these if you want to change the way this sounds!
@@ -27,8 +26,8 @@ public class MotionBasedSoundInstance<E extends Entity> extends FadeOutSoundInst
     private final float referencePitch;
     private final Predicate<E> playingCondition;
 
-    public MotionBasedSoundInstance(SoundEvent sound, E entity, Predicate<E> playingCondition, float minVolume, float maxVolume, float pitch, Random random) {
-        super(sound, entity.getSoundCategory(), 0.1F, random);
+    public MotionBasedSoundInstance(SoundEvent sound, E entity, Predicate<E> playingCondition, float minVolume, float maxVolume, float pitch, RandomSource random) {
+        super(sound, entity.getSoundSource(), 0.1F, random);
         this.entity = entity;
         this.pitch = pitch;
         this.referencePitch = pitch;
@@ -56,20 +55,20 @@ public class MotionBasedSoundInstance<E extends Entity> extends FadeOutSoundInst
         z = (float)entity.getZ();
 
         // Get velocity
-        float f = (float)entity.getVelocity().horizontalLength();
+        float f = (float)entity.getDeltaMovement().horizontalDistance();
 
         float lastVal = currentVal;
 
         // First we normalise the volume to the maximum velocity we're targeting, then we make it a curve.
         // Drag is not linear, and neither is the woosh it produces, so a curve makes it sound more natural.
-        currentVal = (float) Math.pow(MathHelper.clamp(f / MAX_VELOCITY, 0, 1), ATTEN_EXPO);
+        currentVal = (float) Math.pow(Mth.clamp(f / MAX_VELOCITY, 0, 1), ATTEN_EXPO);
 
         // Primitive lowpass filter/rate limiter thingy to rule out sudden jolts
-        currentVal = lastVal + MathHelper.clamp(currentVal - lastVal, -1 / MAX_RATE_TICKS, 1 / MAX_RATE_TICKS);
+        currentVal = lastVal + Mth.clamp(currentVal - lastVal, -1 / MAX_RATE_TICKS, 1 / MAX_RATE_TICKS);
 
         if (f >= 1.0E-7D) {
            // Multiply output volume by reference volume for overall gain control.
-           volume = MathHelper.lerp(currentVal, minVolume, maxVolume);
+           volume = Mth.lerp(currentVal, minVolume, maxVolume);
         } else {
            volume = 0.0F;
         }
@@ -80,7 +79,7 @@ public class MotionBasedSoundInstance<E extends Entity> extends FadeOutSoundInst
         }
 
         // Control pitch with velocity
-        pitch = MathHelper.lerp(currentVal, MIN_PITCH, MAX_PITCH) * referencePitch;
+        pitch = Mth.lerp(currentVal, MIN_PITCH, MAX_PITCH) * referencePitch;
 
         // Setting target volume every frame breaks interpolation. We set volume directly,
         // so that FadeOutSoundInstance only handles stopping the sound with an actual fade out!

@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:solar",
+  "author": {
+    "translate": "painting.unicopia.solar.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.solar.title"
+  },
+  "width": 2
+}

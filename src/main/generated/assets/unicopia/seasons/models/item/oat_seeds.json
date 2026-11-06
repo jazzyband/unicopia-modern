@@ -1,0 +1,13 @@
+{
+  "textures": {
+    "fall": {
+      "layer0": "unicopia:item/seasons/fall/oat_seeds"
+    },
+    "summer": {
+      "layer0": "unicopia:item/seasons/summer/oat_seeds"
+    },
+    "winter": {
+      "layer0": "unicopia:item/seasons/winter/oat_seeds"
+    }
+  }
+}

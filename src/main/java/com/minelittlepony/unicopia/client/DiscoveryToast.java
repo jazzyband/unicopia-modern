@@ -3,22 +3,21 @@ package com.minelittlepony.unicopia.client;
 import com.minelittlepony.unicopia.item.UItems;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.toasts.Toast;
+import net.minecraft.client.gui.components.toasts.ToastManager;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import org.joml.Matrix3x2fStack;
 import org.spongepowered.include.com.google.common.base.Objects;
-
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.toast.Toast;
-import net.minecraft.client.toast.ToastManager;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
 public class DiscoveryToast implements Toast {
     private static final long MAX_AGE = 5000L;
-    private static final Identifier TEXTURE = Identifier.ofVanilla("toast/advancement");
-    private static final Text TITLE = Text.translatable("unicopia.toast.discoveries.title");
-    private static final Text DESCRIPTION = Text.translatable("unicopia.toast.discoveries.description");
+    private static final Identifier TEXTURE = Identifier.withDefaultNamespace("toast/advancement");
+    private static final Component TITLE = Component.translatable("unicopia.toast.discoveries.title");
+    private static final Component DESCRIPTION = Component.translatable("unicopia.toast.discoveries.description");
 
     private final List<Identifier> discoveries = new ArrayList<>();
     private long startTime;
@@ -28,7 +27,7 @@ public class DiscoveryToast implements Toast {
 
 
     @Override
-    public Visibility getVisibility() {
+    public Visibility getWantedVisibility() {
         return discoveries.isEmpty() || age >= MAX_AGE ? Toast.Visibility.HIDE : Toast.Visibility.SHOW;
     }
 
@@ -42,20 +41,20 @@ public class DiscoveryToast implements Toast {
     }
 
     @Override
-    public void draw(DrawContext context, TextRenderer textRenderer, long startTime) {
-        context.drawGuiTexture(RenderLayer::getGuiTextured, TEXTURE, 0, 0, getWidth(), getHeight());
-        context.drawText(textRenderer, TITLE, 30, 7, -11534256, false);
-        context.drawText(textRenderer, DESCRIPTION, 30, 18, -16777216, false);
+    public void extractRenderState(GuiGraphicsExtractor context, Font textRenderer, long startTime) {
+        context.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE, 0, 0, width(), height());
+        context.text(textRenderer, TITLE, 30, 7, -11534256, false);
+        context.text(textRenderer, DESCRIPTION, 30, 18, -16777216, false);
 
         Identifier icon = discoveries.get((int)(startTime / Math.max(1L, MAX_AGE / discoveries.size()) % discoveries.size()));
 
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.scale(0.6F, 0.6F, 1);
-        context.drawItem(UItems.SPELLBOOK.getDefaultStack(), 3, 3);
-        matrices.pop();
+        Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.scale(0.6F, 0.6F);
+        context.item(UItems.SPELLBOOK.getDefaultInstance(), 3, 3);
+        matrices.popMatrix();
 
-        context.drawTexture(RenderLayer::getGuiTextured, icon, 8, 8, 1, 0, 0, 16, 16, 16, 16);
+        context.blit(icon, 8, 8, 16, 16, 0, 0, 1, 1);
     }
 
     public DiscoveryToast addDiscoveries(Identifier icon) {
@@ -69,9 +68,9 @@ public class DiscoveryToast implements Toast {
 
     class Discovery {
         final Identifier icon;
-        final Text description;
+        final Component description;
 
-        Discovery(Identifier icon, Text description) {
+        Discovery(Identifier icon, Component description) {
             this.icon = icon;
             this.description = description;
         }
@@ -90,9 +89,9 @@ public class DiscoveryToast implements Toast {
     }
 
     public static void show(ToastManager manager, Identifier icon) {
-        DiscoveryToast existing = manager.getToast(DiscoveryToast.class, TYPE);
+        DiscoveryToast existing = manager.getToast(DiscoveryToast.class, NO_TOKEN);
         if (existing == null) {
-            manager.add(new DiscoveryToast().addDiscoveries(icon));
+            manager.addToast(new DiscoveryToast().addDiscoveries(icon));
         } else {
             existing.addDiscoveries(icon);
         }

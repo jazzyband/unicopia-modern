@@ -1,0 +1,31 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "type": "farmersdelight:cutting",
+  "ingredients": [
+    "unicopia:waxed_zap_fence_gate"
+  ],
+  "result": [
+    {
+      "item": {
+        "id": "unicopia:zap_fence_gate"
+      }
+    },
+    {
+      "item": {
+        "id": "minecraft:honeycomb"
+      }
+    }
+  ],
+  "sound": "minecraft:item.axe.wax_off",
+  "tool": {
+    "fabric:type": "farmersdelight:item_ability",
+    "action": "axe_strip"
+  }
+}

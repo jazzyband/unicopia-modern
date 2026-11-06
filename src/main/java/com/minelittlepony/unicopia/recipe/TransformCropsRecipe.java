@@ -2,43 +2,42 @@ package com.minelittlepony.unicopia.recipe;
 
 import java.util.HashSet;
 import java.util.Set;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.PlacementInfo;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
+import net.minecraft.world.item.crafting.RecipeInput;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import com.minelittlepony.unicopia.block.state.StateUtil;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.IngredientPlacement;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.book.RecipeBookCategories;
-import net.minecraft.recipe.book.RecipeBookCategory;
-import net.minecraft.recipe.input.RecipeInput;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
 
 public class TransformCropsRecipe implements Recipe<TransformCropsRecipe.PlacementArea> {
     public static final MapCodec<TransformCropsRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Registries.BLOCK.getCodec().fieldOf("target").forGetter(recipe -> recipe.target),
+            BuiltInRegistries.BLOCK.byNameCodec().fieldOf("target").forGetter(recipe -> recipe.target),
             BlockState.CODEC.fieldOf("consume").forGetter(recipe -> recipe.catalyst),
             BlockState.CODEC.fieldOf("output").forGetter(recipe -> recipe.output)
     ).apply(instance, TransformCropsRecipe::new));
-    private static final PacketCodec<ByteBuf, BlockState> STATE_PACKET_CODEC = PacketCodecs.INTEGER.xmap(Block::getStateFromRawId, Block::getRawIdFromState);
-    public static final PacketCodec<RegistryByteBuf, TransformCropsRecipe> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.registryValue(RegistryKeys.BLOCK), recipe -> recipe.target,
+    private static final StreamCodec<ByteBuf, BlockState> STATE_PACKET_CODEC = ByteBufCodecs.INT.map(Block::stateById, Block::getId);
+    public static final StreamCodec<RegistryFriendlyByteBuf, TransformCropsRecipe> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.registry(Registries.BLOCK), recipe -> recipe.target,
             STATE_PACKET_CODEC, recipe -> recipe.catalyst,
             STATE_PACKET_CODEC, recipe -> recipe.output,
             TransformCropsRecipe::new
@@ -60,18 +59,23 @@ public class TransformCropsRecipe implements Recipe<TransformCropsRecipe.Placeme
     }
 
     @Override
-    public IngredientPlacement getIngredientPlacement() {
-        return IngredientPlacement.NONE;
+    public PlacementInfo placementInfo() {
+        return PlacementInfo.NOT_PLACEABLE;
     }
 
     @Override
-    public RecipeBookCategory getRecipeBookCategory() {
+    public String group() {
+        return "";
+    }
+
+    @Override
+    public boolean showNotification() {
+        return false;
+    }
+
+    @Override
+    public RecipeBookCategory recipeBookCategory() {
         return RecipeBookCategories.CRAFTING_MISC;
-    }
-
-    @Override
-    public boolean isIgnoredInRecipeBook() {
-        return true;
     }
 
     public BlockState getCatalystState() {
@@ -79,19 +83,19 @@ public class TransformCropsRecipe implements Recipe<TransformCropsRecipe.Placeme
     }
 
     public BlockState getTargetState() {
-        return target.getDefaultState();
+        return target.defaultBlockState();
     }
 
     public ItemStack getTarget() {
-        return target.asItem().getDefaultStack();
+        return target.asItem().getDefaultInstance();
     }
 
     public ItemStack getCatalyst() {
-        return catalyst.getBlock().asItem().getDefaultStack();
+        return catalyst.getBlock().asItem().getDefaultInstance();
     }
 
     public ItemStack getOutput() {
-        return output.getBlock().asItem().getDefaultStack();
+        return output.getBlock().asItem().getDefaultInstance();
     }
 
     @Override
@@ -105,31 +109,31 @@ public class TransformCropsRecipe implements Recipe<TransformCropsRecipe.Placeme
     }
 
     @Override
-    public boolean matches(PlacementArea inventory, World world) {
-        return world.getBlockState(inventory.position()).isOf(target);
+    public boolean matches(PlacementArea inventory, Level world) {
+        return world.getBlockState(inventory.position()).is(target);
     }
 
     @Override
-    public ItemStack craft(PlacementArea inventory, WrapperLookup manager) {
-        return output.getBlock().asItem().getDefaultStack();
+    public ItemStack assemble(PlacementArea inventory) {
+        return output.getBlock().asItem().getDefaultInstance();
     }
 
-    public Result checkPattern(World world, BlockPos pos) {
-        BlockPos center = pos.down();
+    public Result checkPattern(Level world, BlockPos pos) {
+        BlockPos center = pos.below();
         Set<BlockPos> matches = new HashSet<>();
-        for (BlockPos cell : BlockPos.iterateInSquare(center, RADIUS, Direction.EAST, Direction.NORTH)) {
+        for (BlockPos cell : BlockPos.spiralAround(center, RADIUS, Direction.EAST, Direction.NORTH)) {
             if (cell.equals(center)) {
                 continue;
             }
             if (!world.getBlockState(cell).equals(catalyst)) {
                 break;
             }
-            matches.add(cell.toImmutable());
+            matches.add(cell.immutable());
         }
         return new Result(this, matches);
     }
 
-    public BlockState getResult(World world, BlockPos pos) {
+    public BlockState getResult(Level world, BlockPos pos) {
         return StateUtil.copyState(world.getBlockState(pos), output);
     }
 
@@ -140,7 +144,7 @@ public class TransformCropsRecipe implements Recipe<TransformCropsRecipe.Placeme
         }
 
         @Override
-        public ItemStack getStackInSlot(int slot) {
+        public ItemStack getItem(int slot) {
             return ItemStack.EMPTY;
         }
 
@@ -151,7 +155,7 @@ public class TransformCropsRecipe implements Recipe<TransformCropsRecipe.Placeme
     }
 
     public record Result (TransformCropsRecipe recipe, Set<BlockPos> matchedLocations) {
-        public boolean shoudTransform(Random random) {
+        public boolean shoudTransform(RandomSource random) {
             return random.nextInt(AREA) < matchedLocations().size();
         }
     }

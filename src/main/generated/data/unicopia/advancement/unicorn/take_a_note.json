@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:unicorn/unicorn_route",
+  "criteria": {
+    "has_scroll": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:dragon_breath_scroll"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.take_a_note.description"
+    },
+    "icon": {
+      "id": "unicopia:dragon_breath_scroll"
+    },
+    "title": {
+      "translate": "advancements.unicopia.take_a_note.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_scroll"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

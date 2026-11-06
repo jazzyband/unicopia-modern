@@ -12,8 +12,7 @@ import com.minelittlepony.unicopia.ability.magic.spell.attribute.TooltipFactory;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * An area-effect spell that disperses illusions.
@@ -40,7 +39,7 @@ public class DisperseIllusionSpell extends AbstractAreaEffectSpell {
             MagicParticleEffect effect = new MagicParticleEffect(getType().getColor());
 
             source.spawnParticles(new Sphere(false, range), 5, pos -> {
-                source.addParticle(effect, pos, Vec3d.ZERO);
+                source.addParticle(effect, pos, Vec3.ZERO);
             });
             source.spawnParticles(effect, 5);
         }

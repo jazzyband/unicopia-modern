@@ -1,0 +1,9 @@
+{
+  "values": [
+    "#c:tools/shear",
+    {
+      "id": "#c:tools/knife",
+      "required": false
+    }
+  ]
+}

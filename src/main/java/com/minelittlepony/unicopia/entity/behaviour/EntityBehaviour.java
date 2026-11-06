@@ -2,7 +2,28 @@ package com.minelittlepony.unicopia.entity.behaviour;
 
 import java.util.Optional;
 import java.util.function.Supplier;
-
+import net.minecraft.core.Registry;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.golem.SnowGolem;
+import net.minecraft.world.entity.animal.equine.Llama;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.LlamaSpit;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -16,32 +37,10 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.LimbAnimationUtil;
 import com.minelittlepony.unicopia.util.RegistryUtils;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.Entity.RemovalReason;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MovementType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.decoration.AbstractDecorationEntity;
-import net.minecraft.entity.mob.AbstractSkeletonEntity;
-import net.minecraft.entity.passive.LlamaEntity;
-import net.minecraft.entity.passive.SnowGolemEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.LlamaSpitEntity;
-import net.minecraft.entity.projectile.thrown.SnowballEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.registry.Registry;
-
 public class EntityBehaviour<T extends Entity> {
 
     private static final EntityBehaviour<Entity> DEFAULT = new EntityBehaviour<>();
-    private static final Registry<EntityBehaviour<?>> REGISTRY = RegistryUtils.createSimple(Unicopia.key("entity_behaviour"));
+    private static final Registry<EntityBehaviour<?>> REGISTRY = RegistryUtils.createSimple(Unicopia.id("entity_behaviour"));
 
     /**
      * Equivalent of the entity#tick method. Called every tick to update th logic for a disguise.
@@ -63,13 +62,13 @@ public class EntityBehaviour<T extends Entity> {
     }
 
     public T onCreate(T entity, EntityAppearance context, boolean wasNew) {
-        entity.extinguish();
+        entity.clearFire();
         PehkUtil.clearScale(entity);
         return entity;
     }
 
     public void onDestroy(T entity) {
-        entity.setInvulnerable(false);
+        entity.setPermanentlyInvulnerable(false);
         entity.setNoGravity(false);
         entity.remove(RemovalReason.KILLED);
     }
@@ -83,7 +82,7 @@ public class EntityBehaviour<T extends Entity> {
             return Optional.empty();
         }
 
-        double normalHeight = PlayerEntity.STANDING_DIMENSIONS.height();
+        double normalHeight = player.asEntity().getDimensions(net.minecraft.world.entity.Pose.STANDING).height();
         double entityHeight = entity.getDimensions(entity.getPose()).height();
 
         return Optional.of((float)(entityHeight / normalHeight));
@@ -103,31 +102,31 @@ public class EntityBehaviour<T extends Entity> {
             return current;
         }
 
-        return Optional.of(EntityDimensions.changing(w, h));
+        return Optional.of(EntityDimensions.scalable(w, h));
     }
 
     public void copyBaseAttributes(LivingEntity from, Entity to) {
-        copyBaseAttributes(from, to, Vec3d.ZERO);
+        copyBaseAttributes(from, to, Vec3.ZERO);
     }
 
-    public void copyBaseAttributes(LivingEntity from, Entity to, Vec3d positionOffset) {
+    public void copyBaseAttributes(LivingEntity from, Entity to, Vec3 positionOffset) {
         // Set first because position calculations rely on it
-        to.age = from.age;
+        to.tickCount = from.tickCount;
         ((EntityDuck)to).setRemovalReason(from.getRemovalReason());
-        to.setOnGround(from.isOnGround());
+        to.setOnGround(from.onGround());
 
-        if (!from.getWorld().isClient) {
+        if (!from.level().isClientSide()) {
             // player collision is not known on the server
-            boolean clip = to.noClip;
-            to.noClip = false;
-            Vec3d vel = from.getRotationVec(1);
+            boolean clip = to.noPhysics;
+            to.noPhysics = false;
+            Vec3 vel = from.getViewVector(1);
 
-            if (!(to instanceof AbstractDecorationEntity)) {
-                to.move(MovementType.SELF, vel);
+            if (!(to instanceof HangingEntity)) {
+                to.move(MoverType.SELF, vel);
             } else {
-                to.setVelocity(Vec3d.ZERO);
+                to.setDeltaMovement(Vec3.ZERO);
             }
-            to.noClip = clip;
+            to.noPhysics = clip;
         } else {
             to.verticalCollision = from.verticalCollision;
             to.horizontalCollision = from.horizontalCollision;
@@ -138,95 +137,97 @@ public class EntityBehaviour<T extends Entity> {
             double y = positionOffset.y + Math.floor(from.getY());
             double z = positionOffset.z + Math.floor(from.getZ()) + 0.5;
 
-            to.lastX = x;
-            to.lastY = y;
-            to.lastZ = z;
+            to.xo = x;
+            to.yo = y;
+            to.zo = z;
 
-            to.lastRenderX = x;
-            to.lastRenderY = y;
-            to.lastRenderZ = z;
+            to.xOld = x;
+            to.yOld = y;
+            to.zOld = z;
 
-            to.updatePosition(x, y, z);
+            to.absSnapTo(x, y, z);
 
             if (to instanceof FallingBlockEntity fbe) {
-                fbe.setFallingBlockPos(from.getBlockPos());
+                fbe.setStartPos(from.blockPosition());
             }
         } else {
-            to.copyPositionAndRotation(from);
+            to.copyPosition(from);
 
-            to.lastX = positionOffset.x + from.lastX;
-            to.lastY = positionOffset.y + from.lastY;
-            to.lastZ = positionOffset.z + from.lastZ;
+            to.xo = positionOffset.x + from.xo;
+            to.yo = positionOffset.y + from.yo;
+            to.zo = positionOffset.z + from.zo;
 
-            to.lastRenderX = positionOffset.x + from.lastRenderX;
-            to.lastRenderY = positionOffset.y + from.lastRenderY;
-            to.lastRenderZ = positionOffset.z + from.lastRenderZ;
+            to.xOld = positionOffset.x + from.xOld;
+            to.yOld = positionOffset.y + from.yOld;
+            to.zOld = positionOffset.z + from.zOld;
         }
 
-        to.setVelocity(from.getVelocity());
+        to.setDeltaMovement(from.getDeltaMovement());
 
-        to.setPitch(from.getPitch());
-        to.lastPitch = from.lastPitch;
-        to.setYaw(from.getYaw());
-        to.lastYaw = from.lastYaw;
-        to.speed = from.speed;
+        to.setXRot(from.getXRot());
+        to.xRotO = from.xRotO;
+        to.setYRot(from.getYRot());
+        to.yRotO = from.yRotO;
+        to.flyDist = from.flyDist;
         to.fallDistance = 0;
-        to.setOnGround(from.isOnGround());
-        to.setInvulnerable(from.isInvulnerable() || (from instanceof PlayerEntity player && player.getAbilities().creativeMode));
+        to.setOnGround(from.onGround());
+        to.setPermanentlyInvulnerable(from.isInvulnerable() || (from instanceof Player player && player.getAbilities().instabuild));
 
-        to.distanceTraveled = from.distanceTraveled;
+        to.moveDist = from.moveDist;
 
         if (to instanceof LivingEntity l) {
-            l.headYaw = from.headYaw;
-            l.lastHeadYaw = from.lastHeadYaw;
-            l.bodyYaw = from.bodyYaw;
-            l.lastBodyYaw = from.lastBodyYaw;
+            l.yHeadRot = from.yHeadRot;
+            l.yHeadRotO = from.yHeadRotO;
+            l.yBodyRot = from.yBodyRot;
+            l.yBodyRotO = from.yBodyRotO;
 
-            LimbAnimationUtil.copy(from.limbAnimator, l.limbAnimator);
+            LimbAnimationUtil.copy(from.walkAnimation, l.walkAnimation);
 
-            l.handSwingProgress = from.handSwingProgress;
-            l.lastHandSwingProgress = from.lastHandSwingProgress;
-            l.handSwingTicks = from.handSwingTicks;
-            l.handSwinging = from.handSwinging;
+            var sourceSwing = (com.minelittlepony.unicopia.mixin.SwingStateAccessor)(Object)((com.minelittlepony.unicopia.mixin.LivingEntitySwingAccessor)from).unicopia$getSwingState();
+            var targetSwing = (com.minelittlepony.unicopia.mixin.SwingStateAccessor)(Object)((com.minelittlepony.unicopia.mixin.LivingEntitySwingAccessor)l).unicopia$getSwingState();
+            targetSwing.unicopia$setCurrentSwing(sourceSwing.unicopia$getCurrentSwing());
+            targetSwing.unicopia$setTicks(sourceSwing.unicopia$getTicks());
+            targetSwing.unicopia$setOldAnimation(sourceSwing.unicopia$getOldAnimation());
+            targetSwing.unicopia$setAnimation(sourceSwing.unicopia$getAnimation());
 
             l.hurtTime = from.hurtTime;
             l.deathTime = from.deathTime;
-            l.stuckStingerTimer = from.stuckStingerTimer;
-            l.stuckArrowTimer = from.stuckArrowTimer;
+            l.removeStingerTime = from.removeStingerTime;
+            l.removeArrowTime = from.removeArrowTime;
 
             // disguise uses our health
             l.setHealth((from.getHealth() / from.getMaxHealth()) * l.getMaxHealth());
 
             // we use the disguise's air so changelings disguised as dolphin/axolotl/etc drown on land
-            from.setAir((l.getAir() / l.getMaxAir()) * from.getMaxAir());
+            from.setAirSupply((l.getAirSupply() / l.getMaxAirSupply()) * from.getMaxAirSupply());
 
             copyInventory(from, l);
         }
 
-        if (to instanceof TameableEntity tameable) {
-            tameable.setSitting(from.isSneaking());
+        if (to instanceof TamableAnimal tameable) {
+            tameable.setOrderedToSit(from.isShiftKeyDown());
         }
 
-        if (to instanceof AbstractSkeletonEntity skeleton) {
-            skeleton.setAttacking(from.getItemUseTimeLeft() > 0);
+        if (to instanceof AbstractSkeleton skeleton) {
+            skeleton.setAggressive(from.getUseItemRemainingTicks() > 0);
         }
 
         if (to instanceof LivingEntityDuck duck) {
-            duck.updateItemUsage(from.getActiveHand(), from.getActiveItem(), from.getItemUseTimeLeft());
+            duck.updateItemUsage(from.getUsedItemHand(), from.getUseItem(), from.getUseItemRemainingTicks());
         }
 
-        if (from.age < 100 || from instanceof PlayerEntity player && (player.isCreative() || player.isSpectator())) {
-            to.extinguish();
+        if (from.tickCount < 100 || from instanceof Player player && (player.isCreative() || player.isSpectator())) {
+            to.clearFire();
         }
 
         if (to.isOnFire()) {
-            from.setOnFireFor(1);
+            from.igniteForSeconds(1);
         } else {
-            from.extinguish();
+            from.clearFire();
         }
 
-        to.setSneaking(from.isSneaking());
-        if (to instanceof PlayerEntity) {
+        to.setShiftKeyDown(from.isShiftKeyDown());
+        if (to instanceof Player) {
             to.setPose(from.getPose());
         }
     }
@@ -234,10 +235,10 @@ public class EntityBehaviour<T extends Entity> {
     protected void copyInventory(LivingEntity from, LivingEntity l) {
         for (EquipmentSlot i : EquipmentSlot.values()) {
             if (!skipSlot(i)) {
-                ItemStack neu = from.getEquippedStack(i);
-                ItemStack old = l.getEquippedStack(i);
+                ItemStack neu = from.getItemBySlot(i);
+                ItemStack old = l.getItemBySlot(i);
                 if (old != neu) {
-                    l.equipStack(i, neu);
+                    l.setItemSlot(i, neu);
                 }
             }
         }
@@ -249,12 +250,12 @@ public class EntityBehaviour<T extends Entity> {
 
     protected boolean isSneakingOnGround(Caster<?> source) {
         Entity e = source.asEntity();
-        return e.isSneaking() && (e.isOnGround() && !(e instanceof PlayerEntity player && player.getAbilities().flying));
+        return e.isShiftKeyDown() && (e.onGround() && !(e instanceof Player player && player.getAbilities().flying));
     }
 
     public static <T extends Entity> void register(Supplier<EntityBehaviour<T>> behaviour, EntityType<?>... types) {
         for (EntityType<?> type : types) {
-            Registry.register(REGISTRY, EntityType.getId(type), behaviour.get());
+            Registry.register(REGISTRY, EntityType.getKey(type), behaviour.get());
         }
     }
 
@@ -263,33 +264,33 @@ public class EntityBehaviour<T extends Entity> {
         if (entity == null) {
             return (EntityBehaviour<T>)DEFAULT;
         }
-        return (EntityBehaviour<T>)REGISTRY.getOptionalValue(EntityType.getId(entity.getType())).orElse(DEFAULT);
+        return (EntityBehaviour<T>)REGISTRY.getOptional(EntityType.getKey(entity.getType())).orElse(DEFAULT);
     }
 
     static {
-        register(PlayerBehaviour::new, EntityType.PLAYER);
-        register(FallingBlockBehaviour::new, EntityType.FALLING_BLOCK);
-        register(MobBehaviour::new, EntityType.RAVAGER);
-        register(IronGolemBehaviour::new, EntityType.IRON_GOLEM);
-        register(HoppingBehaviour::new, EntityType.RABBIT, EntityType.SLIME, EntityType.MAGMA_CUBE);
-        register(TraderBehaviour::new, EntityType.VILLAGER, EntityType.WANDERING_TRADER);
-        register(SteedBehaviour::new, EntityType.HORSE, EntityType.DONKEY, EntityType.SKELETON_HORSE, EntityType.ZOMBIE_HORSE);
-        register(SheepBehaviour::new, EntityType.SHEEP);
-        register(BeeBehaviour::new, EntityType.BEE);
-        register(GhastBehaviour::new, EntityType.GHAST);
-        register(AxolotlBehaviour::new, EntityType.AXOLOTL);
-        register(EndermanBehaviour::new, EntityType.ENDERMAN);
-        EntityBehaviour.<LlamaEntity>register(() -> new RangedAttackBehaviour<>(USounds.Vanilla.ENTITY_LLAMA_SPIT, LlamaSpitEntity::new), EntityType.LLAMA, EntityType.TRADER_LLAMA);
-        EntityBehaviour.<SnowGolemEntity>register(() -> new RangedAttackBehaviour<>(USounds.Vanilla.ENTITY_SNOW_GOLEM_SHOOT, (world, owner) -> new SnowballEntity(world, owner, Items.SNOWBALL.getDefaultStack())), EntityType.SNOW_GOLEM);
-        register(SpellcastingIllagerBehaviour::new, EntityType.ILLUSIONER, EntityType.EVOKER);
-        register(ShulkerBehaviour::new, EntityType.SHULKER);
-        register(CreeperBehaviour::new, EntityType.CREEPER);
-        register(SilverfishBehaviour::new, EntityType.SILVERFISH);
-        register(ChickenBehaviour::new, EntityType.CHICKEN);
-        register(BlazeBehaviour::new, EntityType.BLAZE);
-        register(BreezeBehaviour::new, EntityType.BREEZE);
-        register(MinecartBehaviour::new, EntityType.CHEST_MINECART, EntityType.COMMAND_BLOCK_MINECART, EntityType.FURNACE_MINECART, EntityType.HOPPER_MINECART, EntityType.MINECART, EntityType.SPAWNER_MINECART, EntityType.TNT_MINECART);
-        register(CamelBehaviour::new, EntityType.CAMEL);
+        register(PlayerBehaviour::new, EntityTypes.PLAYER);
+        register(FallingBlockBehaviour::new, EntityTypes.FALLING_BLOCK);
+        register(MobBehaviour::new, EntityTypes.RAVAGER);
+        register(IronGolemBehaviour::new, EntityTypes.IRON_GOLEM);
+        register(HoppingBehaviour::new, EntityTypes.RABBIT, EntityTypes.SLIME, EntityTypes.MAGMA_CUBE);
+        register(TraderBehaviour::new, EntityTypes.VILLAGER, EntityTypes.WANDERING_TRADER);
+        register(SteedBehaviour::new, EntityTypes.HORSE, EntityTypes.DONKEY, EntityTypes.SKELETON_HORSE, EntityTypes.ZOMBIE_HORSE);
+        register(SheepBehaviour::new, EntityTypes.SHEEP);
+        register(BeeBehaviour::new, EntityTypes.BEE);
+        register(GhastBehaviour::new, EntityTypes.GHAST);
+        register(AxolotlBehaviour::new, EntityTypes.AXOLOTL);
+        register(EndermanBehaviour::new, EntityTypes.ENDERMAN);
+        EntityBehaviour.<Llama>register(() -> new RangedAttackBehaviour<>(USounds.Vanilla.LLAMA_SPIT, LlamaSpit::new), EntityTypes.LLAMA, EntityTypes.TRADER_LLAMA);
+        EntityBehaviour.<SnowGolem>register(() -> new RangedAttackBehaviour<>(USounds.Vanilla.SNOW_GOLEM_SHOOT, (world, owner) -> new Snowball(world, owner, Items.SNOWBALL.getDefaultInstance())), EntityTypes.SNOW_GOLEM);
+        register(SpellcastingIllagerBehaviour::new, EntityTypes.ILLUSIONER, EntityTypes.EVOKER);
+        register(ShulkerBehaviour::new, EntityTypes.SHULKER);
+        register(CreeperBehaviour::new, EntityTypes.CREEPER);
+        register(SilverfishBehaviour::new, EntityTypes.SILVERFISH);
+        register(ChickenBehaviour::new, EntityTypes.CHICKEN);
+        register(BlazeBehaviour::new, EntityTypes.BLAZE);
+        register(BreezeBehaviour::new, EntityTypes.BREEZE);
+        register(MinecartBehaviour::new, EntityTypes.CHEST_MINECART, EntityTypes.COMMAND_BLOCK_MINECART, EntityTypes.FURNACE_MINECART, EntityTypes.HOPPER_MINECART, EntityTypes.MINECART, EntityTypes.SPAWNER_MINECART, EntityTypes.TNT_MINECART);
+        register(CamelBehaviour::new, EntityTypes.CAMEL);
     }
 
     public static void bootstrap() {}

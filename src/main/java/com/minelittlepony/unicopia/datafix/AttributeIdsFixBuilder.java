@@ -3,9 +3,8 @@ package com.minelittlepony.unicopia.datafix;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import net.minecraft.datafixer.fix.AttributeIdFix;
 import net.minecraft.util.Util;
+import net.minecraft.util.datafix.fixes.AttributeModifierIdFix;
 
 public class AttributeIdsFixBuilder {
     private final Map<UUID, String> uuids = new HashMap<>();
@@ -23,7 +22,7 @@ public class AttributeIdsFixBuilder {
     }
 
     public void register() {
-        AttributeIdFix.UUID_TO_ID = Map.copyOf(Util.make(new HashMap<>(AttributeIdFix.UUID_TO_ID), map -> map.putAll(uuids)));
-        AttributeIdFix.NAME_TO_ID = Map.copyOf(Util.make(new HashMap<>(AttributeIdFix.NAME_TO_ID), map -> map.putAll(names)));
+        AttributeModifierIdFix.ID_MAP = Map.copyOf(Util.make(new HashMap<>(AttributeModifierIdFix.ID_MAP), map -> map.putAll(uuids)));
+        AttributeModifierIdFix.NAME_MAP = Map.copyOf(Util.make(new HashMap<>(AttributeModifierIdFix.NAME_MAP), map -> map.putAll(names)));
     }
 }

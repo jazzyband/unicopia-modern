@@ -1,11 +1,9 @@
 package com.minelittlepony.unicopia.entity;
 
 import java.util.function.Predicate;
-
+import net.minecraft.world.entity.LivingEntity;
 import com.minelittlepony.unicopia.item.AmuletItem;
 import com.minelittlepony.unicopia.item.UItems;
-
-import net.minecraft.entity.LivingEntity;
 
 public interface AmuletSelectors {
     Predicate<LivingEntity> ALICORN_AMULET = e -> AmuletItem.isApplicable(e, UItems.ALICORN_AMULET);

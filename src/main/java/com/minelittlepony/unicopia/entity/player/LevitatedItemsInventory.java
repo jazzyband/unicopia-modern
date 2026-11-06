@@ -6,7 +6,30 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import net.minecraft.advancements.triggers.CriteriaTriggers;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.Abilities;
@@ -18,27 +41,6 @@ import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import net.minecraft.advancement.criterion.Criteria;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
 
 public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory>, NbtSerialisable, Tickable {
 
@@ -67,47 +69,47 @@ public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory
     public boolean addStack(ItemStack stack) {
         LevitatingItemEntity entity = new LevitatingItemEntity(nextSlot++, player.asEntity(), stack);
         onEntitySpawned(entity);
-        player.asWorld().spawnEntity(entity);
-        player.playSound(SoundEvents.ENTITY_ITEM_PICKUP, 1);
+        player.asWorld().addFreshEntity(entity);
+        player.playSound(SoundEvents.ITEM_PICKUP, 1);
         return true;
     }
 
     public boolean addPassenger(Entity passenger) {
         double yOffset = 0.1;
         if (passenger.getRootVehicle() instanceof LevitatingItemEntity root) {
-            boolean isOnlyPassenger = root.getPassengerList().size() == 1 && root.getPassengerList().get(0) == passenger;
+            boolean isOnlyPassenger = root.getPassengers().size() == 1 && root.getPassengers().get(0) == passenger;
             passenger.stopRiding();
-            passenger.setPosition(root.getPos());
+            passenger.setPos(root.position());
             yOffset = 0;
-            if (root.getPassengerList().isEmpty()) {
+            if (root.getPassengers().isEmpty()) {
                 discardOrKill(root);
             }
             if (root.getMaster() == player.asEntity() && isOnlyPassenger) {
-                player.playSound(SoundEvents.ENTITY_ITEM_PICKUP, 1);
+                player.playSound(SoundEvents.ITEM_PICKUP, 1);
                 return true;
             }
         }
         LevitatingItemEntity entity = new LevitatingItemEntity(nextSlot++, player.asEntity(), ItemStack.EMPTY);
-        entity.setPosition(passenger.getPos());
-        entity.setHoldingPosition(passenger.getPos().add(0, yOffset, 0));
+        entity.setPos(passenger.position());
+        entity.setHoldingPosition(passenger.position().add(0, yOffset, 0));
         if (passenger instanceof ItemEntity i) {
-            entity.setStack(i.getStack());
+            entity.setStack(i.getItem());
             i.discard();
-            return addStack(i.getStack());
+            return addStack(i.getItem());
         } else {
             onEntitySpawned(entity);
-            passenger.startRiding(entity, true);
-            player.asWorld().spawnEntity(entity);
+            passenger.startRiding(entity, true, true);
+            player.asWorld().addFreshEntity(entity);
         }
 
-        player.playSound(SoundEvents.ENTITY_ITEM_PICKUP, 1);
+        player.playSound(SoundEvents.ITEM_PICKUP, 1);
         return true;
     }
 
     public void dropEverything() {
         List<LevitatingItemEntity> copy = new ArrayList<>(stacks.values());
         if (!copy.isEmpty()) {
-            player.playSound(SoundEvents.ENTITY_ITEM_PICKUP, 1);
+            player.playSound(SoundEvents.ITEM_PICKUP, 1);
         }
         stacks.clear();
         nextSlot = 0;
@@ -115,61 +117,61 @@ public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory
     }
 
     private void discardOrKill(Entity entity) {
-        if (entity.getWorld() instanceof ServerWorld sw) {
+        if (entity.level() instanceof ServerLevel sw) {
             entity.kill(sw);
         } else {
             entity.discard();
         }
     }
 
-    public ActionResult interact(@Nullable BlockHitResult hit) {
+    public InteractionResult interact(@Nullable BlockHitResult hit) {
         for (var i : stacks.values()) {
             ItemStack stack = i.getStack();
-            if (player.asEntity().getItemCooldownManager().isCoolingDown(stack)) {
+            if (player.asEntity().getCooldowns().isOnCooldown(stack)) {
                 continue;
             }
 
-            if (ForageableItem.use(player.asEntity(), stack, player.asWorld(), Hand.MAIN_HAND, hit).isAccepted()) {
-                return ActionResult.SUCCESS;
+            if (ForageableItem.use(player.asEntity(), stack, player.asWorld(), InteractionHand.MAIN_HAND, hit).consumesAction()) {
+                return InteractionResult.SUCCESS;
             }
 
-            var result = stack.useOnBlock(new ItemUsageContext(player.asWorld(), player.asEntity(), Hand.MAIN_HAND, stack, hit));
-            if (result.isAccepted()) {
-                if (player.asEntity() instanceof ServerPlayerEntity spe) {
-                    Criteria.ITEM_USED_ON_BLOCK.trigger(spe, hit.getBlockPos(), stack);
+            var result = stack.useOn(new UseOnContext(player.asWorld(), player.asEntity(), InteractionHand.MAIN_HAND, stack, hit));
+            if (result.consumesAction()) {
+                if (player.asEntity() instanceof ServerPlayer spe) {
+                    CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(spe, hit.getBlockPos(), stack);
                 }
                 return result;
             }
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public ActionResult interact(Entity entity, @Nullable EntityHitResult hit) {
+    public InteractionResult interact(Entity entity, @Nullable EntityHitResult hit) {
         if (!(entity instanceof LivingEntity l)) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
         for (var i : stacks.values()) {
             ItemStack stack = i.getStack();
-            if (player.asEntity().getItemCooldownManager().isCoolingDown(stack)) {
+            if (player.asEntity().getCooldowns().isOnCooldown(stack)) {
                 continue;
             }
 
-            var result = stack.useOnEntity(player.asEntity(), l, Hand.MAIN_HAND);
-            if (result.isAccepted()) {
+            var result = stack.interactLivingEntity(player.asEntity(), l, InteractionHand.MAIN_HAND);
+            if (result.consumesAction()) {
                 return result;
             }
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public ActionResult attack(Entity entity, @Nullable EntityHitResult hit) {
-        double playerAttackDamage = player.asEntity().getAttributeValue(EntityAttributes.ATTACK_DAMAGE);
+    public InteractionResult attack(Entity entity, @Nullable EntityHitResult hit) {
+        double playerAttackDamage = player.asEntity().getAttributeValue(Attributes.ATTACK_DAMAGE);
         @Nullable
         LevitatingItemEntity chosenAttacker = null;
         double chosenAttackerDamage = playerAttackDamage;
 
         for (var i : stacks.values()) {
-            if (player.asEntity().getItemCooldownManager().isCoolingDown(i.getStack())
+            if (player.asEntity().getCooldowns().isOnCooldown(i.getStack())
                     || i.getMiningPos().isPresent()
                     || !i.canChangePositionHoldingFreely()
                     || i.isSwinging()) {
@@ -186,18 +188,18 @@ public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory
         }
 
         if (chosenAttacker != null) {
-            chosenAttacker.swingAt(entity.getBlockPos().add(0, (int)entity.getHeight(), 0));
-            ItemStack oldStack = player.asEntity().getStackInHand(Hand.MAIN_HAND);
+            chosenAttacker.swingAt(entity.blockPosition().offset(0, (int)entity.getBbHeight(), 0));
+            ItemStack oldStack = player.asEntity().getItemInHand(InteractionHand.MAIN_HAND);
             try {
-                player.asEntity().setStackInHand(Hand.MAIN_HAND, chosenAttacker.getStack());
+                player.asEntity().setItemInHand(InteractionHand.MAIN_HAND, chosenAttacker.getStack());
                 player.asEntity().attack(entity);
             } finally {
-                chosenAttacker.setStack(player.asEntity().getStackInHand(Hand.MAIN_HAND));
-                player.asEntity().setStackInHand(Hand.MAIN_HAND, oldStack);
+                chosenAttacker.setStack(player.asEntity().getItemInHand(InteractionHand.MAIN_HAND));
+                player.asEntity().setItemInHand(InteractionHand.MAIN_HAND, oldStack);
             }
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     public boolean startMining(BlockState state, BlockPos pos, Direction direction) {
@@ -220,13 +222,13 @@ public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory
     @Override
     public void tick() {
         if (!player.isClient()) {
-            if (!Abilities.TELEKINESIS.value().canUse(player.getCompositeRace())) {
+            if (!Abilities.TELEKINESIS.canUse(player.getCompositeRace())) {
                 dropEverything();
             }
 
             List<LevitatingItemEntity> copy = new ArrayList<>(pending);
             pending.clear();
-            copy.forEach(player.asWorld()::spawnEntity);
+            copy.forEach(player.asWorld()::addFreshEntity);
         }
 
         blockBreakingRecords.values().removeIf(BlockBreakingRecord::tryDiscard);
@@ -236,11 +238,11 @@ public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory
             float cost = 0;
             for (LevitatingItemEntity a : stacks.values()) {
                 cost += 0.01F * a.getStack().getCount();
-                cost += 0.1F * a.getPassengerList().size();
+                cost += 0.1F * a.getPassengers().size();
                 for (LevitatingItemEntity b : stacks.values()) {
                     if (a != b) {
                         if (a.getRelativePosition().distanceTo(b.getRelativePosition()) < 0.8) {
-                            Vec3d delta = a.getRelativePosition().subtract(b.getRelativePosition()).multiply(0.5);
+                            Vec3 delta = a.getRelativePosition().subtract(b.getRelativePosition()).scale(0.5);
                             a.setPolarPositionOffset(a.getRelativePosition().add(delta));
                             b.setPolarPositionOffset(b.getRelativePosition().subtract(delta));
                         }
@@ -264,21 +266,23 @@ public class LevitatedItemsInventory implements Copyable<LevitatedItemsInventory
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-        NbtList stacks = new NbtList();
+    public void toNBT(CompoundTag compound, Provider lookup) {
+        ListTag stacks = new ListTag();
         for (var stack : this.stacks.values()) {
-            stacks.add(stack.writeNbt(new NbtCompound()));
+            var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, lookup);
+            stack.saveWithoutId(output);
+            stacks.add(output.buildResult());
         }
         compound.put("stacks", stacks);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-        NbtList stacks = compound.getListOrEmpty("stacks");
+    public void fromNBT(CompoundTag compound, Provider lookup) {
+        ListTag stacks = compound.getListOrEmpty("stacks");
         this.stacks.clear();
         for (int i = 0; i < stacks.size(); i++) {
             LevitatingItemEntity stack = new LevitatingItemEntity(i, player.asEntity(), ItemStack.EMPTY);
-            stack.readNbt(stacks.getCompoundOrEmpty(i));
+            stack.load(TagValueInput.create(ProblemReporter.DISCARDING, lookup, stacks.getCompoundOrEmpty(i)));
             stack.setSlot(i);
             onEntitySpawned(stack);
             if (!player.isClient()) {

@@ -1,0 +1,123 @@
+{
+  "parent": "unicopia:earth/apple_route",
+  "criteria": {
+    "has_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_cooked_zap_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:cooked_zap_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_golden_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:golden_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_green_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:green_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_rotten_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:rotten_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_sour_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:sour_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_sweet_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:sweet_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_zap_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:zap_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.sweet_apple_acres.description"
+    },
+    "icon": {
+      "id": "unicopia:sweet_apple"
+    },
+    "title": {
+      "translate": "advancements.unicopia.sweet_apple_acres.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_apple"
+    ],
+    [
+      "has_green_apple"
+    ],
+    [
+      "has_sweet_apple"
+    ],
+    [
+      "has_sour_apple"
+    ],
+    [
+      "has_rotten_apple"
+    ],
+    [
+      "has_zap_apple"
+    ],
+    [
+      "has_cooked_zap_apple"
+    ],
+    [
+      "has_golden_apple"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

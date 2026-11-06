@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "group": "cloud_slab",
+  "key": {
+    "#": "unicopia:dense_cloud"
+  },
+  "pattern": [
+    "###"
+  ],
+  "result": {
+    "count": 6,
+    "id": "unicopia:dense_cloud_slab"
+  }
+}

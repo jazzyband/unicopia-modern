@@ -2,34 +2,25 @@ package com.minelittlepony.unicopia.block.zap;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.StairsBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockView;
-
-public class ZapStairsBlock extends StairsBlock {
-    public static final MapCodec<ZapStairsBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockState.CODEC.fieldOf("base_state").forGetter(block -> block.baseBlock),
-            createSettingsCodec()
-    ).apply(instance, ZapStairsBlock::new));
+public class ZapStairsBlock extends StairBlock {
 
     private final BlockState baseBlock;
 
-    public ZapStairsBlock(BlockState baseBlockState, Settings settings) {
+    public ZapStairsBlock(BlockState baseBlockState, Properties settings) {
         super(baseBlockState, settings);
         this.baseBlock = baseBlockState;
     }
 
-    @Override
-    public MapCodec<? extends StairsBlock> getCodec() {
-        return CODEC;
-    }
 
     @Deprecated
     @Override
-    public float calcBlockBreakingDelta(BlockState state, PlayerEntity player, BlockView world, BlockPos pos) {
-        return baseBlock.calcBlockBreakingDelta(player, world, pos);
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter world, BlockPos pos) {
+        return baseBlock.getDestroyProgress(player, world, pos);
     }
 }

@@ -14,15 +14,17 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.*;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.world.World;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.VegetationBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.Fluid;
 
 public interface StatePredicate extends Predicate<BlockState> {
     Codec<StatePredicate> TYPE_CODEC = Identifier.CODEC.dispatch(StatePredicate::getType, type -> StatePredicate.REGISTRY.get(type));
@@ -45,7 +47,7 @@ public interface StatePredicate extends Predicate<BlockState> {
 
     @SuppressWarnings("deprecation")
     static boolean isFluid(BlockState state) {
-        return state.isLiquid();
+        return state.liquid();
     }
 
     @SuppressWarnings("unchecked")
@@ -73,17 +75,17 @@ public interface StatePredicate extends Predicate<BlockState> {
 
         @Override
         public boolean test(BlockState state) {
-            return state.getBlock() instanceof PlantBlock;
+            return state.getBlock() instanceof VegetationBlock;
         }
     }
 
     record FluidTag(TagKey<Fluid> tag) implements StatePredicate {
         public static final Identifier ID = Unicopia.id("fluid_tag");
-        public static final Codec<FluidTag> CODEC = TagKey.codec(RegistryKeys.FLUID).xmap(FluidTag::new, FluidTag::tag);
+        public static final Codec<FluidTag> CODEC = TagKey.hashedCodec(Registries.FLUID).xmap(FluidTag::new, FluidTag::tag);
         public static final MapCodec<FluidTag> MAP_CODEC = CODEC.fieldOf("tag");
 
         public FluidTag(String tag) {
-            this(TagKey.of(RegistryKeys.FLUID, Identifier.of(tag)));
+            this(TagKey.create(Registries.FLUID, Identifier.parse(tag)));
         }
 
         @Override
@@ -93,17 +95,17 @@ public interface StatePredicate extends Predicate<BlockState> {
 
         @Override
         public boolean test(BlockState state) {
-            return isFluid(state) && state.getFluidState().isIn(tag);
+            return isFluid(state) && state.getFluidState().is(tag);
         }
     }
 
     record Tag(TagKey<Block> tag, Optional<ReversableStateChange> inverse) implements StatePredicate {
         public static final Identifier ID = Unicopia.id("block_tag");
-        public static final Codec<Tag> CODEC = TagKey.codec(RegistryKeys.BLOCK).xmap(Tag::new, Tag::tag);
+        public static final Codec<Tag> CODEC = TagKey.hashedCodec(Registries.BLOCK).xmap(Tag::new, Tag::tag);
         public static final MapCodec<Tag> MAP_CODEC = CODEC.fieldOf("tag");
 
         public Tag(String tag) {
-            this(TagKey.of(RegistryKeys.BLOCK, Identifier.of(tag)), Optional.empty());
+            this(TagKey.create(Registries.BLOCK, Identifier.parse(tag)), Optional.empty());
         }
 
         public Tag(TagKey<Block> tag) {
@@ -117,7 +119,7 @@ public interface StatePredicate extends Predicate<BlockState> {
 
         @Override
         public boolean test(BlockState state) {
-            return state.isIn(tag);
+            return state.is(tag);
         }
 
         @Override
@@ -139,7 +141,7 @@ public interface StatePredicate extends Predicate<BlockState> {
         }
 
         public State(String state) {
-            this(Identifier.of(state.split("\\{")[0]), Optional.of(state)
+            this(Identifier.parse(state.split("\\{")[0]), Optional.of(state)
                 .filter(s -> s.contains("{"))
                 .stream()
                 .flatMap(s -> Stream.of(s.split("\\{")[1].split("\\}")[0].split(",")))
@@ -156,11 +158,11 @@ public interface StatePredicate extends Predicate<BlockState> {
 
         @Override
         public boolean test(BlockState state) {
-            return Registries.BLOCK.getOptionalValue(id).filter(state::isOf).isPresent()
+            return BuiltInRegistries.BLOCK.getOptional(id).filter(state::is).isPresent()
                     && (properties.isEmpty() || properties.stream().allMatch(p -> p.test(state)));
         }
 
-        public BlockState applyTo(World world, BlockState state) {
+        public BlockState applyTo(Level world, BlockState state) {
             for (PropertyOp prop : properties) {
                 state = prop.applyTo(world, state);
             }
@@ -191,11 +193,11 @@ public interface StatePredicate extends Predicate<BlockState> {
             return combiner.func.test(predicates.stream(), predicate -> predicate.test(state));
         }
 
-        public enum Combiner implements StringIdentifiable {
+        public enum Combiner implements StringRepresentable {
             AND(Stream::allMatch),
             OR(Stream::anyMatch);
 
-            public static final Codec<Combiner> CODEC = StringIdentifiable.createCodec(Combiner::values);
+            public static final Codec<Combiner> CODEC = StringRepresentable.fromEnum(Combiner::values);
 
             private final String name = name().toLowerCase(Locale.ROOT);
             private final BiPredicate<Stream<StatePredicate>, Predicate<StatePredicate>> func;
@@ -205,7 +207,7 @@ public interface StatePredicate extends Predicate<BlockState> {
             }
 
             @Override
-            public String asString() {
+            public String getSerializedName() {
                 return name;
             }
         }
@@ -247,9 +249,9 @@ public interface StatePredicate extends Predicate<BlockState> {
             return ID;
         }
 
-        public BlockState applyTo(World world, BlockState state) {
+        public BlockState applyTo(Level world, BlockState state) {
             return getProperty(state, name).flatMap(property -> {
-                return property.parse(value).map(val -> {
+                return property.getValue(value).map(val -> {
                     return applyValidValue(world, property, val, state);
                 });
             }).orElse(state);
@@ -260,15 +262,15 @@ public interface StatePredicate extends Predicate<BlockState> {
             return name + op.getSymbol() + value;
         }
 
-        private <T extends Comparable<T>> BlockState applyValidValue(World world, Property<T> property, T allowedValue, BlockState state) {
+        private <T extends Comparable<T>> BlockState applyValidValue(Level world, Property<T> property, T allowedValue, BlockState state) {
             if (op == Comparison.EQUAL) {
-                return state.with(property, allowedValue);
+                return state.setValue(property, allowedValue);
             }
             if (op == Comparison.GREATER) {
-                var allowedValues = property.getValues().stream().filter(v -> op.test(v.compareTo(allowedValue))).toList();
-                if (!allowedValues.contains(state.get(property))) {
-                    int index = world.random.nextInt(allowedValues.size());
-                    return state.with(property, allowedValues.remove(index));
+                var allowedValues = property.getPossibleValues().stream().filter(v -> op.test(v.compareTo(allowedValue))).toList();
+                if (!allowedValues.contains(state.getValue(property))) {
+                    int index = world.getRandom().nextInt(allowedValues.size());
+                    return state.setValue(property, allowedValues.remove(index));
                 }
             }
             return state;
@@ -277,12 +279,12 @@ public interface StatePredicate extends Predicate<BlockState> {
         @Override
         public boolean test(BlockState state) {
             return getProperty(state, name)
-                    .flatMap(property -> property.parse(value)
-                            .filter(v -> op.test(state.get(property).compareTo(v))))
+                    .flatMap(property -> property.getValue(value)
+                            .filter(v -> op.test(state.getValue(property).compareTo(v))))
                     .isPresent();
         }
 
-        public enum Comparison implements IntPredicate, StringIdentifiable {
+        public enum Comparison implements IntPredicate, StringRepresentable {
             LESS('<') {
                 @Override
                 public boolean test(int value) {
@@ -302,7 +304,7 @@ public interface StatePredicate extends Predicate<BlockState> {
                 }
             };
 
-            public static final Codec<Comparison> CODEC = StringIdentifiable.createCodec(Comparison::values);
+            public static final Codec<Comparison> CODEC = StringRepresentable.fromEnum(Comparison::values);
 
             private final String name = name().toLowerCase(Locale.ROOT);
             private final char symbol;
@@ -316,7 +318,7 @@ public interface StatePredicate extends Predicate<BlockState> {
             }
 
             @Override
-            public String asString() {
+            public String getSerializedName() {
                 return name;
             }
 

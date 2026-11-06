@@ -24,20 +24,33 @@ import com.minelittlepony.unicopia.entity.ai.WantItTakeItGoal;
 import com.minelittlepony.unicopia.entity.mob.UEntityAttributes;
 import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.network.track.TrackableDataType;
-
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnGroup;
-import net.minecraft.entity.ai.goal.*;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.mob.*;
-import net.minecraft.entity.passive.*;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.GoalSelector;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.cubemob.Slime;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.HolderLookup;
 
 public class Creature extends Living<LivingEntity> implements WeaklyOwned.Mutable<LivingEntity> {
     public static void boostrap() {}
@@ -125,56 +138,56 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned.Mutabl
             return;
         }
 
-        DynamicTargetGoal targetter = new DynamicTargetGoal((MobEntity)entity);
-        targets.add(1, targetter);
-        if (!InteractionManager.getInstance().getSyncedConfig().wantItNeedItExcludeList().contains(EntityType.getId(entity.getType()).toString())) {
-            goals.add(1, new WantItTakeItGoal(this, targetter));
+        DynamicTargetGoal targetter = new DynamicTargetGoal((Mob)entity);
+        targets.addGoal(1, targetter);
+        if (!InteractionManager.getInstance().getSyncedConfig().wantItNeedItExcludeList().contains(EntityType.getKey(entity.getType()).toString())) {
+            goals.addGoal(1, new WantItTakeItGoal(this, targetter));
         }
-        if (entity.getType().getSpawnGroup() == SpawnGroup.MONSTER) {
-            goals.add(3, new BreakHeartGoal((MobEntity)entity, targetter));
-            if (entity instanceof AbstractSkeletonEntity) {
-                targets.add(1, new PrioritizedActiveTargetGoal<>((MobEntity)entity, PlayerEntity.class, TargettingUtil.FLYING_PREFERRED, true));
+        if (entity.getType().getCategory() == MobCategory.MONSTER) {
+            goals.addGoal(3, new BreakHeartGoal((Mob)entity, targetter));
+            if (entity instanceof AbstractSkeleton) {
+                targets.addGoal(1, new PrioritizedActiveTargetGoal<>((Mob)entity, Player.class, TargettingUtil.FLYING_PREFERRED, true));
             }
         }
-        if (entity instanceof PigEntity pig) {
+        if (entity instanceof Pig pig) {
             eatMuffinGoal = new EatMuffinGoal(pig, targetter);
-            goals.add(3, eatMuffinGoal);
+            goals.addGoal(3, eatMuffinGoal);
         }
-        if (entity instanceof TameableEntity tameable) {
-            goals.add(3, new FleeExplosionGoal(tameable, 6, 1, 1.2));
+        if (entity instanceof TamableAnimal tameable) {
+            goals.addGoal(3, new FleeExplosionGoal(tameable, 6, 1, 1.2));
         }
 
-        if (entity instanceof CreeperEntity mob) {
-            goals.add(1, new FleeEntityGoal<>(mob, LivingEntity.class, 10, 1.5, 1.9, AmuletSelectors.ALICORN_AMULET));
+        if (entity instanceof Creeper mob) {
+            goals.addGoal(1, new AvoidEntityGoal<>(mob, LivingEntity.class, 10, 1.5, 1.9, AmuletSelectors.ALICORN_AMULET));
         }
-        if (entity instanceof PassiveEntity mob) {
-            goals.add(1, new FleeEntityGoal<>(mob, LivingEntity.class, 10, 1.1, 1.7, AmuletSelectors.ALICORN_AMULET_AFTER_1_DAYS));
+        if (entity instanceof AgeableMob mob) {
+            goals.addGoal(1, new AvoidEntityGoal<>(mob, LivingEntity.class, 10, 1.1, 1.7, AmuletSelectors.ALICORN_AMULET_AFTER_1_DAYS));
         }
 
         final BooleanSupplier isMinion = () -> getMasterReference().isSet();
         final BooleanSupplier isNotMinion = () -> !isMinion.getAsBoolean();
 
         PredicatedGoal.applyToAll(targets, isNotMinion);
-        targets.add(2, new PredicatedGoal(new ActiveEnemyGoal<>(PlayerEntity.class), isMinion));
-        targets.add(2, new PredicatedGoal(new ActiveEnemyGoal<>(HostileEntity.class), isMinion));
-        targets.add(2, new PredicatedGoal(new ActiveEnemyGoal<>(SlimeEntity.class), isMinion));
+        targets.addGoal(2, new PredicatedGoal(new ActiveEnemyGoal<>(Player.class), isMinion));
+        targets.addGoal(2, new PredicatedGoal(new ActiveEnemyGoal<>(Monster.class), isMinion));
+        targets.addGoal(2, new PredicatedGoal(new ActiveEnemyGoal<>(Slime.class), isMinion));
 
-        if (entity instanceof MobEntity mob) {
+        if (entity instanceof Mob mob) {
             final BooleanSupplier isDiscorded = () -> isNotMinion.getAsBoolean() && isDiscorded();
             PredicatedGoal.applyToAll(goals, () -> !isDiscorded.getAsBoolean());
 
-            goals.add(1, new PredicatedGoal(new SwimGoal(mob), isDiscorded));
-            if (mob instanceof PathAwareEntity pae) {
-                goals.add(5, new PredicatedGoal(new WanderAroundFarGoal(pae, 0.8), isDiscorded));
+            goals.addGoal(1, new PredicatedGoal(new FloatGoal(mob), isDiscorded));
+            if (mob instanceof PathfinderMob pae) {
+                goals.addGoal(5, new PredicatedGoal(new WaterAvoidingRandomStrollGoal(pae, 0.8), isDiscorded));
             }
-            goals.add(6, new PredicatedGoal(new LookAtEntityGoal(mob, PlayerEntity.class, 8.0f), isDiscorded));
-            goals.add(6, new PredicatedGoal(new LookAroundGoal(mob), isDiscorded));
+            goals.addGoal(6, new PredicatedGoal(new LookAtPlayerGoal(mob, Player.class, 8.0f), isDiscorded));
+            goals.addGoal(6, new PredicatedGoal(new RandomLookAroundGoal(mob), isDiscorded));
         }
     }
 
-    public static void registerAttributes(DefaultAttributeContainer.Builder builder) {
-        builder.add(EntityAttributes.ATTACK_DAMAGE);
-        builder.add(EntityAttributes.ATTACK_KNOCKBACK);
+    public static void registerAttributes(AttributeSupplier.Builder builder) {
+        builder.add(Attributes.ATTACK_DAMAGE);
+        builder.add(Attributes.ATTACK_KNOCKBACK);
         builder.add(UEntityAttributes.ENTITY_GRAVITY_MODIFIER);
     }
 
@@ -218,12 +231,12 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned.Mutabl
     public float getHeadAngle(float delta) {
         if (eatTimer > 4 && eatTimer <= 36) {
             float f = (eatTimer - 4 - delta) / 32F;
-            return 0.62831855f + 0.21991149f * MathHelper.sin(f * 28.7F);
+            return 0.62831855f + 0.21991149f * Mth.sin(f * 28.7F);
         }
         if (eatTimer > 0) {
             return 0.62831855f;
         }
-        return entity.getPitch() * ((float)Math.PI / 180);
+        return entity.getXRot() * ((float)Math.PI / 180);
     }
 
     @Override
@@ -253,7 +266,7 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned.Mutabl
     @Override
     public boolean subtractEnergyCost(double amount) {
         if (!isClient()) {
-            getMaster().damage(asServerWorld(), asEntity().getDamageSources().magic(), (int)amount/2);
+            getMaster().hurtServer(asServerWorld(), asEntity().damageSources().magic(), (int)amount/2);
         }
         return getMaster().getHealth() > 0;
     }
@@ -271,7 +284,7 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned.Mutabl
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.put("master", getMasterReference().toNBT(lookup));
         physics.toNBT(compound, lookup);
@@ -279,22 +292,22 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned.Mutabl
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        getMasterReference().fromNBT(compound.getCompoundOrEmpty("master"), lookup);
+        compound.getCompound("master").ifPresent(c -> getMasterReference().fromNBT(c, lookup));
         physics.fromNBT(compound, lookup);
-        setDiscorded(compound.getBoolean("discorded", false));
+        setDiscorded(compound.getBooleanOr("discorded", false));
     }
 
-    private class ActiveEnemyGoal<T extends LivingEntity> extends ActiveTargetGoal<T> {
+    private class ActiveEnemyGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
         public ActiveEnemyGoal(Class<T> targetClass) {
-            super((MobEntity)entity, targetClass, true, (e, w) -> Creature.this.targetPredicate.test(e));
+            super((Mob)entity, targetClass, true, (e, w) -> Creature.this.targetPredicate.test(e));
         }
 
         @Override
-        public boolean shouldContinue() {
+        public boolean canContinueToUse() {
             LivingEntity target = this.mob.getTarget();
-            return target != null  && targetPredicate.test(castToServerWorld(mob.getWorld()), mob, target) && super.shouldContinue();
+            return target != null  && targetConditions.test(getServerLevel(mob.level()), mob, target) && super.canContinueToUse();
         }
     }
 }

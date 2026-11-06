@@ -1,0 +1,30 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "eat_hay": {
+      "conditions": {
+        "item": {
+          "items": "minecraft:hay_block"
+        }
+      },
+      "trigger": "minecraft:consume_item"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.what_the_hay.description"
+    },
+    "icon": {
+      "id": "minecraft:hay_block"
+    },
+    "title": {
+      "translate": "advancements.unicopia.what_the_hay.title"
+    }
+  },
+  "requirements": [
+    [
+      "eat_hay"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:unicorn/books",
+  "criteria": {
+    "has_shard": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:crystal_shard"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.crystaline.description"
+    },
+    "icon": {
+      "id": "unicopia:crystal_shard"
+    },
+    "title": {
+      "translate": "advancements.unicopia.crystaline.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_shard"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

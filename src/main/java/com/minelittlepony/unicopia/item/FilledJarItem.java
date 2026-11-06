@@ -7,26 +7,25 @@ import com.minelittlepony.unicopia.item.component.BufferflyVariantComponent;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.FlyingItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ProjectileDeflection;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.world.WorldEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ItemSupplier;
+import net.minecraft.world.entity.projectile.ProjectileDeflection;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.phys.EntityHitResult;
 
 public class FilledJarItem extends ProjectileItem implements ProjectileDelegate.HitListener {
-    public FilledJarItem(Item.Settings settings) {
+    public FilledJarItem(Item.Properties settings) {
         super(settings, 0);
     }
 
@@ -36,64 +35,65 @@ public class FilledJarItem extends ProjectileItem implements ProjectileDelegate.
     }
 
     @Override
-    public Text getName(ItemStack stack) {
+    public Component getName(ItemStack stack) {
         Appearance appearance = stack.get(UDataComponentTypes.APPEARANCE);
-        return appearance != null ? Text.translatable(getTranslationKey(), appearance.item().getName()) : UItems.EMPTY_JAR.getName(UItems.EMPTY_JAR.getDefaultStack());
+        return appearance != null ? Component.translatable(getDescriptionId(), appearance.item().getHoverName()) : UItems.EMPTY_JAR.getName(UItems.EMPTY_JAR.getDefaultInstance());
     }
 
     @Override
     public void onImpact(MagicProjectileEntity projectile, EntityHitResult hit) {
         Entity entity = hit.getEntity();
 
-        if (!entity.isAttackable() || !(projectile instanceof FlyingItemEntity)) {
+        if (!entity.isAttackable() || !(projectile instanceof ItemSupplier)) {
             return;
         }
 
-        ItemStack stack = Appearance.upwrapAppearance(((FlyingItemEntity)projectile).getStack());
+        ItemStack stack = Appearance.upwrapAppearance(((ItemSupplier)projectile).getItem());
 
         boolean onFire = false;
 
-        if (projectile.getWorld() instanceof ServerWorld world) {
-            DamageSource damageSource = entity.getDamageSources().thrown(projectile, projectile.getOwner());
+        if (projectile.level() instanceof ServerLevel world) {
+            DamageSource damageSource = entity.damageSources().thrown(projectile, projectile.getOwner());
 
-            float damage = EnchantmentHelper.getDamage(world, stack, entity, damageSource, projectile.getThrowDamage());
+            float damage = EnchantmentHelper.modifyDamage(world, stack, entity, damageSource, projectile.getThrowDamage());
 
             if (projectile.getOwner() instanceof LivingEntity owner) {
-                owner.onAttacking(entity);
+                owner.setLastHurtMob(entity);
             }
 
-            if (entity.damage(world, damageSource, damage)) {
+            if (entity.hurtServer(world, damageSource, damage)) {
 
                 if (entity instanceof LivingEntity living) {
                     projectile.knockback(living, damageSource, stack);
-                    EnchantmentHelper.onTargetDamaged(world, living, damageSource, stack);
+                    EnchantmentHelper.doPostAttackEffectsWithItemSource(world, living, damageSource, stack);
                 }
             } else {
                 if (onFire) {
-                    entity.setOnFire(false);
+                    entity.setSharedFlagOnFire(false);
                 }
-                projectile.deflect(ProjectileDeflection.SIMPLE, entity, projectile.getOwner(), false);
-                projectile.setVelocity(projectile.getVelocity().multiply(0.2));
+                projectile.deflect(ProjectileDeflection.REVERSE, entity,
+                        projectile.getOwner() == null ? null : net.minecraft.world.entity.EntityReference.of(projectile.getOwner()), false, 1);
+                projectile.setDeltaMovement(projectile.getDeltaMovement().scale(0.2));
             }
         }
     }
 
     @Override
     public void onImpact(MagicProjectileEntity projectile) {
-        ItemStack stack = Appearance.upwrapAppearance(projectile.getStack());
+        ItemStack stack = Appearance.upwrapAppearance(projectile.getItem());
         BufferflyVariantComponent butterflyVariant = stack.get(UDataComponentTypes.BUTTERFLY_VARIANT);
 
-        if (projectile.getWorld() instanceof ServerWorld sw) {
+        if (projectile.level() instanceof ServerLevel sw) {
             if (butterflyVariant != null) {
-                projectile.getWorld().spawnEntity(UEntities.BUTTERFLY.create(sw, b -> {
+                projectile.level().addFreshEntity(UEntities.BUTTERFLY.create(sw, b -> {
                     b.setVariant(butterflyVariant.variant());
-                    b.updatePosition(projectile.getX(), projectile.getY(), projectile.getZ());
-                }, projectile.getBlockPos(), SpawnReason.EVENT, false, false));
+                    b.absSnapTo(projectile.getX(), projectile.getY(), projectile.getZ());
+                }, projectile.blockPosition(), EntitySpawnReason.EVENT, false, false));
             } else {
-                stack.damage(1, sw, null, i -> {});
-                projectile.dropStack(sw, stack);
+                stack.hurtAndBreak(1, sw, null, i -> {});
+                projectile.spawnAtLocation(sw, stack);
             }
         }
-        projectile.getWorld().syncWorldEvent(WorldEvents.BLOCK_BROKEN, projectile.getBlockPos(), Block.getRawIdFromState(Blocks.GLASS.getDefaultState()));
+        projectile.level().levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, projectile.blockPosition(), Block.getId(Blocks.GLASS.defaultBlockState()));
     }
 }

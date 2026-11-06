@@ -1,6 +1,6 @@
 package com.minelittlepony.unicopia.client.gui;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import com.minelittlepony.common.client.gui.GameGui;
 import com.minelittlepony.common.client.gui.ScrollContainer;
@@ -8,10 +8,14 @@ import com.minelittlepony.common.client.gui.element.Button;
 import com.minelittlepony.common.client.gui.element.Label;
 import com.minelittlepony.unicopia.Race;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.text.Text;
-import net.minecraft.util.*;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 public class TribeConfirmationScreen extends GameGui implements HidesHud {
     private final Race selection;
@@ -21,7 +25,7 @@ public class TribeConfirmationScreen extends GameGui implements HidesHud {
     private final ScrollContainer textBody = new ScrollContainer();
 
     public TribeConfirmationScreen(BooleanConsumer callback, Race selection) {
-        super(Text.translatable("gui.unicopia.tribe_selection"));
+        super(Component.translatable("gui.unicopia.tribe_selection"));
         this.callback = callback;
         this.selection = selection;
     }
@@ -29,7 +33,7 @@ public class TribeConfirmationScreen extends GameGui implements HidesHud {
     @Override
     protected void init() {
         if (parent != null) {
-            parent.init(client, width, height);
+            parent.init(width, height);
         }
         final int columnHeight = 167;
         final int columnWidth = 310;
@@ -52,16 +56,16 @@ public class TribeConfirmationScreen extends GameGui implements HidesHud {
 
         getChildElements().add(textBody);
 
-        addDrawableChild(new Button(width / 2 + 5, top + columnHeight + padding, 100, 20))
+        addRenderableWidget(new Button(width / 2 + 5, top + columnHeight + padding, 100, 20))
             .onClick(b -> callback.accept(true))
-            .getStyle().setText(Text.translatable("gui.unicopia.tribe_selection.join"));
-        addDrawableChild(new Button(width / 2 - 105, top + columnHeight + padding, 100, 20))
+            .getStyle().setText(Component.translatable("gui.unicopia.tribe_selection.join"));
+        addRenderableWidget(new Button(width / 2 - 105, top + columnHeight + padding, 100, 20))
             .onClick(b -> callback.accept(false))
-            .getStyle().setText(Text.translatable("gui.unicopia.tribe_selection.cancel"));
+            .getStyle().setText(Component.translatable("gui.unicopia.tribe_selection.cancel"));
 
-        addDrawable(new Label(width / 2, top - 30).setCentered()).getStyle().setText(Text.translatable("gui.unicopia.tribe_selection.confirm", selection.getDisplayName().copy().formatted(Formatting.YELLOW)));
+        addRenderableOnly(new Label(width / 2, top - 30).setCentered()).getStyle().setText(Component.translatable("gui.unicopia.tribe_selection.confirm", selection.getDisplayName().copy().withStyle(ChatFormatting.YELLOW)));
 
-        addDrawable(new TribeButton((width - 70) / 2, top, 0, selection));
+        addRenderableOnly(new TribeButton((width - 70) / 2, top, 0, selection));
     }
 
     private void buildTextBody() {
@@ -69,50 +73,46 @@ public class TribeConfirmationScreen extends GameGui implements HidesHud {
 
         int left = 0;
 
-        Text race = selection.getAltDisplayName().copy().formatted(Formatting.YELLOW);
+        Component race = selection.getAltDisplayName().copy().withStyle(ChatFormatting.YELLOW);
 
-        textBody.addButton(new Label(left - 3, top += 10)).getStyle().setText(Text.translatable("gui.unicopia.tribe_selection.confirm.goods", race).formatted(Formatting.YELLOW));
+        textBody.addButton(new Label(left - 3, top += 10)).getStyle().setText(Component.translatable("gui.unicopia.tribe_selection.confirm.goods", race).withStyle(ChatFormatting.YELLOW));
 
         top += 15;
 
         int maxWidth = 270;
 
-        Identifier id = Race.REGISTRY.getId(selection);
+        Identifier id = Race.REGISTRY.getKey(selection);
 
         for (int i = 0; i < 10; i++) {
             String key = String.format("gui.unicopia.tribe_selection.confirm.goods.%d.%s.%s", i, id.getNamespace(), id.getPath());
-            if (Language.getInstance().hasTranslation(key)) {
+            if (Language.getInstance().has(key)) {
                 TextBlock block = textBody.addButton(new TextBlock(left, top, maxWidth));
-                block.getStyle().setText(Text.translatable(key));
+                block.getStyle().setText(Component.translatable(key));
                 top += block.getBounds().height;
             }
         }
 
-        textBody.addButton(new Label(left - 3, top += 5)).getStyle().setText(Text.translatable("gui.unicopia.tribe_selection.confirm.bads", race).formatted(Formatting.YELLOW));
+        textBody.addButton(new Label(left - 3, top += 5)).getStyle().setText(Component.translatable("gui.unicopia.tribe_selection.confirm.bads", race).withStyle(ChatFormatting.YELLOW));
 
         top += 15;
 
         for (int i = 0; i < 10; i++) {
             String key = String.format("gui.unicopia.tribe_selection.confirm.bads.%d.%s.%s", i, id.getNamespace(), id.getPath());
-            if (Language.getInstance().hasTranslation(key)) {
+            if (Language.getInstance().has(key)) {
                 TextBlock block = textBody.addButton(new TextBlock(left, top, maxWidth));
-                block.getStyle().setText(Text.translatable(key));
+                block.getStyle().setText(Component.translatable(key));
                 top += block.getBounds().height;
             }
         }
     }
 
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.getMatrices().push();
-        context.getMatrices().translate(0, 0, -2);
+    public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        context.pose().pushMatrix();
         if (parent != null) {
-            context.getMatrices().push();
-            context.getMatrices().translate(0, 0, -100);
-            parent.render(context, -1, -1, delta);
-            context.getMatrices().pop();
+            parent.extractRenderState(context, -1, -1, delta);
         }
-        renderInGameBackground(context);
+        extractTransparentBackground(context);
 
         final int columnHeight = 180;
         final int columnWidth = 310;
@@ -124,17 +124,17 @@ public class TribeConfirmationScreen extends GameGui implements HidesHud {
         top += 40;
         final int zOffset = 0;
 
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, left + zOffset, top, 0, 70, 123, columnHeight, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, left + segmentWidth + zOffset, top, 20, 70, 123, columnHeight, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, width - left - segmentWidth + zOffset + 1, top, 10, 70, 123, columnHeight, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, left + zOffset, top, 0, 70, 123, columnHeight, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, left + segmentWidth + zOffset, top, 20, 70, 123, columnHeight, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, width - left - segmentWidth + zOffset + 1, top, 10, 70, 123, columnHeight, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
         top -= 31;
         left = width / 2;
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, left - 55, top, 140, 70, 21, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, left + 35, top, 148, 70, 21, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
-        textBody.render(context, mouseX, mouseY, delta);
-        context.getMatrices().pop();
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, left - 35, top - 5, 10, 70, 69, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
-        context.drawTexture(RenderLayer::getGuiTextured, TribeSelectionScreen.TEXTURE, left - 35, top - 15, 10, 70, 69, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, left - 55, top, 140, 70, 21, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, left + 35, top, 148, 70, 21, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        textBody.extractRenderState(context, mouseX, mouseY, delta);
+        context.pose().popMatrix();
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, left - 35, top - 5, 10, 70, 69, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
+        context.blit(RenderPipelines.GUI_TEXTURED, TribeSelectionScreen.TEXTURE, left - 35, top - 15, 10, 70, 69, 50, TribeSelectionScreen.TEXTURE_SIZE, TribeSelectionScreen.TEXTURE_SIZE);
     }
 
     @Override
@@ -143,15 +143,15 @@ public class TribeConfirmationScreen extends GameGui implements HidesHud {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == InputConstants.KEY_ESCAPE) {
             callback.accept(false);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_ENTER) {
+        if (event.key() == InputConstants.KEY_RETURN) {
             callback.accept(true);
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 }

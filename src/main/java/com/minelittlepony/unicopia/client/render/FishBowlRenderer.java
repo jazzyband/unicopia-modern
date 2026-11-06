@@ -1,44 +1,46 @@
 package com.minelittlepony.unicopia.client.render;
 
-import static net.minecraft.util.math.ColorHelper.fromFloats;
+import static net.minecraft.util.ARGB.colorFromFloat;
 
 import java.util.Set;
-
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.client.minelittlepony.MineLPDelegate;
 import com.minelittlepony.unicopia.client.render.ModelPartHooks.EnqueudHeadRender;
 import com.minelittlepony.unicopia.client.render.model.SphereModel;
 import com.minelittlepony.unicopia.entity.Equine;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 public class FishBowlRenderer {
-    private static final int DIVER_HELMET_COLOR = fromFloats(0.1F, 0.5F, 0.5F, 0.5F);
+    private static final int DIVER_HELMET_COLOR = colorFromFloat(0.1F, 0.5F, 0.5F, 0.5F);
 
     public boolean shouldRender(Equine<?> equine) {
         return equine instanceof Pony pony && pony.getCompositeRace().includes(Race.SEAPONY)
-                && equine.asEntity().isSubmergedInWater()
+                && equine.asEntity().isUnderWater()
                 && MineLPDelegate.getInstance().getPlayerPonyRace(pony.asEntity()) != Race.SEAPONY;
     }
 
     public void render(
             Set<EnqueudHeadRender> headParts,
-            MatrixStack matrices,
-            VertexConsumerProvider vertices,
+            PoseStack matrices,
+            SubmitNodeCollector vertices,
             int light) {
-        RenderLayer layer = RenderLayers.getMagicColored();
+        RenderType layer = RenderLayers.getMagicColored();
         for (var part : headParts) {
-            matrices.push();
+            matrices.pushPose();
             part.transform(matrices, 1F);
             float scale = 0.9F;
 
-            SphereModel.SPHERE.render(matrices, vertices.getBuffer(layer), light, 0, scale, DIVER_HELMET_COLOR);
-            SphereModel.SPHERE.render(matrices, vertices.getBuffer(layer), light, 0, scale + 0.2F, DIVER_HELMET_COLOR);
+            vertices.submitCustomGeometry(matrices, layer, (pose, buffer) -> {
+                PoseStack stack = new PoseStack();
+                stack.mulPose(pose.pose());
+                SphereModel.SPHERE.render(stack, buffer, light, 0, scale, DIVER_HELMET_COLOR);
+                SphereModel.SPHERE.render(stack, buffer, light, 0, scale + 0.2F, DIVER_HELMET_COLOR);
+            });
 
-            matrices.pop();
+            matrices.popPose();
         }
     }
 }

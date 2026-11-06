@@ -7,32 +7,31 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.minelittlepony.unicopia.entity.Equine;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
-@Mixin(PlayerEntity.class)
+@Mixin(Player.class)
 abstract class MixinPlayerEntity {
-    @ModifyVariable(method = "adjustMovementForSneaking", at = @At("HEAD"), argsOnly = true)
-    private Vec3d flipMovementForSneaking(Vec3d movement) {
+    @ModifyVariable(method = "maybeBackOffFromEdge", at = @At("HEAD"), argsOnly = true)
+    private Vec3 flipMovementForSneaking(Vec3 movement) {
         if (this instanceof Equine.Container eq && eq.get().getPhysics().isGravityNegative()) {
             return movement.multiply(1, -1, 1);
         }
         return movement;
     }
 
-    @ModifyReturnValue(method = "adjustMovementForSneaking", at = @At("RETURN"))
-    private Vec3d unflipMovementForSneaking(Vec3d result) {
+    @ModifyReturnValue(method = "maybeBackOffFromEdge", at = @At("RETURN"))
+    private Vec3 unflipMovementForSneaking(Vec3 result) {
         if (this instanceof Equine.Container eq && eq.get().getPhysics().isGravityNegative()) {
             return result.multiply(1, -1, 1);
         }
         return result;
     }
 
-    @ModifyArg(method = "isSpaceAroundPlayerEmpty",
-            at = @At(value = "INVOKE", target = "net/minecraft/util/math/Box.<init>(DDDDDD)V"),
+    @ModifyArg(method = "canFallAtLeast",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/AABB;<init>(DDDDDD)V"),
             index = 1)
     private double invertStepHeightCheckBoxBottom(double bottom) {
         if (this instanceof Equine.Container eq && eq.get().getPhysics().isGravityNegative()) {
@@ -41,8 +40,8 @@ abstract class MixinPlayerEntity {
         return bottom;
     }
 
-    @ModifyArg(method = "isSpaceAroundPlayerEmpty",
-            at = @At(value = "INVOKE", target = "net/minecraft/util/math/Box.<init>(DDDDDD)V"),
+    @ModifyArg(method = "canFallAtLeast",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/AABB;<init>(DDDDDD)V"),
             index = 4)
     private double invertStepHeightCheckBoxTop(double top, @Local(argsOnly = true, ordinal = 2) double stepHeight) {
         if (this instanceof Equine.Container eq && eq.get().getPhysics().isGravityNegative()) {
@@ -51,19 +50,20 @@ abstract class MixinPlayerEntity {
         return top;
     }
 
-    @ModifyArg(method = "canChangeIntoPose",
+    @ModifyArg(method = "canPlayerFitWithinBlocksAndEntitiesWhen",
             at = @At(value = "INVOKE",
-                target = "net/minecraft/world/World.isSpaceEmpty(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/Box;)Z"))
-    private Box unicopiaReAnchorBoundingBox(Box box) {
+                target = "Lnet/minecraft/world/level/Level;noCollision(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;)Z"),
+            index = 1)
+    private AABB unicopiaReAnchorBoundingBox(AABB box) {
         if (this instanceof Equine.Container eq && eq.get().getPhysics().isGravityNegative()) {
             Entity self = eq.get().asEntity();
-            Box oldBox = self.getBoundingBox();
-            double newHeight = box.getLengthY();
-            if (newHeight > oldBox.getLengthY()) {
+            AABB oldBox = self.getBoundingBox();
+            double newHeight = box.getYsize();
+            if (newHeight > oldBox.getYsize()) {
                 double targetMaxY = oldBox.maxY;
-                Vec3d min = new Vec3d(box.minX, targetMaxY - newHeight, box.minZ);
-                Vec3d max = new Vec3d(box.maxX, targetMaxY, box.maxZ);
-                return new Box(min, max);
+                Vec3 min = new Vec3(box.minX, targetMaxY - newHeight, box.minZ);
+                Vec3 max = new Vec3(box.maxX, targetMaxY, box.maxZ);
+                return new AABB(min, max);
             }
         }
         return box;

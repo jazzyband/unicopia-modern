@@ -5,7 +5,30 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-
+import net.minecraft.client.color.item.Dye;
+import net.minecraft.client.color.item.ItemTintSource;
+import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.model.ModelLocationUtils;
+import net.minecraft.client.data.models.model.ModelTemplate;
+import net.minecraft.client.data.models.model.ModelTemplates;
+import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.client.data.models.model.TextureSlot;
+import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.client.renderer.item.RangeSelectItemModel;
+import net.minecraft.client.renderer.item.SelectItemModel;
+import net.minecraft.client.renderer.item.properties.conditional.FishingRodCast;
+import net.minecraft.client.renderer.item.properties.numeric.Damage;
+import net.minecraft.client.renderer.item.properties.numeric.Time;
+import net.minecraft.client.renderer.item.properties.select.DisplayContext;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Blocks;
 import com.google.common.base.Strings;
 
 import com.minelittlepony.unicopia.Unicopia;
@@ -21,172 +44,147 @@ import com.minelittlepony.unicopia.entity.mob.ButterflyEntity;
 import com.minelittlepony.unicopia.item.GemstoneItem;
 import com.minelittlepony.unicopia.item.UItems;
 
-import net.minecraft.block.Blocks;
-import net.minecraft.client.data.ItemModelGenerator;
-import net.minecraft.client.data.Model;
-import net.minecraft.client.data.ModelIds;
-import net.minecraft.client.data.Models;
-import net.minecraft.client.data.TextureKey;
-import net.minecraft.client.data.TextureMap;
-import net.minecraft.client.render.item.model.ItemModel;
-import net.minecraft.client.render.item.model.RangeDispatchItemModel;
-import net.minecraft.client.render.item.model.SelectItemModel;
-import net.minecraft.client.render.item.property.bool.FishingRodCastProperty;
-import net.minecraft.client.render.item.property.numeric.DamageProperty;
-import net.minecraft.client.render.item.property.numeric.TimeProperty;
-import net.minecraft.client.render.item.property.select.DisplayContextProperty;
-import net.minecraft.client.render.item.tint.DyeTintSource;
-import net.minecraft.client.render.item.tint.TintSource;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.StringIdentifiable;
-
-import static net.minecraft.client.data.ItemModels.*;
+import static net.minecraft.client.data.models.model.ItemModelUtils.*;
 
 interface ItemModels {
-    Model GENERATED = net.minecraft.client.data.Models.GENERATED;
-    Model CHEST = item(Identifier.ofVanilla("chest"), TextureKey.PARTICLE);
-    Model BUILTIN_ENTITY = new Model(Optional.of(Identifier.ofVanilla("builtin/entity")), Optional.empty());
-    Model TEMPLATE_AMULET = item("template_amulet", TextureKey.LAYER0);
-    Model TEMPLATE_EYEWEAR = item("template_eyewear", TextureKey.LAYER0);
-    Model TEMPLATE_MUG = item("template_mug", TextureKey.LAYER0);
-    Model TEMPLATE_PILLAR = item("template_pillar", TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE, TextureKey.END);
-    Model HANDHELD_STAFF = item("handheld_staff", TextureKey.LAYER0);
-    Model TRIDENT_THROWING = item(Identifier.ofVanilla("trident_throwing"), TextureKey.LAYER0);
-    Model TRIDENT_IN_HAND = item(Identifier.ofVanilla("trident_in_hand"), TextureKey.LAYER0);
+    ModelTemplate GENERATED = net.minecraft.client.data.models.model.ModelTemplates.FLAT_ITEM;
+    ModelTemplate CHEST = item(Identifier.withDefaultNamespace("chest"), TextureSlot.PARTICLE);
+    ModelTemplate BUILTIN_ENTITY = new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("builtin/entity")), Optional.empty());
+    ModelTemplate TEMPLATE_AMULET = item("template_amulet", TextureSlot.LAYER0);
+    ModelTemplate TEMPLATE_EYEWEAR = item("template_eyewear", TextureSlot.LAYER0);
+    ModelTemplate TEMPLATE_MUG = item("template_mug", TextureSlot.LAYER0);
+    ModelTemplate TEMPLATE_PILLAR = item("template_pillar", TextureSlot.TOP, TextureSlot.BOTTOM, TextureSlot.SIDE, TextureSlot.END);
+    ModelTemplate HANDHELD_STAFF = item("handheld_staff", TextureSlot.LAYER0);
+    ModelTemplate TRIDENT_THROWING = item(Identifier.withDefaultNamespace("trident_throwing"), TextureSlot.LAYER0);
+    ModelTemplate TRIDENT_IN_HAND = item(Identifier.withDefaultNamespace("trident_in_hand"), TextureSlot.LAYER0);
 
-    static Model item(String parent, TextureKey ... requiredTextureKeys) {
+    static ModelTemplate item(String parent, TextureSlot ... requiredTextureKeys) {
         return item(Unicopia.id(parent), requiredTextureKeys);
     }
 
-    static Model item(Identifier parent, TextureKey ... requiredTextureKeys) {
-        return new Model(Optional.of(parent.withPrefixedPath("item/")), Optional.empty(), requiredTextureKeys);
+    static ModelTemplate item(Identifier parent, TextureSlot ... requiredTextureKeys) {
+        return new ModelTemplate(Optional.of(parent.withPrefix("item/")), Optional.empty(), requiredTextureKeys);
     }
 
-    static TintSource spellTintSource(int defaultColor) {
+    static ItemTintSource spellTintSource(int defaultColor) {
         return new SpellTintSource(defaultColor);
     }
 
-    static void register(ItemModelGenerator itemModelGenerator, Item... items) {
+    static void register(ItemModelGenerators itemModelGenerator, Item... items) {
         register(itemModelGenerator, GENERATED, items);
     }
 
-    static void register(ItemModelGenerator itemModelGenerator, Model model, Item... items) {
+    static void register(ItemModelGenerators itemModelGenerator, ModelTemplate model, Item... items) {
         for (Item item : items) {
-            itemModelGenerator.register(item, model);
+            itemModelGenerator.generateFlatItem(item, model);
         }
     }
 
-    static void registerDyeable(ItemModelGenerator itemModelGenerator, Item item, int defaultColor) {
-        itemModelGenerator.output.accept(item, tinted(itemModelGenerator.upload(item, GENERATED), new DyeTintSource(defaultColor)));
+    static void registerDyeable(ItemModelGenerators itemModelGenerator, Item item, int defaultColor) {
+        itemModelGenerator.itemModelOutput.accept(item, tintedModel(itemModelGenerator.createFlatItemModel(item, GENERATED), new Dye(defaultColor)));
     }
 
-    static void registerParented(ItemModelGenerator itemModelGenerator, Item item, ItemConvertible parent) {
-        itemModelGenerator.output.accept(item, basic(item(Registries.ITEM.getId(parent.asItem())).upload(ModelIds.getItemModelId(item), new TextureMap(), itemModelGenerator.modelCollector)));
+    static void registerParented(ItemModelGenerators itemModelGenerator, Item item, ItemLike parent) {
+        item(BuiltInRegistries.ITEM.getKey(parent.asItem())).create(ModelLocationUtils.getModelLocation(item), new TextureMapping(), itemModelGenerator.modelOutput);
     }
 
-    static void registerPolearm(ItemModelGenerator itemModelGenerator, Item item) {
-        TextureMap textures = TextureMap.layer0(TextureMap.getId(item));
+    static void registerPolearm(ItemModelGenerators itemModelGenerator, Item item) {
+        TextureMapping textures = TextureMapping.layer0(TextureMapping.getItemTexture(item));
 
-        var inInventory = basic(GENERATED.upload(ModelIds.getItemSubModelId(item, "_in_inventory"), textures, itemModelGenerator.modelCollector));
-        var throwing = TRIDENT_THROWING.upload(ModelIds.getItemSubModelId(item, "_throwing"), textures, itemModelGenerator.modelCollector);
-        var inHand = TRIDENT_IN_HAND.upload(ModelIds.getItemModelId(item), textures, itemModelGenerator.modelCollector);
+        var inInventory = plainModel(GENERATED.create(ModelLocationUtils.getModelLocation(item, "_in_inventory"), textures, itemModelGenerator.modelOutput));
+        var throwing = TRIDENT_THROWING.create(ModelLocationUtils.getModelLocation(item, "_throwing"), textures, itemModelGenerator.modelOutput);
+        var inHand = TRIDENT_IN_HAND.create(ModelLocationUtils.getModelLocation(item), textures, itemModelGenerator.modelOutput);
 
-        itemModelGenerator.output.accept(item, select(new DisplayContextProperty(), condition(usingItemProperty(),
-                special(throwing, new PolearmModelRenderer.Unbaked(ModelIds.getItemModelId(item))),
-                special(inHand, new PolearmModelRenderer.Unbaked(ModelIds.getItemModelId(item)))
-        ), switchCase(List.of(ItemDisplayContext.GUI, ItemDisplayContext.GROUND, ItemDisplayContext.FIXED), inInventory)));
+        itemModelGenerator.itemModelOutput.accept(item, select(new DisplayContext(), conditional(isUsingItem(),
+                specialModel(throwing, new PolearmModelRenderer.Unbaked(ModelLocationUtils.getModelLocation(item))),
+                specialModel(inHand, new PolearmModelRenderer.Unbaked(ModelLocationUtils.getModelLocation(item)))
+        ), when(List.of(ItemDisplayContext.GUI, ItemDisplayContext.GROUND, ItemDisplayContext.FIXED), inInventory)));
     }
 
     @SuppressWarnings("unchecked")
-    static void registerButterfly(ItemModelGenerator itemModelGenerator, Item item) {
-        var base = basic(itemModelGenerator.upload(item, GENERATED));
-        itemModelGenerator.output.accept(item, select(
+    static void registerButterfly(ItemModelGenerators itemModelGenerator, Item item) {
+        var base = plainModel(itemModelGenerator.createFlatItemModel(item, GENERATED));
+        itemModelGenerator.itemModelOutput.accept(item, select(
                 ButterflyVariantProperty.INSTANCE,
                 base,
                 Arrays.stream(ButterflyEntity.Variant.VALUES)
-                    .map(variant -> switchCase(variant, variant == ButterflyEntity.Variant.BUTTERFLY ? base : createVariantItemModel(item, itemModelGenerator, variant)))
+                    .map(variant -> when(variant, variant == ButterflyEntity.Variant.BUTTERFLY ? base : createVariantItemModel(item, itemModelGenerator, variant)))
                     .toArray(SelectItemModel.SwitchCase[]::new)));
     }
 
-    static void registerStagedFoodItem(ItemModelGenerator itemModelGenerator, Item item, int minBites, int maxBites, String suffex) {
-        itemModelGenerator.output.accept(item, rangeDispatch(new DamageProperty(true),
-                basic(itemModelGenerator.upload(item, GENERATED)),
+    static void registerStagedFoodItem(ItemModelGenerators itemModelGenerator, Item item, int minBites, int maxBites, String suffex) {
+        itemModelGenerator.itemModelOutput.accept(item, rangeSelect(new Damage(true),
+                plainModel(itemModelGenerator.createFlatItemModel(item, GENERATED)),
                 IntStream.range(minBites, maxBites + 1)
-                    .mapToObj(count -> rangeDispatchEntry(basic(itemModelGenerator.registerSubModel(item, "_" + suffex + count, GENERATED)), count / (maxBites + 1F)))
+                    .mapToObj(count -> override(plainModel(itemModelGenerator.createFlatItemModel(item, "_" + suffex + count, GENERATED)), count / (maxBites + 1F)))
                     .toList()
         ));
     }
 
-    static void registerMagicStaff(ItemModelGenerator itemModelGenerator, Item item) {
-        var base = basic(itemModelGenerator.registerSubModel(item, "_base", HANDHELD_STAFF));
-        var magicOverlay = tinted(itemModelGenerator.registerSubModel(item, "_magic", HANDHELD_STAFF), spellTintSource(Colors.WHITE));
-        itemModelGenerator.output.accept(item, composite(base, magicOverlay));
+    static void registerMagicStaff(ItemModelGenerators itemModelGenerator, Item item) {
+        var base = plainModel(itemModelGenerator.createFlatItemModel(item, "_base", HANDHELD_STAFF));
+        var magicOverlay = tintedModel(itemModelGenerator.createFlatItemModel(item, "_magic", HANDHELD_STAFF), spellTintSource(CommonColors.WHITE));
+        itemModelGenerator.itemModelOutput.accept(item, composite(base, magicOverlay));
     }
 
-    static void registerGemstone(ItemModelGenerator itemModelGenerator, Item item) {
-        itemModelGenerator.output.accept(item, select(new GemShapeProperty(),
-            tinted(itemModelGenerator.upload(item, GENERATED), spellTintSource(Colors.WHITE)),
+    static void registerGemstone(ItemModelGenerators itemModelGenerator, Item item) {
+        itemModelGenerator.itemModelOutput.accept(item, select(new GemShapeProperty(),
+            tintedModel(itemModelGenerator.createFlatItemModel(item, GENERATED), spellTintSource(CommonColors.WHITE)),
             Arrays.stream(GemstoneItem.Shape.values())
-                .map(shape -> switchCase(shape, tinted(itemModelGenerator.registerSubModel(item, "_" + shape.asString(), GENERATED), spellTintSource(Colors.WHITE))))
+                .map(shape -> when(shape, tintedModel(itemModelGenerator.createFlatItemModel(item, "_" + shape.getSerializedName(), GENERATED), spellTintSource(CommonColors.WHITE))))
                 .toList()
         ));
     }
 
     @SuppressWarnings("unchecked")
-    static void registerBalloonDesigns(ItemModelGenerator itemModelGenerator, Item item) {
-        var base = basic(itemModelGenerator.upload(item, GENERATED));
-        itemModelGenerator.output.accept(item, select(
+    static void registerBalloonDesigns(ItemModelGenerators itemModelGenerator, Item item) {
+        var base = plainModel(itemModelGenerator.createFlatItemModel(item, GENERATED));
+        itemModelGenerator.itemModelOutput.accept(item, select(
                 BalloonDesignProperty.INSTANCE,
                 base,
                 Arrays.stream(AirBalloonEntity.BalloonDesign.VALUES)
-                    .map(variant -> switchCase(variant, variant == AirBalloonEntity.BalloonDesign.NONE ? base : createVariantItemModel(item, itemModelGenerator, variant)))
+                    .map(variant -> when(variant, variant == AirBalloonEntity.BalloonDesign.NONE ? base : createVariantItemModel(item, itemModelGenerator, variant)))
                     .toArray(SelectItemModel.SwitchCase[]::new)));
     }
 
-    static void registerCustomFishingRod(ItemModelGenerator itemModelGenerator, Item item) {
-        itemModelGenerator.registerCondition(item, new FishingRodCastProperty(),
-                basic(ModelIds.getItemSubModelId(Items.FISHING_ROD, "_cast")),
-                basic(itemModelGenerator.upload(item, Models.HANDHELD_ROD))
+    static void registerCustomFishingRod(ItemModelGenerators itemModelGenerator, Item item) {
+        itemModelGenerator.generateBooleanDispatch(item, new FishingRodCast(),
+                plainModel(ModelLocationUtils.getModelLocation(Items.FISHING_ROD, "_cast")),
+                plainModel(itemModelGenerator.createFlatItemModel(item, ModelTemplates.FLAT_HANDHELD_ROD_ITEM))
         );
     }
 
-    private static <T extends StringIdentifiable> ItemModel.Unbaked createVariantItemModel(Item item, ItemModelGenerator itemModelGenerator, T variant) {
-        Identifier subModelId = Registries.ITEM.getId(item).withPath(p -> "item/" + variant.asString() + "_" + p);
-        return basic(GENERATED.upload(subModelId, TextureMap.layer0(subModelId), itemModelGenerator.modelCollector));
+    private static <T extends StringRepresentable> ItemModel.Unbaked createVariantItemModel(Item item, ItemModelGenerators itemModelGenerator, T variant) {
+        Identifier subModelId = BuiltInRegistries.ITEM.getKey(item).withPath(p -> "item/" + variant.getSerializedName() + "_" + p);
+        return plainModel(GENERATED.create(subModelId, TextureMapping.layer0(new net.minecraft.client.resources.model.sprite.Material(subModelId)), itemModelGenerator.modelOutput));
     }
 
-    static void registerFilledJar(ItemModelGenerator itemModelGenerator, Item jar) {
-        itemModelGenerator.output.accept(jar.asItem(), composite(
-                basic(ModelIds.getItemModelId(UItems.EMPTY_JAR)),
-                special(Models.TEMPLATE_CHEST.upload(jar.asItem(), TextureMap.particle(Blocks.GLASS), itemModelGenerator.modelCollector), new JarContentsModelRenderer.Unbaked())
+    static void registerFilledJar(ItemModelGenerators itemModelGenerator, Item jar) {
+        itemModelGenerator.itemModelOutput.accept(jar.asItem(), composite(
+                plainModel(ModelLocationUtils.getModelLocation(UItems.EMPTY_JAR)),
+                specialModel(ModelTemplates.CHEST_INVENTORY.create(jar.asItem(), TextureMapping.particle(Blocks.GLASS), itemModelGenerator.modelOutput), new JarContentsModelRenderer.Unbaked())
             )
         );
     }
 
-    static void registerSpectralClock(ItemModelGenerator itemModelGenerator, Item clock) {
-        List<RangeDispatchItemModel.Entry> list = new ArrayList<>();
-        ItemModel.Unbaked defaultModel = basic(itemModelGenerator.registerSubModel(clock, "_00", Models.GENERATED));
-        list.add(rangeDispatchEntry(defaultModel, 0F));
+    static void registerSpectralClock(ItemModelGenerators itemModelGenerator, Item clock) {
+        List<RangeSelectItemModel.Entry> list = new ArrayList<>();
+        ItemModel.Unbaked defaultModel = plainModel(itemModelGenerator.createFlatItemModel(clock, "_00", ModelTemplates.FLAT_ITEM));
+        list.add(override(defaultModel, 0F));
 
         String[] suffexes = { "", "_greening", "_flowering", "_fruiting", "_ripe", "" };
 
         for (int index = 1; index < 40; index++) {
-            Identifier subModelId = itemModelGenerator.registerSubModel(clock, suffexes[index / 8] + "_" + Strings.padStart((index % 8) * 5 + "", 2, '0'), Models.GENERATED);
-            list.add(rangeDispatchEntry(basic(subModelId), index / 40F - 0.5F));
+            Identifier subModelId = itemModelGenerator.createFlatItemModel(clock, suffexes[index / 8] + "_" + Strings.padStart((index % 8) * 5 + "", 2, '0'), ModelTemplates.FLAT_ITEM);
+            list.add(override(plainModel(subModelId), index / 40F - 0.5F));
         }
 
-        list.add(rangeDispatchEntry(defaultModel, 1F));
-        itemModelGenerator.output.accept(
+        list.add(override(defaultModel, 1F));
+        itemModelGenerator.itemModelOutput.accept(
                 clock,
-                overworldSelect(
-                    rangeDispatch(new ZapAppleCycleProperty(true), 64.0F, list),
-                    rangeDispatch(new TimeProperty(true, TimeProperty.Source.RANDOM), 1F, list)
+                inOverworld(
+                    rangeSelect(new ZapAppleCycleProperty(true), 64.0F, list),
+                    rangeSelect(new Time(true, Time.TimeSource.RANDOM), 1F, list)
                 )
             );
     }

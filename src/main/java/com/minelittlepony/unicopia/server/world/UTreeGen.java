@@ -6,15 +6,16 @@ import com.minelittlepony.unicopia.server.world.gen.UFeatureConfigs;
 import com.minelittlepony.unicopia.server.world.gen.UPlacedFeatures;
 
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
-import net.minecraft.block.*;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.tag.BiomeTags;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.biome.BiomeKeys;
-import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.PlacedFeature;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BiomeTags;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.SaplingBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 public interface UTreeGen {
     Tree ZAP_APPLE_TREE = Tree.Builder.create(UFeatureConfigs.ZAP_APPLE_TREE)
@@ -33,8 +34,8 @@ public interface UTreeGen {
             .sapling(Unicopia.id("palm_sapling")).sapling((generator, settings) -> {
                 return new SaplingBlock(generator, settings) {
                     @Override
-                    public boolean canPlantOnTop(BlockState floor, BlockView world, BlockPos pos) {
-                        return floor.isIn(BlockTags.SAND);
+                    public boolean mayPlaceOn(BlockState floor, BlockGetter world, BlockPos pos) {
+                        return floor.is(BlockTags.SAND);
                     }
                 };
             })
@@ -42,10 +43,10 @@ public interface UTreeGen {
             .build();
     Tree MANGO_TREE = Tree.Builder.create(UFeatureConfigs.MANGO_TREE)
             .sapling(Unicopia.id("mango_sapling"))
-            .spawns(UPlacedFeatures.MANGO_TREE, selector -> selector.hasTag(BiomeTags.IS_JUNGLE) && selector.getBiomeKey() != BiomeKeys.SPARSE_JUNGLE)
+            .spawns(UPlacedFeatures.MANGO_TREE, selector -> selector.hasTag(BiomeTags.IS_JUNGLE) && selector.getBiomeKey() != Biomes.SPARSE_JUNGLE)
             .build();
 
-    static Tree.Builder createAppleTree(String name, RegistryKey<ConfiguredFeature<?, ?>> featureKey, RegistryKey<PlacedFeature> placement) {
+    static Tree.Builder createAppleTree(String name, ResourceKey<Feature> featureKey, ResourceKey<PlacedFeature> placement) {
         return Tree.Builder.create(featureKey)
                 .sapling(Unicopia.id(name + "_sapling"))
                 .spawns(placement, Tree.Builder.IS_OAK_FOREST);

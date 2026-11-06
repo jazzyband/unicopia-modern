@@ -1,0 +1,109 @@
+{
+  "default_multiplier": 0.9,
+  "effects": [
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "tags": [
+        "unicopia:fish/cooked",
+        "unicopia:fish/raw"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 2
+          },
+          "chance": 95,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 50,
+            "min": 50
+          }
+        }
+      },
+      "tags": [
+        "unicopia:fish/rotten"
+      ]
+    }
+  ],
+  "foraging_multiplier": 1.0,
+  "multipliers": [
+    {
+      "hunger": 1.0,
+      "saturation": 1.0,
+      "tags": [
+        "unicopia:baked_goods"
+      ]
+    },
+    {
+      "hunger": 0.9,
+      "saturation": 0.9,
+      "tags": [
+        "unicopia:pinecone"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:meat/raw",
+        "unicopia:insect/raw",
+        "unicopia:meat/rotten",
+        "unicopia:love",
+        "unicopia:insect/rotten"
+      ]
+    },
+    {
+      "hunger": 0.0,
+      "saturation": 0.0,
+      "tags": [
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:special_shells",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:shells"
+      ]
+    },
+    {
+      "hunger": 1.5,
+      "saturation": 1.5,
+      "tags": [
+        "unicopia:fish/cooked"
+      ]
+    },
+    {
+      "hunger": 0.25,
+      "saturation": 0.16,
+      "tags": [
+        "unicopia:meat/cooked"
+      ]
+    },
+    {
+      "hunger": 0.1,
+      "saturation": 0.7,
+      "tags": [
+        "unicopia:insect/cooked"
+      ]
+    },
+    {
+      "hunger": 0.5,
+      "saturation": 0.8,
+      "tags": [
+        "unicopia:fish/raw"
+      ]
+    },
+    {
+      "hunger": 0.25,
+      "saturation": 0.5,
+      "tags": [
+        "unicopia:fish/rotten"
+      ]
+    }
+  ]
+}

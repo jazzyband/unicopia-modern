@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.util.Util;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,9 +15,6 @@ import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 
 import it.unimi.dsi.fastutil.floats.Float2ObjectFunction;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Util;
 
 public record SpellAttribute<T> (
         Trait trait,
@@ -23,7 +22,7 @@ public record SpellAttribute<T> (
         TooltipFactory tooltipFactory
 ) implements TooltipFactory {
     @Override
-    public void appendTooltip(CustomisedSpellType<?> type, List<Text> tooltip) {
+    public void appendTooltip(CustomisedSpellType<?> type, List<Component> tooltip) {
         tooltipFactory.appendTooltip(type, tooltip);
     }
 
@@ -64,15 +63,15 @@ public record SpellAttribute<T> (
             T max = maxValueGetter.get(traits);
             return max.floatValue() > 0 && t.floatValue() > max.floatValue() ? max : t;
         };
-        return new SpellAttribute<>(trait, clampedValueGetter, (CustomisedSpellType<?> type, List<Text> tooltip) -> {
+        return new SpellAttribute<>(trait, clampedValueGetter, (CustomisedSpellType<?> type, List<Component> tooltip) -> {
             float traitAmount = type.traits().get(trait);
             float traitDifference = type.relativeTraits().get(trait);
             float max = maxValueGetter == null ? 0 : maxValueGetter.get(type.traits()).floatValue();
             float value = clampedValueGetter.apply(type.traits(), traitAmount).floatValue();
 
             var b = max > 0
-                    ? baseFormat.getBase(id.name(), value, max, "equals", Formatting.LIGHT_PURPLE)
-                    : baseFormat.getBase(id.name(), value, "equals", Formatting.LIGHT_PURPLE);
+                    ? baseFormat.getBase(id.name(), value, max, "equals", ChatFormatting.LIGHT_PURPLE)
+                    : baseFormat.getBase(id.name(), value, "equals", ChatFormatting.LIGHT_PURPLE);
             if (traitDifference != 0) {
                 tooltip.add(b.append(relativeFormat.getRelative(valueGetter.apply(type.traits(), traitAmount - traitDifference).floatValue(), value, detrimental)));
                 tooltip.add(AttributeFormat.formatTraitDifference(trait, traitDifference));
@@ -88,11 +87,11 @@ public record SpellAttribute<T> (
     }
 
     public static SpellAttribute<Boolean> createConditional(SpellAttributeType id, Trait trait, BiFunction<SpellTraits, Float, @NotNull Boolean> valueGetter) {
-        return new SpellAttribute<>(trait, valueGetter, (CustomisedSpellType<?> type, List<Text> tooltip) -> {
+        return new SpellAttribute<>(trait, valueGetter, (CustomisedSpellType<?> type, List<Component> tooltip) -> {
             float difference = type.relativeTraits().get(trait);
-            Text value = AttributeFormat.formatAttributeLine(id.name());
+            Component value = AttributeFormat.formatAttributeLine(id.name());
             if (!valueGetter.apply(type.traits(), type.traits().get(trait))) {
-                value = value.copy().formatted(Formatting.STRIKETHROUGH, Formatting.DARK_GRAY);
+                value = value.copy().withStyle(ChatFormatting.STRIKETHROUGH, ChatFormatting.DARK_GRAY);
             }
             tooltip.add(value);
             if (difference != 0) {
@@ -106,13 +105,13 @@ public record SpellAttribute<T> (
     }
 
     public static <T extends Enum<T>> SpellAttribute<T> createEnumerated(SpellAttributeType id, Trait trait, BiFunction<SpellTraits, Float, @NotNull T> valueGetter) {
-        Function<T, Text> cache = Util.memoize(t -> Text.translatable(Util.createTranslationKey("spell_attribute", id.id().withPath(p -> p + "." + t.name().toLowerCase(Locale.ROOT)))));
-        return new SpellAttribute<>(trait, valueGetter, (CustomisedSpellType<?> type, List<Text> tooltip) -> {
+        Function<T, Component> cache = Util.memoize(t -> Component.translatable(Util.makeDescriptionId("spell_attribute", id.id().withPath(p -> p + "." + t.name().toLowerCase(Locale.ROOT)))));
+        return new SpellAttribute<>(trait, valueGetter, (CustomisedSpellType<?> type, List<Component> tooltip) -> {
             T t = valueGetter.apply(type.traits(), type.traits().get(trait));
 
             if (t != null) {
                 int max = t.getClass().getEnumConstants().length;
-                tooltip.add(Text.translatable(" %s (%s/%s)", cache.apply(t), Text.literal("" + (t.ordinal() + 1)).formatted(Formatting.LIGHT_PURPLE), max).formatted(Formatting.DARK_PURPLE));
+                tooltip.add(Component.translatable(" %s (%s/%s)", cache.apply(t), Component.literal("" + (t.ordinal() + 1)).withStyle(ChatFormatting.LIGHT_PURPLE), max).withStyle(ChatFormatting.DARK_PURPLE));
             }
             float difference = type.relativeTraits().get(trait);
             if (difference != 0) {

@@ -6,10 +6,9 @@ import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 import com.minelittlepony.unicopia.client.render.RenderUtil;
-
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.util.math.MatrixStack;
 
 public class BakedModel {
     protected final List<RenderUtil.Vertex> vertices = new ObjectArrayList<>();
@@ -32,39 +31,39 @@ public class BakedModel {
         vertices.add(new RenderUtil.Vertex(x, y, z, u, v));
     }
 
-    public final void render(MatrixStack matrices, VertexConsumer buffer, int light, int overlay, float scale, int color) {
+    public final void render(PoseStack matrices, VertexConsumer buffer, int light, int overlay, float scale, int color) {
         scale = Math.abs(scale);
         if (scale < 0.001F) {
             return;
         }
 
-        matrices.push();
+        matrices.pushPose();
         matrices.scale(scale, scale, scale);
-        Matrix4f positionmatrix = matrices.peek().getPositionMatrix();
+        Matrix4f positionmatrix = matrices.last().pose();
         for (RenderUtil.Vertex vertex : vertices) {
             Vector4f pos = vertex.position(positionmatrix);
             Vector4f tex = vertex.texture(textureMatrix);
-            buffer.vertex(pos.x, pos.y, pos.z, color, tex.x, tex.y, overlay, light, 0, 0, 0);
+            buffer.addVertex(pos.x, pos.y, pos.z, color, tex.x, tex.y, overlay, light, 0, 0, 0);
         }
-        matrices.pop();
+        matrices.popPose();
         textureMatrix.identity();
     }
 
-    public final void render(MatrixStack matrices, VertexConsumer buffer, int light, float scale, int color) {
+    public final void render(PoseStack matrices, VertexConsumer buffer, int light, float scale, int color) {
         scale = Math.abs(scale);
         if (scale < 0.001F) {
             return;
         }
 
-        matrices.push();
+        matrices.pushPose();
         matrices.scale(scale, scale, scale);
-        Matrix4f positionmatrix = matrices.peek().getPositionMatrix();
+        Matrix4f positionmatrix = matrices.last().pose();
         for (RenderUtil.Vertex vertex : vertices) {
             Vector4f pos = vertex.position(positionmatrix);
             Vector4f tex = vertex.texture(textureMatrix);
-            buffer.vertex(pos.x, pos.y, pos.z).texture(tex.x, tex.y).color(color).light(getLightAt(pos, light));
+            buffer.addVertex(pos.x, pos.y, pos.z).setUv(tex.x, tex.y).setColor(color).setLight(getLightAt(pos, light));
         }
-        matrices.pop();
+        matrices.popPose();
         textureMatrix.identity();
     }
 

@@ -3,7 +3,10 @@ package com.minelittlepony.unicopia.ability.magic;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Unicopia;
@@ -16,12 +19,9 @@ import com.minelittlepony.unicopia.network.track.Trackable;
 import com.minelittlepony.unicopia.network.track.TrackableObject;
 import com.minelittlepony.unicopia.network.track.MsgTrackedValues.TrackerEntries;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 /**
  * Container for multiple spells
@@ -70,12 +70,25 @@ class MultiSpellSlot implements SpellSlots, NbtSerialisable {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         compound.put("spells", NbtSerialisable.writeMap(tracker.entries(), UUID::toString, entry -> entry.spell.toNBT(lookup)));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toValue(net.minecraft.world.level.storage.ValueOutput output, Provider lookup) {
+        output.store("spells", CompoundTag.CODEC,
+                NbtSerialisable.writeMap(tracker.entries(), UUID::toString, entry -> entry.spell.toNBT(lookup)));
+    }
+
+    @Override
+    public void fromValue(net.minecraft.world.level.storage.ValueInput input, Provider lookup) {
+        CompoundTag compound = new CompoundTag();
+        input.read("spells", CompoundTag.CODEC).ifPresent(spells -> compound.put("spells", spells));
+        fromNBT(compound, lookup);
+    }
+
+    @Override
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         tracker.load(NbtSerialisable.readMap(compound.getCompoundOrEmpty("spells"), key -> {
             try {
                 return UUID.fromString(key);
@@ -84,7 +97,7 @@ class MultiSpellSlot implements SpellSlots, NbtSerialisable {
         }, (key, nbt) -> {
             try {
                 Entry<Spell> entry = new Entry<>(owner);
-                entry.spell.fromNBT((NbtCompound)nbt, lookup);
+                entry.spell.fromNBT((CompoundTag)nbt, lookup);
                 return entry;
             } catch (Throwable t) {
                 Unicopia.LOGGER.warn("Exception loading tracked object: {}", t.getMessage());
@@ -138,27 +151,27 @@ class MultiSpellSlot implements SpellSlots, NbtSerialisable {
         }
 
         @Override
-        public void read(RegistryByteBuf buffer) {
+        public void read(RegistryFriendlyByteBuf buffer) {
             byte contentType = buffer.readByte();
             if (contentType == 1) {
-                spell.fromNBT(buffer.readNbt(), buffer.getRegistryManager());
+                spell.fromNBT(buffer.readNbt(), buffer.registryAccess());
             } else {
                 T spell = this.spell.get();
                 if (spell != null) {
-                    spell.getDataTracker().load(MsgTrackedValues.TrackerEntries.PACKET_CODEC.decode(buffer), buffer.getRegistryManager());
+                    spell.getDataTracker().load(MsgTrackedValues.TrackerEntries.PACKET_CODEC.decode(buffer), buffer.registryAccess());
                 }
             }
         }
 
         @Override
-        public void write(RegistryByteBuf buffer) {
-            buffer.writeNbt(spell.toNBT(buffer.getRegistryManager()));
+        public void write(RegistryFriendlyByteBuf buffer) {
+            buffer.writeNbt(spell.toNBT(buffer.registryAccess()));
         }
 
         @Override
-        public Optional<? extends ByteBuf> write(Status status, DynamicRegistryManager lookup) {
+        public Optional<? extends ByteBuf> write(Status status, RegistryAccess lookup) {
             if (status != Status.DEFAULT) {
-                RegistryByteBuf buffer = new RegistryByteBuf(Unpooled.buffer(), lookup);
+                RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), lookup);
                 buffer.writeByte(1);
                 buffer.writeNbt(spell.toNBT(lookup));
                 return Optional.of(buffer);
@@ -168,7 +181,7 @@ class MultiSpellSlot implements SpellSlots, NbtSerialisable {
                 return Optional.empty();
             }
             return spell.getDataTracker().getDirtyPairs(lookup).map(entries -> {
-                RegistryByteBuf buffer = new RegistryByteBuf(Unpooled.buffer(), owner.asEntity().getRegistryManager());
+                RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), owner.asEntity().registryAccess());
                 buffer.writeByte(0);
                 TrackerEntries.PACKET_CODEC.encode(buffer, entries);
                 return buffer;

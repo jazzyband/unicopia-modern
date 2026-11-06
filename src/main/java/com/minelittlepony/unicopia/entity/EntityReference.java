@@ -21,19 +21,19 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Util;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * An indirect reference to an entity by its unique id.
@@ -45,10 +45,10 @@ import net.minecraft.world.World;
  * @param <T> The type of the entity this reference points to.
  */
 public class EntityReference<T extends Entity> implements NbtSerialisable, TrackableObject<EntityReference<T>> {
-    public static final MapCodec<EntityReference<?>> CODEC = EntityValues.CODEC.xmap(r -> new EntityReference<>(r), r -> r.reference);
-    private static final Codec<List<EntityReference<?>>> LIST_CODEC = CODEC.codec().listOf();
+    public static final Codec<EntityReference<?>> CODEC = EntityValues.CODEC.codec().xmap(r -> new EntityReference<>(r), r -> r.reference);
+    public static final Codec<List<EntityReference<?>>> LIST_CODEC = CODEC.listOf();
 
-    public static <T extends Entity> MapCodec<EntityReference<T>> codec() {
+    public static <T extends Entity> Codec<EntityReference<T>> codec() {
         return Untyped.cast(CODEC);
     }
 
@@ -68,7 +68,11 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
         set(entity);
     }
 
-    public EntityReference(NbtCompound nbt, WrapperLookup lookup) {
+    public EntityReference(UUID uuid) {
+        this.reference = new EntityValues<>(uuid, Vec3.ZERO, -1, false, false, Levelled.ZERO, Levelled.ZERO);
+    }
+
+    public EntityReference(CompoundTag nbt, Provider lookup) {
         fromNBT(nbt, lookup);
     }
 
@@ -103,7 +107,7 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
     }
 
     public boolean referenceEquals(Entity entity) {
-        return entity != null && referenceEquals(entity.getUuid());
+        return entity != null && referenceEquals(entity.getUUID());
     }
 
     public boolean referenceEquals(UUID uuid) {
@@ -116,12 +120,12 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
         return st == ot || (st != null && ot != null && Objects.equals(st.uuid(), ot.uuid()));
     }
 
-    public void ifPresent(World world, Consumer<T> consumer) {
+    public void ifPresent(Level world, Consumer<T> consumer) {
         getOrEmpty(world).ifPresent(consumer);
     }
 
     @Nullable
-    public T get(World world) {
+    public T get(Level world) {
         T t = directReference.get();
         if (t == null && reference != null) {
             directReference = new WeakReference<>(t = reference.resolve(world).orElse(null));
@@ -129,20 +133,20 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
         return t;
     }
 
-    public Optional<T> getOrEmpty(World world) {
+    public Optional<T> getOrEmpty(Level world) {
         return Optional.ofNullable(get(world));
     }
 
     @Override
-    public void toNBT(NbtCompound tag, WrapperLookup lookup) {
+    public void toNBT(CompoundTag tag, Provider lookup) {
         getTarget().ifPresent(ref -> {
-            EntityValues.CODEC.codec().encodeStart(lookup.getOps(NbtOps.INSTANCE), ref).result().ifPresent(nbt -> tag.copyFrom((NbtCompound)nbt));
+            EntityValues.CODEC.codec().encodeStart(lookup.createSerializationContext(NbtOps.INSTANCE), ref).result().ifPresent(nbt -> tag.merge((CompoundTag)nbt));
         });
     }
 
     @Override
-    public void fromNBT(NbtCompound tag, WrapperLookup lookup) {
-        this.reference = tag.isEmpty() ? null : tag.decode(EntityValues.<T>mapCodec(), lookup.getOps(NbtOps.INSTANCE)).orElse(null);
+    public void fromNBT(CompoundTag tag, Provider lookup) {
+        this.reference = tag.isEmpty() ? null : tag.read(EntityValues.<T>mapCodec(), lookup.createSerializationContext(NbtOps.INSTANCE)).orElse(null);
         this.dirty = true;
         if (reference != null) {
             T value = directReference.get();
@@ -167,12 +171,12 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
     }
 
     @Override
-    public void write(RegistryByteBuf buffer) {
+    public void write(RegistryFriendlyByteBuf buffer) {
         buffer.writeOptional(getTarget(), EntityValues.packetCodec());
     }
 
     @Override
-    public void read(RegistryByteBuf buffer) {
+    public void read(RegistryFriendlyByteBuf buffer) {
         reference = buffer.readNullable(EntityValues.packetCodec());
         dirty = true;
         if (reference != null) {
@@ -196,14 +200,14 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
 
     public record EntityValues<T extends Entity>(
             UUID uuid,
-            Vec3d pos,
+            Vec3 pos,
             int clientId,
             boolean isPlayer,
             boolean isDead,
             Levelled.LevelStore level,
             Levelled.LevelStore corruption) {
         public static final MapCodec<EntityValues<?>> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                Uuids.CODEC.fieldOf("uuid").forGetter(EntityValues::uuid),
+                UUIDUtil.AUTHLIB_CODEC.fieldOf("uuid").forGetter(EntityValues::uuid),
                 CodecUtils.VECTOR.fieldOf("pos").forGetter(EntityValues::pos),
                 Codec.INT.fieldOf("clientId").forGetter(EntityValues::clientId),
                 Codec.BOOL.fieldOf("isPlayer").forGetter(EntityValues::isPlayer),
@@ -211,12 +215,12 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
                 Levelled.CODEC.fieldOf("level").forGetter(EntityValues::level),
                 Levelled.CODEC.fieldOf("corruption").forGetter(EntityValues::corruption)
         ).apply(instance, EntityValues::new));
-        public static final PacketCodec<ByteBuf, EntityValues<?>> PACKET_CODEC = PacketCodec.tuple(
-                Uuids.PACKET_CODEC, EntityValues::uuid,
+        public static final StreamCodec<ByteBuf, EntityValues<?>> PACKET_CODEC = StreamCodec.composite(
+                UUIDUtil.STREAM_CODEC, EntityValues::uuid,
                 PacketCodecUtils.VECTOR, EntityValues::pos,
-                PacketCodecs.INTEGER, EntityValues::clientId,
-                PacketCodecs.BOOLEAN, EntityValues::isPlayer,
-                PacketCodecs.BOOLEAN, EntityValues::isDead,
+                ByteBufCodecs.INT, EntityValues::clientId,
+                ByteBufCodecs.BOOL, EntityValues::isPlayer,
+                ByteBufCodecs.BOOL, EntityValues::isDead,
                 Levelled.PACKET_CODEC, EntityValues::level,
                 Levelled.PACKET_CODEC, EntityValues::corruption,
                 EntityValues::new
@@ -226,15 +230,15 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
             return Untyped.cast(CODEC);
         }
 
-        public static <T extends Entity> PacketCodec<ByteBuf, EntityValues<T>> packetCodec() {
+        public static <T extends Entity> StreamCodec<ByteBuf, EntityValues<T>> packetCodec() {
             return Untyped.cast(PACKET_CODEC);
         }
 
         public EntityValues(Entity entity) {
             this(
-                entity.getUuid(),
-                entity.getPos(),
-                entity.getId(), entity instanceof PlayerEntity,
+                entity.getUUID(),
+                entity.position(),
+                entity.getId(), entity instanceof Player,
                 !entity.isAlive(),
                 Caster.of(entity).map(Caster::getLevel).map(Levelled::copyOf).orElse(Levelled.ZERO),
                 Caster.of(entity).map(Caster::getCorruption).map(Levelled::copyOf).orElse(Levelled.ZERO)
@@ -242,12 +246,12 @@ public class EntityReference<T extends Entity> implements NbtSerialisable, Track
         }
 
         @SuppressWarnings("unchecked")
-        public Optional<T> resolve(World world) {
-            if (world instanceof ServerWorld serverWorld) {
+        public Optional<T> resolve(Level world) {
+            if (world instanceof ServerLevel serverWorld) {
                 return Optional.ofNullable((T)serverWorld.getEntity(uuid));
             }
-            Entity target = world.getEntityById(clientId());
-            if (target == null || !target.getUuid().equals(uuid)) {
+            Entity target = world.getEntity(clientId());
+            if (target == null || !target.getUUID().equals(uuid)) {
                 return Optional.empty();
             }
 

@@ -1,11 +1,10 @@
 package com.minelittlepony.unicopia.client.minelittlepony;
 
 import com.minelittlepony.unicopia.Race;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
 public class MineLPDelegate {
     static MineLPDelegate INSTANCE = new MineLPDelegate();
@@ -15,18 +14,18 @@ public class MineLPDelegate {
     }
 
     public final Race getPlayerPonyRace() {
-        if (MinecraftClient.getInstance().player == null) {
+        if (Minecraft.getInstance().player == null) {
             return Race.HUMAN;
         }
-        return getPlayerPonyRace(MinecraftClient.getInstance().player);
+        return getPlayerPonyRace(Minecraft.getInstance().player);
     }
 
-    public Race getPlayerPonyRace(PlayerEntity player) {
+    public Race getPlayerPonyRace(Player player) {
         return Race.HUMAN;
     }
 
     public float getPonyHeight(Entity entity) {
-        return entity.getHeight();
+        return entity.getBbHeight();
     }
 
     public Race getRace(Entity entity) {

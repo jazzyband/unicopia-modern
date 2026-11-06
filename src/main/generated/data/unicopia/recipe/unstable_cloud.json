@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "redstone",
+  "ingredients": [
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    "unicopia:cloud",
+    [
+      "unicopia:lightning_jar",
+      "unicopia:zap_apple_jam_jar"
+    ]
+  ],
+  "result": {
+    "count": 8,
+    "id": "unicopia:unstable_cloud"
+  }
+}

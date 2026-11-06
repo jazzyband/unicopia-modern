@@ -1,42 +1,48 @@
 package com.minelittlepony.unicopia.recipe;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.SpecialCraftingRecipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.util.Pair;
-import net.minecraft.world.World;
+import com.minelittlepony.unicopia.util.Tuple;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.level.Level;
 
-public abstract class ItemCombinationRecipe extends SpecialCraftingRecipe {
+public abstract class ItemCombinationRecipe extends CustomRecipe {
+    private final CraftingBookCategory recipeCategory;
 
-    public ItemCombinationRecipe(CraftingRecipeCategory category) {
-        super(category);
+    public ItemCombinationRecipe(CraftingBookCategory category) {
+        this.recipeCategory = category;
     }
 
     @Override
-    public final boolean matches(CraftingRecipeInput inventory, World world) {
-        Pair<ItemStack, ItemStack> result = runMatch(inventory);
-
-        return !result.getLeft().isEmpty() && !result.getRight().isEmpty();
+    public CraftingBookCategory category() {
+        return recipeCategory;
     }
 
-    protected Pair<ItemStack, ItemStack> runMatch(CraftingRecipeInput inventory) {
+    @Override
+    public final boolean matches(CraftingInput inventory, Level world) {
+        Tuple<ItemStack, ItemStack> result = runMatch(inventory);
+
+        return !result.getA().isEmpty() && !result.getB().isEmpty();
+    }
+
+    protected Tuple<ItemStack, ItemStack> runMatch(CraftingInput inventory) {
         ItemStack bangle = ItemStack.EMPTY;
         ItemStack dust = ItemStack.EMPTY;
 
         for(int i = 0; i < inventory.size(); i++) {
-           ItemStack stack = inventory.getStackInSlot(i);
+           ItemStack stack = inventory.getItem(i);
 
            if (!stack.isEmpty()) {
               if (isContainerItem(stack)) {
                  if (!bangle.isEmpty()) {
-                     return new Pair<>(bangle, dust);
+                     return new Tuple<>(bangle, dust);
                  }
 
                  bangle = stack;
               } else {
                  if (!dust.isEmpty() || !isInsertItem(stack)) {
-                     return new Pair<>(bangle, dust);
+                     return new Tuple<>(bangle, dust);
                  }
 
                  dust = stack;
@@ -45,10 +51,10 @@ public abstract class ItemCombinationRecipe extends SpecialCraftingRecipe {
         }
 
         if (!bangle.isEmpty() && isCombinationInvalid(bangle, dust)) {
-            return new Pair<>(ItemStack.EMPTY, ItemStack.EMPTY);
+            return new Tuple<>(ItemStack.EMPTY, ItemStack.EMPTY);
         }
 
-        return new Pair<>(bangle, dust);
+        return new Tuple<>(bangle, dust);
     }
 
     protected boolean isCombinationInvalid(ItemStack bangle, ItemStack dust) {

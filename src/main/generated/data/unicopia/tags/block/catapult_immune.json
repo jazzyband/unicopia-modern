@@ -1,0 +1,16 @@
+{
+  "values": [
+    "minecraft:structure_void",
+    "minecraft:structure_block",
+    "minecraft:command_block",
+    "minecraft:chain_command_block",
+    "minecraft:repeating_command_block",
+    "minecraft:light",
+    "minecraft:jigsaw",
+    "minecraft:barrier",
+    "minecraft:bedrock",
+    "#minecraft:doors",
+    "#minecraft:trapdoors",
+    "#minecraft:beds"
+  ]
+}

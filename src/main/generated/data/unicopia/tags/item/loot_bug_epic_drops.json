@@ -1,0 +1,18 @@
+{
+  "values": [
+    "minecraft:diamond_block",
+    "minecraft:diamond_helmet",
+    "minecraft:diamond_boots",
+    "minecraft:diamond_leggings",
+    "minecraft:diamond_chestplate",
+    "minecraft:diamond_horse_armor",
+    "minecraft:diamond_pickaxe",
+    "minecraft:diamond_shovel",
+    "minecraft:diamond_axe",
+    "minecraft:diamond_sword",
+    "minecraft:diamond_hoe",
+    "unicopia:diamond_polearm",
+    "#unicopia:badges",
+    "#c:ingots/gold"
+  ]
+}

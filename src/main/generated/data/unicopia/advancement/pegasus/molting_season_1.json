@@ -1,0 +1,34 @@
+{
+  "parent": "unicopia:pegasus/pegasus_route",
+  "criteria": {
+    "shed_feather": {
+      "conditions": {
+        "event": "shed_feather",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.molting_season_1.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:pegasus_feather"
+    },
+    "title": {
+      "translate": "advancements.unicopia.molting_season_1.title"
+    }
+  },
+  "requirements": [
+    [
+      "shed_feather"
+    ]
+  ],
+  "rewards": {
+    "experience": 1
+  },
+  "sends_telemetry_event": true
+}

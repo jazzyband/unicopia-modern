@@ -9,19 +9,19 @@ import com.minelittlepony.unicopia.server.world.UTreeGen;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.minecraft.block.Block;
-import net.minecraft.data.DataOutput;
-import net.minecraft.registry.Registries;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.DataWriter;
+import net.minecraft.data.PackOutput;
+import net.minecraft.world.level.block.Block;
 
 public class SeasonsGrowthRatesProvider implements DataProvider {
 
     private final DataCollector<Crop> collectedData;
 
-    public SeasonsGrowthRatesProvider(FabricDataOutput output) {
-        this.collectedData = new DataCollector<>(output.getResolver(DataOutput.OutputType.DATA_PACK, "seasons/crop"), Crop.CODEC);
+    public SeasonsGrowthRatesProvider(FabricPackOutput output) {
+        this.collectedData = new DataCollector<>(output.createPathProvider(PackOutput.Target.DATA_PACK, "seasons/crop"), Crop.CODEC);
     }
 
     @Override
@@ -30,9 +30,9 @@ public class SeasonsGrowthRatesProvider implements DataProvider {
     }
 
     @Override
-    public CompletableFuture<?> run(DataWriter writer) {
+    public CompletableFuture<?> run(CachedOutput writer) {
         var exporter = collectedData.prime();
-        generate((block, crop) -> exporter.accept(Registries.BLOCK.getId(block), crop));
+        generate((block, crop) -> exporter.accept(BuiltInRegistries.BLOCK.getKey(block), crop));
         return collectedData.upload(writer);
     }
 

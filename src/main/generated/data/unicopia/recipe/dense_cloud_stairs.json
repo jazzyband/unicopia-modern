@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "group": "cloud_stairs",
+  "key": {
+    "#": "unicopia:dense_cloud"
+  },
+  "pattern": [
+    "#  ",
+    "## ",
+    "###"
+  ],
+  "result": {
+    "count": 4,
+    "id": "unicopia:dense_cloud_stairs"
+  }
+}

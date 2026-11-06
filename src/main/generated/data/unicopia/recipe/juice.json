@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "juice",
+  "ingredients": [
+    "#unicopia:fresh_apples",
+    "#unicopia:fresh_apples",
+    "#unicopia:fresh_apples",
+    "#unicopia:fresh_apples",
+    "#unicopia:fresh_apples",
+    "#unicopia:fresh_apples",
+    "minecraft:glass_bottle"
+  ],
+  "result": {
+    "id": "unicopia:juice"
+  }
+}

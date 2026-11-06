@@ -1,0 +1,654 @@
+{
+  "content": {
+    "pages": [
+      {
+        "elements": [
+          {
+            "bounds": {
+              "height": 128,
+              "width": 128,
+              "x": 15,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/container/pages/ice_magic.png"
+          }
+        ],
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.ice.p1.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p2.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p2.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p2.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.frost.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.frost.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "minecraft:textures/item/snowball.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/ice.png"
+          }
+        ],
+        "level": 3,
+        "title": {
+          "translate": "spell.unicopia.frost"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:ice": 15.0
+                  },
+                  "unicopia:stored_spell": "unicopia:frost"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:ice": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "count": 10,
+                "trait": "unicopia:ice"
+              }
+            ]
+          }
+        ],
+        "level": 3
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.chilling_breath.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.chilling_breath.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "minecraft:textures/item/oak_boat.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/ice.png"
+          }
+        ],
+        "level": 3,
+        "title": {
+          "translate": "spell.unicopia.chilling_breath"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:frost"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:ice": 15.0
+                  },
+                  "unicopia:stored_spell": "unicopia:chilling_breath"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:ice": 5.0,
+                "unicopia:knowledge": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:frost"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 5,
+                "trait": "unicopia:ice"
+              }
+            ]
+          }
+        ],
+        "level": 3
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p5.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p5.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p5.3.body"
+          }
+        ],
+        "level": 4,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p6.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p6.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p6.2.body"
+          }
+        ],
+        "level": 5,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p7.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p7.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p7.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 6
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p8.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p8.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 4,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p8.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.light.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.light.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "minecraft:textures/item/light.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/ice.png"
+          }
+        ],
+        "level": 5,
+        "title": {
+          "translate": "spell.unicopia.light"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:fire_bolt"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:air": 0.3,
+                    "unicopia:kindness": 12.0,
+                    "unicopia:life": 10.0,
+                    "unicopia:order": 25.0
+                  },
+                  "unicopia:stored_spell": "unicopia:light"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:focus": 10.0,
+                "unicopia:ice": 30.0,
+                "unicopia:life": 30.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:fire_bolt"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:focus"
+              },
+              {
+                "count": 30,
+                "trait": "unicopia:life"
+              },
+              {
+                "count": 30,
+                "trait": "unicopia:ice"
+              }
+            ]
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.light.modifier.1"
+          }
+        ],
+        "level": 5
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p10.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p10.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 4,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p11.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p11.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p11.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 4,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p12.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p12.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p12.2.body"
+          }
+        ],
+        "level": 6,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p13.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p13.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p13.2.body"
+          }
+        ],
+        "level": 6,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p14.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p14.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p14.2.body"
+          }
+        ],
+        "level": 19,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p15.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p15.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p15.2.body"
+          }
+        ],
+        "level": 19,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p16.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p16.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p16.2.body"
+          }
+        ],
+        "level": 19
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p16.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p16.4.body"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p17.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p17.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p17.2.body"
+          }
+        ],
+        "level": 20
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p17.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p17.4.body"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p18.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p18.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p18.2.body"
+          }
+        ],
+        "level": 20
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p18.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p18.4.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p19.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p19.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p19.2.body"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.air.p20.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.air.p20.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.sign_off"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 20
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.hydrophobic.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.hydrophobic.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/strength.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/ice.png"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "spell.unicopia.hydrophobic"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:frost"
+                },
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:shield"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:hydrophobic"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:focus": 6.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:frost"
+              },
+              {
+                "spell": "unicopia:shield"
+              },
+              {
+                "count": 6,
+                "trait": "unicopia:focus"
+              }
+            ]
+          },
+          {
+            "ingredients": [
+              {
+                "text": {
+                  "translate": "gui.unicopia.spellbook.chapter.ice.hydrophobic.modifier.1"
+                }
+              },
+              {
+                "text": {
+                  "translate": "gui.unicopia.spellbook.chapter.ice.hydrophobic.modifier.2"
+                }
+              }
+            ]
+          }
+        ],
+        "level": 20
+      }
+    ]
+  },
+  "side": "right",
+  "y_position": 3
+}

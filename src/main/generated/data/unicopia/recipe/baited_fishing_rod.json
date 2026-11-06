@@ -1,0 +1,19 @@
+{
+  "type": "unicopia:conversion",
+  "base": {
+    "id": "minecraft:fishing_rod"
+  },
+  "category": "misc",
+  "group": "fishing_rod",
+  "key": {
+    "#": "minecraft:fishing_rod",
+    "*": "unicopia:wheat_worms"
+  },
+  "pattern": [
+    "# ",
+    " *"
+  ],
+  "result": {
+    "id": "unicopia:baited_fishing_rod"
+  }
+}

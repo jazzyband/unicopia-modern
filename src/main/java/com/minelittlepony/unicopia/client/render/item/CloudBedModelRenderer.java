@@ -3,17 +3,19 @@ package com.minelittlepony.unicopia.client.render.item;
 import com.minelittlepony.unicopia.block.FancyBedBlock.SheetPattern;
 import com.minelittlepony.unicopia.client.render.entity.CloudBedBlockEntityRenderer;
 import com.minelittlepony.unicopia.item.FancyBedItem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.model.LoadedEntityModels;
-import net.minecraft.client.render.item.model.special.SpecialModelRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.model.geom.EntityModelSet;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.special.SpecialModelRenderer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import java.util.function.Consumer;
 
 public class CloudBedModelRenderer implements SpecialModelRenderer<SheetPattern> {
     private final CloudBedBlockEntityRenderer renderer;
@@ -27,28 +29,34 @@ public class CloudBedModelRenderer implements SpecialModelRenderer<SheetPattern>
     }
 
     @Override
-    public void render(SheetPattern pattern, ItemDisplayContext displayContext, MatrixStack matrices, VertexConsumerProvider vertices, int light, int overlay, boolean glint) {
+    public void submit(SheetPattern pattern, PoseStack matrices, SubmitNodeCollector vertices, int light, int overlay, boolean glint, int color) {
         renderer.renderAsItem(pattern, texture, translucent, matrices, vertices, light, overlay);
     }
 
     @Override
-    public SheetPattern getData(ItemStack stack) {
+    public void getExtents(Consumer<Vector3fc> extents) {
+        extents.accept(new Vector3f(0, 0, -1));
+        extents.accept(new Vector3f(1, 1, 1));
+    }
+
+    @Override
+    public SheetPattern extractArgument(ItemStack stack) {
         return FancyBedItem.getPattern(stack);
     }
 
-    public record Unbaked(Identifier texture, boolean translucent) implements SpecialModelRenderer.Unbaked {
-        public static final MapCodec<Unbaked> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                Identifier.CODEC.fieldOf("texture").forGetter(Unbaked::texture),
-                Codec.BOOL.fieldOf("translucent").forGetter(Unbaked::translucent)
-        ).apply(i, Unbaked::new));
+    public record Unbaked(Identifier texture, boolean translucent) implements SpecialModelRenderer.Unbaked<SheetPattern> {
+        public static final MapCodec<com.minelittlepony.unicopia.client.render.item.CloudBedModelRenderer.Unbaked> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.fieldOf("texture").forGetter(com.minelittlepony.unicopia.client.render.item.CloudBedModelRenderer.Unbaked::texture),
+                Codec.BOOL.fieldOf("translucent").forGetter(com.minelittlepony.unicopia.client.render.item.CloudBedModelRenderer.Unbaked::translucent)
+        ).apply(i, com.minelittlepony.unicopia.client.render.item.CloudBedModelRenderer.Unbaked::new));
 
         @Override
-        public MapCodec<Unbaked> getCodec() {
+        public MapCodec<com.minelittlepony.unicopia.client.render.item.CloudBedModelRenderer.Unbaked> type() {
             return CODEC;
         }
 
         @Override
-        public SpecialModelRenderer<?> bake(LoadedEntityModels models) {
+        public SpecialModelRenderer<SheetPattern> bake(SpecialModelRenderer.BakingContext context) {
             return new CloudBedModelRenderer(new CloudBedBlockEntityRenderer(), texture, translucent);
         }
     }

@@ -1,0 +1,11 @@
+{
+  "values": [
+    "unicopia:bat_screech",
+    "unicopia:rainboom",
+    "minecraft:fly_into_wall",
+    "minecraft:falling_anvil",
+    "minecraft:falling_block",
+    "minecraft:sonic_boom",
+    "#minecraft:is_explosion"
+  ]
+}

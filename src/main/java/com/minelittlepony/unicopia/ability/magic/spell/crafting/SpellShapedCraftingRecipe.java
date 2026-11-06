@@ -1,7 +1,19 @@
 package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 
 import java.util.Optional;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapedRecipePattern;
+import net.minecraft.world.level.Level;
 import com.google.common.base.Predicates;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
 import com.minelittlepony.unicopia.item.EnchantableItem;
@@ -10,68 +22,66 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.RawShapedRecipe;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.world.World;
-
 public class SpellShapedCraftingRecipe extends ShapedRecipe {
     public static final MapCodec<SpellShapedCraftingRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("group", "").forGetter(SpellShapedCraftingRecipe::getGroup),
-            CraftingRecipeCategory.CODEC.fieldOf("category").orElse(CraftingRecipeCategory.MISC).forGetter(SpellShapedCraftingRecipe::getCategory),
-            RawShapedRecipe.CODEC.forGetter(recipe -> recipe.raw),
+            Codec.STRING.optionalFieldOf("group", "").forGetter(SpellShapedCraftingRecipe::group),
+            CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(SpellShapedCraftingRecipe::category),
+            ShapedRecipePattern.MAP_CODEC.forGetter(recipe -> recipe.raw),
             Ingredient.CODEC.optionalFieldOf("spell_source").forGetter(recipe -> recipe.spellSource),
-            ItemStack.VALIDATED_CODEC.fieldOf("result").forGetter(recipe -> recipe.result),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(recipe -> recipe.result),
             Codec.BOOL.optionalFieldOf("show_notification", true).forGetter(SpellShapedCraftingRecipe::showNotification)
     ).apply(instance, SpellShapedCraftingRecipe::new));
-    public static final PacketCodec<RegistryByteBuf, SpellShapedCraftingRecipe> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.STRING, SpellShapedCraftingRecipe::getGroup,
-            CraftingRecipeCategory.PACKET_CODEC, SpellShapedCraftingRecipe::getCategory,
-            RawShapedRecipe.PACKET_CODEC, recipe -> recipe.raw,
-            Ingredient.OPTIONAL_PACKET_CODEC, recipe -> recipe.spellSource,
-            ItemStack.PACKET_CODEC, recipe -> recipe.result,
-            PacketCodecs.BOOLEAN, SpellShapedCraftingRecipe::showNotification,
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpellShapedCraftingRecipe> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8, SpellShapedCraftingRecipe::group,
+            CraftingBookCategory.STREAM_CODEC, SpellShapedCraftingRecipe::category,
+            ShapedRecipePattern.STREAM_CODEC, recipe -> recipe.raw,
+            Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC, recipe -> recipe.spellSource,
+            ItemStackTemplate.STREAM_CODEC, recipe -> recipe.result,
+            ByteBufCodecs.BOOL, SpellShapedCraftingRecipe::showNotification,
             SpellShapedCraftingRecipe::new
     );
 
-    private final RawShapedRecipe raw;
-    private final ItemStack result;
+    private final ShapedRecipePattern raw;
+    private final ItemStackTemplate result;
 
     private final Optional<Ingredient> spellSource;
 
-    public SpellShapedCraftingRecipe(String group, CraftingRecipeCategory category, RawShapedRecipe raw, Optional<Ingredient> spellSource, ItemStack result, boolean showNotification) {
-        super(group, category, raw, result, showNotification);
+    public SpellShapedCraftingRecipe(String group, CraftingBookCategory category, ShapedRecipePattern raw, Optional<Ingredient> spellSource, ItemStackTemplate result, boolean showNotification) {
+        super(new net.minecraft.world.item.crafting.Recipe.CommonInfo(showNotification),
+                new net.minecraft.world.item.crafting.CraftingRecipe.CraftingBookInfo(category, group), raw,
+                result);
         this.spellSource = spellSource;
         this.raw = raw;
         this.result = result;
     }
 
-    @Override
-    public RecipeSerializer<SpellShapedCraftingRecipe> getSerializer() {
-        return URecipes.CRAFTING_MAGICAL_SERIALIZER;
+    public SpellShapedCraftingRecipe(String group, CraftingBookCategory category, ShapedRecipePattern raw, Optional<Ingredient> spellSource, ItemStack result, boolean showNotification) {
+        this(group, category, raw, spellSource, ItemStackTemplate.fromStack(result), showNotification);
     }
 
     @Override
-    public boolean matches(CraftingRecipeInput input, World world) {
-        return super.matches(input, world) && (spellSource.isEmpty() || input.getStacks().stream().anyMatch(spellSource.get()));
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public RecipeSerializer<ShapedRecipe> getSerializer() {
+        return (RecipeSerializer)URecipes.CRAFTING_MAGICAL_SERIALIZER;
     }
 
     @Override
-    public ItemStack craft(CraftingRecipeInput inventory, WrapperLookup registries) {
-        return inventory.getStacks().stream()
+    public boolean matches(CraftingInput input, Level world) {
+        return super.matches(input, world) && (spellSource.isEmpty() || input.items().stream().anyMatch(spellSource.get()));
+    }
+
+    public ItemStack assemble(CraftingInput inventory, Provider registries) {
+        return assemble(inventory);
+    }
+
+    @Override
+    public ItemStack assemble(CraftingInput inventory) {
+        return inventory.items().stream()
             .filter(spellSource.isPresent() ? spellSource.get() : Predicates.alwaysTrue())
             .filter(EnchantableItem::isEnchanted)
             .map(EnchantableItem::getSpellEffect)
             .findFirst()
             .orElseGet(CustomisedSpellType::empty)
-            .applyTo(super.craft(inventory, registries));
+            .applyTo(super.assemble(inventory));
     }
 }

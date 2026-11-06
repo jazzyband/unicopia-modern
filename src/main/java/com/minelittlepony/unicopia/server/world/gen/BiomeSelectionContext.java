@@ -1,17 +1,16 @@
 package com.minelittlepony.unicopia.server.world.gen;
 
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.world.biome.Biome;
-
 public interface BiomeSelectionContext {
-    RegistryKey<Biome> biomeKey();
+    ResourceKey<Biome> biomeKey();
 
     SplittableBiomeCoordinate referenceFrame();
 
     @Nullable
-    RegistryKey<Biome> addOverride(SplittableBiomeCoordinate coordinate, RegistryKey<Biome> biome);
+    ResourceKey<Biome> addOverride(SplittableBiomeCoordinate coordinate, ResourceKey<Biome> biome);
 
     public record SplittableBiomeCoordinate(
             SplitableParameterRange temperature,

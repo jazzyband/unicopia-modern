@@ -1,0 +1,24 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:pegasus_amulet"
+    },
+    {
+      "item": "unicopia:crystal_heart"
+    },
+    {
+      "item": "unicopia:grogars_bell"
+    },
+    {
+      "item": "minecraft:totem_of_undying"
+    }
+  ],
+  "material": {
+    "item": "unicopia:broken_alicorn_amulet"
+  },
+  "result": {
+    "id": "unicopia:unicorn_amulet"
+  },
+  "traits": {}
+}

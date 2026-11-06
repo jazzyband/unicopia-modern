@@ -5,7 +5,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.CastingMethod;
@@ -20,26 +38,6 @@ import com.minelittlepony.unicopia.item.component.Charges;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 import com.minelittlepony.unicopia.item.group.MultiItem;
 
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-
 public class EnchantedStaffItem extends StaffItem implements MultiItem, Charges.ChargeChangeCallback {
     private static final Map<EntityType<?>, SpellType<?>> ENTITY_TYPE_TO_SPELL = new HashMap<>();
 
@@ -49,116 +47,96 @@ public class EnchantedStaffItem extends StaffItem implements MultiItem, Charges.
     }
 
     public static SpellType<?> getSpellType(Entity entity, boolean remove) {
-        if (entity instanceof ItemEntity item) {
-            if (EnchantableItem.isEnchanted(item.getStack())) {
-                var spell = EnchantableItem.getSpellKey(item.getStack());
-                if (remove) {
-                    item.setStack(EnchantableItem.unenchant(item.getStack()));
-                }
-                return spell;
-            }
-        }
         if (entity instanceof CastSpellEntity cast) {
             return cast.getSpellSlot().get(SpellType.PLACE_CONTROL_SPELL.negate())
                     .map(Spell::getTypeAndTraits)
                     .map(CustomisedSpellType::type)
                     .orElse(SpellType.empty());
         }
-        if (entity instanceof PlayerEntity player) {
-            return Pony.of(player).getCharms().getStaffSpell(remove).type();
+        if (entity instanceof Player player) {
+            if (remove) {
+                return Pony.of(player).getCharms().equipSpell(InteractionHand.MAIN_HAND, SpellType.EMPTY_KEY.withTraits()).type();
+            }
+            return Pony.of(player).getCharms().getEquippedSpell(InteractionHand.MAIN_HAND).type();
         }
-        return ENTITY_TYPE_TO_SPELL.getOrDefault(entity.getType(), SpellType.AWKWARD);
+        return ENTITY_TYPE_TO_SPELL.getOrDefault(entity.getType(), SpellType.empty());
     }
 
     static {
-        register(EntityType.DROWNED, SpellType.BUBBLE);
-        register(EntityType.DOLPHIN, SpellType.BUBBLE);
-        register(EntityType.COD, SpellType.BUBBLE);
-        register(EntityType.SALMON, SpellType.BUBBLE);
-        register(EntityType.PUFFERFISH, SpellType.BUBBLE);
-        register(EntityType.AXOLOTL, SpellType.BUBBLE);
-        register(EntityType.BLAZE, SpellType.FIRE_BOLT);
-        register(EntityType.PIGLIN, SpellType.CATAPULT);
-        register(EntityType.PIGLIN_BRUTE, SpellType.CATAPULT);
-        register(EntityType.CHICKEN, SpellType.FEATHER_FALL);
-        register(EntityType.CREEPER, SpellType.CATAPULT);
-        register(EntityType.HUSK, SpellType.HYDROPHOBIC);
-        register(EntityType.SNOW_GOLEM, SpellType.FROST);
-        register(EntityType.POLAR_BEAR, SpellType.FROST);
-        register(EntityType.FIREBALL, SpellType.FLAME);
-        register(EntityType.SMALL_FIREBALL, SpellType.FLAME);
-        register(EntityType.ENDER_DRAGON, SpellType.DISPLACEMENT);
-        register(EntityType.GUARDIAN, SpellType.AWKWARD);
-        register(EntityType.ELDER_GUARDIAN, SpellType.AWKWARD);
-        register(EntityType.DRAGON_FIREBALL, SpellType.INFERNAL);
-        register(EntityType.CAVE_SPIDER, SpellType.REVEALING);
-        register(EntityType.ZOMBIE, SpellType.NECROMANCY);
-        register(EntityType.ZOMBIE_HORSE, SpellType.NECROMANCY);
-        register(EntityType.ZOMBIE_VILLAGER, SpellType.NECROMANCY);
-        register(EntityType.ZOMBIFIED_PIGLIN, SpellType.NECROMANCY);
-        register(EntityType.FROG, SpellType.FEATHER_FALL);
-        register(EntityType.VEX, SpellType.NECROMANCY);
-        register(EntityType.SKELETON, SpellType.CATAPULT);
-        register(EntityType.WITHER_SKELETON, SpellType.CATAPULT);
-        register(EntityType.SKELETON_HORSE, SpellType.CATAPULT);
-        register(EntityType.WITHER, SpellType.DARK_VORTEX);
-        register(EntityType.WARDEN, SpellType.VORTEX);
-        register(EntityType.ARROW, SpellType.AWKWARD);
-        register(EntityType.ITEM, SpellType.AWKWARD);
+        register(EntityTypes.DROWNED, SpellType.BUBBLE);
+        register(EntityTypes.DOLPHIN, SpellType.BUBBLE);
+        register(EntityTypes.BLAZE, SpellType.FIRE_BOLT);
+        register(EntityTypes.CHICKEN, SpellType.FEATHER_FALL);
+        register(EntityTypes.CREEPER, SpellType.CATAPULT);
+        register(EntityTypes.HUSK, SpellType.HYDROPHOBIC);
+        register(EntityTypes.SNOW_GOLEM, SpellType.FROST);
+        register(EntityTypes.POLAR_BEAR, SpellType.FROST);
+        register(EntityTypes.FIREBALL, SpellType.FLAME);
+        register(EntityTypes.SMALL_FIREBALL, SpellType.FLAME);
+        register(EntityTypes.ENDER_DRAGON, SpellType.DISPLACEMENT);
+        register(EntityTypes.GUARDIAN, SpellType.AWKWARD);
+        register(EntityTypes.ELDER_GUARDIAN, SpellType.AWKWARD);
+        register(EntityTypes.DRAGON_FIREBALL, SpellType.INFERNAL);
+        register(EntityTypes.CAVE_SPIDER, SpellType.REVEALING);
+        register(EntityTypes.ZOMBIE, SpellType.NECROMANCY);
+        register(EntityTypes.VEX, SpellType.NECROMANCY);
+        register(EntityTypes.SKELETON, SpellType.CATAPULT);
+        register(EntityTypes.WITHER_SKELETON, SpellType.CATAPULT);
+        register(EntityTypes.SKELETON_HORSE, SpellType.CATAPULT);
         register(UEntities.TWITTERMITE, SpellType.LIGHT);
     }
 
-    public EnchantedStaffItem(Settings settings) {
-        super(settings.component(UDataComponentTypes.CHARGES, new Charges(3, 3, 3, true)).maxDamage(500));
+    public EnchantedStaffItem(Properties settings) {
+        super(settings.component(UDataComponentTypes.CHARGES, new Charges(3, 3, 3, true)).durability(500));
     }
 
     @Override
     public List<ItemStack> getDefaultStacks() {
         return Stream.concat(
-                Stream.of(getDefaultStack()),
-                ENTITY_TYPE_TO_SPELL.values().stream().distinct().map(type -> EnchantableItem.enchant(getDefaultStack(), type))
+                Stream.of(getDefaultInstance()),
+                ENTITY_TYPE_TO_SPELL.values().stream().distinct().map(type -> EnchantableItem.enchant(getDefaultInstance(), type))
             ).toList();
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, Item.TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
         if (EnchantableItem.isEnchanted(stack)) {
             SpellType<?> key = EnchantableItem.getSpellKey(stack);
-            textConsumer.accept(Text.translatable(key.getTranslationKey()).formatted(key.getAffinity().getColor()));
+            textConsumer.accept(Component.translatable(key.getTranslationKey()).withStyle(key.getAffinity().getColor()));
         }
     }
 
     @Override
-    public ActionResult useOnEntity(ItemStack stack, PlayerEntity player, LivingEntity target, Hand hand) {
+    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (EnchantableItem.isEnchanted(stack)) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
 
-        super.useOnEntity(stack, player, target, hand);
+        super.interactLivingEntity(stack, player, target, hand);
 
-        boolean remove = EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR.test(target);
+        boolean remove = EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(target);
         SpellType<?> type = getSpellType(target, remove);
         if (!type.isEmpty()) {
             if (remove) {
                 target.setHealth(1);
-                target.setFrozenTicks(9000);
+                target.setTicksFrozen(9000);
             }
             stack = EnchantableItem.enchant(stack, type);
             Charges.recharge(stack);
-            player.setStackInHand(hand, stack);
+            player.setItemInHand(hand, stack);
         }
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity player, Hand hand) {
-        player.setCurrentHand(hand);
-        return ActionResult.CONSUME;
+    public InteractionResult use(Level world, Player player, InteractionHand hand) {
+        player.startUsingItem(hand);
+        return InteractionResult.CONSUME;
     }
 
     @Override
-    public boolean onStoppedUsing(ItemStack stack, World world, LivingEntity entity, int timeLeft) {
-        int i = getMaxUseTime(stack, entity) - timeLeft;
+    public boolean releaseUsing(ItemStack stack, Level world, LivingEntity entity, int timeLeft) {
+        int i = getUseDuration(stack, entity) - timeLeft;
 
         if (i > 5 && EnchantableItem.isEnchanted(stack)) {
             CustomisedSpellType<?> spellType = EnchantableItem.getSpellEffect(stack);
@@ -166,7 +144,7 @@ public class EnchantedStaffItem extends StaffItem implements MultiItem, Charges.
                 Pony.of(entity).ifPresent(pony -> {
                     spellType.apply(pony, CastingMethod.STAFF);
                     pony.setAnimation(Animation.ARMS_UP, Animation.Recipient.ANYONE, 10);
-                    stack.damage(1, pony.asEntity(), EquipmentSlot.MAINHAND);
+                    stack.hurtAndBreak(1, pony.asEntity(), EquipmentSlot.MAINHAND);
                     pony.subtractEnergyCost(4);
                 });
                 return true;
@@ -177,10 +155,10 @@ public class EnchantedStaffItem extends StaffItem implements MultiItem, Charges.
 
     @Override
     protected boolean castContainedEffect(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        if (attacker.isSneaking()) {
+        if (attacker.isShiftKeyDown()) {
             CustomisedSpellType<?> spellType = EnchantableItem.getSpellEffect(stack);
             if (Charges.discharge(stack, 1)) {
-                stack.damage(50, attacker, EquipmentSlot.MAINHAND);
+                stack.hurtAndBreak(50, attacker, EquipmentSlot.MAINHAND);
                 Caster.of(attacker).ifPresent(c -> c.subtractEnergyCost(4));
                 Caster.of(target).ifPresent(c -> spellType.apply(c, CastingMethod.STAFF));
             }
@@ -190,25 +168,25 @@ public class EnchantedStaffItem extends StaffItem implements MultiItem, Charges.
     }
 
     @Override
-    public void usageTick(World world, LivingEntity entity, ItemStack stack, int ticksRemaining) {
+    public void onUseTick(Level world, LivingEntity entity, ItemStack stack, int ticksRemaining) {
         if (entity instanceof LivingEntity) {
             LivingEntity living = entity;
 
-            if (living.getActiveItem().getItem() == this) {
-                Vec3d eyes = entity.getCameraPosVec(1);
+            if (living.getUseItem().getItem() == this) {
+                Vec3 eyes = entity.getEyePosition(1);
 
-                float i = getMaxUseTime(stack, entity) - ticksRemaining;
+                float i = getUseDuration(stack, entity) - ticksRemaining;
 
-                world.addParticleClient(i > 150 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.CLOUD, eyes.x, eyes.y, eyes.z,
-                        (world.random.nextGaussian() - 0.5) / 10,
-                        (world.random.nextGaussian() - 0.5) / 10,
-                        (world.random.nextGaussian() - 0.5) / 10
+                world.addParticle(i > 150 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.CLOUD, eyes.x, eyes.y, eyes.z,
+                        (world.getRandom().nextGaussian() - 0.5) / 10,
+                        (world.getRandom().nextGaussian() - 0.5) / 10,
+                        (world.getRandom().nextGaussian() - 0.5) / 10
                 );
-                world.playSound(null, entity.getBlockPos(), USounds.ITEM_MAGIC_STAFF_CHARGE, SoundCategory.PLAYERS, 1, i / 20);
+                world.playSound(null, entity.blockPosition(), USounds.ITEM_MAGIC_STAFF_CHARGE, SoundSource.PLAYERS, 1, i / 20);
 
-                if (i > 200 && world instanceof ServerWorld sw) {
-                    living.clearActiveItem();
-                    living.damage(sw, entity.getDamageSources().magic(), 1);
+                if (i > 200 && world instanceof ServerLevel sw) {
+                    living.stopUsingItem();
+                    living.hurtServer(sw, entity.damageSources().magic(), 1);
                     if (EnchantableItem.isEnchanted(stack)) {
                         CustomisedSpellType<?> spellType = EnchantableItem.getSpellEffect(stack);
                         if (Charges.discharge(stack, 1)) {
@@ -221,14 +199,14 @@ public class EnchantedStaffItem extends StaffItem implements MultiItem, Charges.
     }
 
     @Override
-    public int getMaxUseTime(ItemStack stack, LivingEntity user) {
+    public int getUseDuration(ItemStack stack, LivingEntity user) {
         return 72000;
     }
 
     @Override
-    public Text getName(ItemStack stack) {
+    public Component getName(ItemStack stack) {
         if (EnchantableItem.isEnchanted(stack) && Charges.of(stack).energy() > 0) {
-            return Text.translatable(getTranslationKey() + ".enchanted", super.getName(stack), EnchantableItem.getSpellKey(stack).getName());
+            return Component.translatable(getDescriptionId() + ".enchanted", super.getName(stack), EnchantableItem.getSpellKey(stack).getName());
         }
         return super.getName(stack);
     }

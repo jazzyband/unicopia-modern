@@ -1,0 +1,10 @@
+{
+  "type": "unicopia:altar",
+  "group": "",
+  "ingredients": [
+    "minecraft:clock"
+  ],
+  "result": {
+    "id": "unicopia:spectral_clock"
+  }
+}

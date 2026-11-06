@@ -1,17 +1,17 @@
 package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.entity.player.Pony;
-import net.minecraft.entity.passive.CamelEntity;
+import net.minecraft.world.entity.animal.camel.Camel;
 
-public class CamelBehaviour extends EntityBehaviour<CamelEntity> {
+public class CamelBehaviour extends EntityBehaviour<Camel> {
     @Override
-    public void update(Pony player, CamelEntity entity, Disguise spell) {
+    public void update(Pony player, Camel entity, Disguise spell) {
         entity.setDashing(player.asEntity().isSprinting());
 
-        if (player.asEntity().isSneaking()) {
-            entity.startSitting();
+        if (player.asEntity().isShiftKeyDown()) {
+            entity.sitDown();
         } else {
-            entity.startStanding();
+            entity.standUp();
         }
     }
 }

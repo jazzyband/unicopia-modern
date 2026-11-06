@@ -1,7 +1,6 @@
 package com.minelittlepony.unicopia.client.render.entity;
 
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
@@ -10,20 +9,20 @@ import com.minelittlepony.unicopia.client.render.spell.SpellEffectsRenderDispatc
 import com.minelittlepony.unicopia.client.render.spell.SpellRenderer;
 import com.minelittlepony.unicopia.client.render.spell.SpellRenderer.SpellRenderState;
 import com.minelittlepony.unicopia.entity.mob.CastSpellEntity;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
 
 public class CastSpellEntityRenderer extends EntityRenderer<CastSpellEntity, CastSpellEntityRenderer.State> {
     private static final Identifier[] TEXTURES = new Identifier[] {
@@ -35,7 +34,7 @@ public class CastSpellEntityRenderer extends EntityRenderer<CastSpellEntity, Cas
             Unicopia.id("textures/particles/runes_5.png")
     };
 
-    public CastSpellEntityRenderer(EntityRendererFactory.Context ctx) {
+    public CastSpellEntityRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
     }
 
@@ -46,78 +45,83 @@ public class CastSpellEntityRenderer extends EntityRenderer<CastSpellEntity, Cas
     }
 
     @Override
-    public void updateRenderState(CastSpellEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
-        state.ringAngle = ((state.age / 9F) % 360) * MathHelper.RADIANS_PER_DEGREE;
-        state.height = entity.getHeight();
+    public void extractRenderState(CastSpellEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
+        state.angle = (state.ageInTicks / 9F) % 360;
+        state.boundingBoxHeight = entity.getBbHeight();
         state.scale = entity.getScale(tickDelta);
-        state.ringScale = state.scale * 3;
-        float pitch = entity.getPitch(tickDelta);
-        state.rotation.rotationZYX(0, entity.getYaw(tickDelta) * MathHelper.RADIANS_PER_DEGREE, -entity.getPitch(tickDelta) * MathHelper.RADIANS_PER_DEGREE);
-        state.yOffset = (-pitch / 90F) * state.height * 0.5F;
-
+        state.pitch = entity.getViewXRot(tickDelta);
+        state.yaw = entity.getViewYRot(tickDelta);
+        state.yOffset = (-state.pitch / 90F) * state.boundingBoxHeight * 0.5F;
         state.state.update(entity, tickDelta);
     }
 
     @Override
-    protected boolean canBeCulled(CastSpellEntity entity) {
-        return false;
-    }
-
-    @Override
-    public void render(State state, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.cameraEntity instanceof CastSpellEntity) {
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertices, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.getCameraEntity() instanceof CastSpellEntity) {
             return;
         }
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(0, 0.001 + state.yOffset, 0);
-        matrices.multiply(state.rotation);
+        matrices.rotate(Axis.YP.rotationDegrees(state.yaw));
+        matrices.rotate(Axis.XP.rotationDegrees(-state.pitch));
 
-        SpellRenderState spellState = state.state.spells.getFirst();
+        SpellRenderState spellState = state.state.spells.isEmpty() ? null : state.state.spells.getFirst();
         if (spellState != null) {
-            renderAmbientEffects(matrices, vertices, state, spellState, light);
-            SpellEffectsRenderDispatcher.INSTANCE.render(matrices, vertices, light, spellState);
+            renderAmbientEffects(matrices, vertices, state, spellState, state.lightCoords);
+            SpellEffectsRenderDispatcher.INSTANCE.render(matrices, vertices, state.lightCoords, state.state, spellState);
         }
-        matrices.pop();
+        matrices.popPose();
     }
 
-    protected void renderAmbientEffects(MatrixStack matrices, VertexConsumerProvider vertices, State state, SpellRenderState spell, int light) {
-        matrices.push();
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
-        matrices.scale(state.ringScale, state.ringScale, state.ringScale);
+    protected void renderAmbientEffects(PoseStack matrices, SubmitNodeCollector vertices, State state, SpellRenderState spell, int light) {
+        matrices.pushPose();
+        matrices.rotate(Axis.XP.rotationDegrees(90));
+
+        float scale = state.scale * 3;
+        matrices.scale(scale, scale, scale);
 
         @Nullable
         SpellRenderer<?, ?> renderer = spell == null ? null : SpellEffectsRenderDispatcher.INSTANCE.getRenderer(spell);
-
-        Quaternionf rotation = new Quaternionf();
 
         for (int i = 0; i < TEXTURES.length; i++) {
             if (renderer != null && !renderer.shouldRenderEffectPass(i)) {
                 continue;
             }
-            VertexConsumer buffer = vertices.getBuffer(RenderLayer.getEntityTranslucent(TEXTURES[i]));
 
+            final Identifier texture = TEXTURES[i];
             for (int dim = 0; dim < 3; dim++) {
+                final int ringIndex = dim;
                 float ringSpeed = (i % 2 == 0 ? i : -1) * i;
 
-                matrices.push();
-                matrices.multiply(rotation.rotationZYX(state.ringAngle * ringSpeed, state.ringAngle * ringSpeed * dim, state.ringAngle * ringSpeed * dim));
-                PlaneModel.INSTANCE.render(matrices, buffer, light, OverlayTexture.DEFAULT_UV, 1, ColorHelper.withAlpha(spell.type.type().getColor(), (int)(255 * (state.ringScale / ((float)(dim * 3) + 1)))));
-                matrices.pop();
+                matrices.pushPose();
+                matrices.rotate(Axis.ZP.rotationDegrees(state.angle * ringSpeed));
+                matrices.rotate(Axis.YP.rotationDegrees(state.angle * ringSpeed * dim));
+                matrices.rotate(Axis.XP.rotationDegrees(state.angle * ringSpeed * dim));
+                vertices.submitCustomGeometry(matrices, RenderTypes.entityTranslucent(texture), (pose, buffer) -> {
+                    PoseStack stack = new PoseStack();
+                    stack.mulPose(pose.pose());
+                    PlaneModel.INSTANCE.render(stack, buffer, light, OverlayTexture.NO_OVERLAY, 1,
+                            ARGB.color(Mth.clamp((int)(255 * (scale / ((float)(ringIndex * 3) + 1))), 0, 255), spell.type.type().getColor()));
+                });
+                matrices.popPose();
             }
         }
 
-        matrices.pop();
+        matrices.popPose();
     }
 
     public static class State extends EntityRenderState {
         public float scale;
+        public float pitch;
+        public float yaw;
+
         public float yOffset;
-        public float ringAngle;
-        public float ringScale;
-        public final Quaternionf rotation = new Quaternionf();
+
+        public float angle;
 
         public CasterState state = new CasterState(this);
     }
 }
+

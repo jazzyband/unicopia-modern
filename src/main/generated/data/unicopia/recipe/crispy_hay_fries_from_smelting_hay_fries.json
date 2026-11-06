@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 25,
+  "experience": 1.0,
+  "group": "hay_fries",
+  "ingredient": "unicopia:hay_fries",
+  "result": {
+    "id": "unicopia:crispy_hay_fries"
+  }
+}

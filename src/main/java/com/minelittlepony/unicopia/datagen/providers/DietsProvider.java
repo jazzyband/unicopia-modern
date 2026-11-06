@@ -12,16 +12,16 @@ import com.minelittlepony.unicopia.datagen.DataCollector;
 import com.minelittlepony.unicopia.diet.DietProfile;
 import com.minelittlepony.unicopia.diet.FoodGroup;
 import com.minelittlepony.unicopia.diet.FoodGroupEffects;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.minecraft.data.DataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.DataWriter;
-import net.minecraft.data.tag.TagProvider;
-import net.minecraft.data.tag.TagProvider.TagLookup;
-import net.minecraft.item.Item;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
+import net.minecraft.data.PackOutput;
+import net.minecraft.data.tags.TagsProvider;
+import net.minecraft.data.tags.TagsProvider.TagLookup;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 
 public class DietsProvider implements DataProvider {
     private final DataCollector<DietProfile> dietsCollector;
@@ -29,10 +29,10 @@ public class DietsProvider implements DataProvider {
 
     private final CompletableFuture<TagLookup<Item>> itemTagLookup;
 
-    public DietsProvider(FabricDataOutput output, TagProvider<Item> tagProvider) {
-        this.dietsCollector = new DataCollector<>(output.getResolver(DataOutput.OutputType.DATA_PACK, "diet/races"), DietProfile.CODEC);
-        this.categoriesCollector = new DataCollector<>(output.getResolver(DataOutput.OutputType.DATA_PACK, "diet/food_groups"), FoodGroup.EFFECTS_CODEC);
-        itemTagLookup = tagProvider.getTagLookupFuture();
+    public DietsProvider(FabricPackOutput output, TagsProvider<Item> tagProvider) {
+        this.dietsCollector = new DataCollector<>(output.createPathProvider(PackOutput.Target.DATA_PACK, "diet/races"), DietProfile.CODEC);
+        this.categoriesCollector = new DataCollector<>(output.createPathProvider(PackOutput.Target.DATA_PACK, "diet/food_groups"), FoodGroup.EFFECTS_CODEC);
+        itemTagLookup = tagProvider.contentsGetter();
     }
 
     @Override
@@ -41,14 +41,14 @@ public class DietsProvider implements DataProvider {
     }
 
     @Override
-    public CompletableFuture<?> run(DataWriter writer) {
+    public CompletableFuture<?> run(CachedOutput writer) {
         return itemTagLookup.thenCompose(tagLookup -> {
             var diets = categoriesCollector.prime();
             Map<Identifier, Set<Identifier>> keyToGroupId = new HashMap<>();
             new FoodGroupsGenerator().generate((id, builder) -> {
                 var attributes = builder.build();
                 attributes.tags().forEach(key -> {
-                    if (!tagLookup.contains(TagKey.of(RegistryKeys.ITEM, key.id()))) {
+                    if (!tagLookup.contains(TagKey.create(Registries.ITEM, key.id()))) {
                         throw new IllegalArgumentException("Food group " + id + " references unknown item tag " + key.id());
                     }
                     keyToGroupId.computeIfAbsent(key.id(), i -> new HashSet<>()).add(id);
@@ -57,7 +57,7 @@ public class DietsProvider implements DataProvider {
             });
             var profiles = dietsCollector.prime();
             new DietProfileGenerator().generate((race, profile) -> {
-                Identifier id = Race.REGISTRY.getId(race);
+                Identifier id = Race.REGISTRY.getKey(race);
                 StringBuilder issues = new StringBuilder();
                 profile.validate(issue -> {
                     issues.append(System.lineSeparator()).append(issue);

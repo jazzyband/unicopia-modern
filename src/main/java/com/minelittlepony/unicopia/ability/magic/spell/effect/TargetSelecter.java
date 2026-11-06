@@ -6,12 +6,11 @@ import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import net.minecraft.world.entity.Entity;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.ability.magic.Affine;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
-import net.minecraft.entity.Entity;
 
 public class TargetSelecter {
     private final Map<UUID, Target> targets = new TreeMap<>();
@@ -48,7 +47,7 @@ public class TargetSelecter {
             .filter(EquinePredicates.EXCEPT_MAGIC_IMMUNE)
             .filter(entity -> entity != source.asEntity() && checkAlliegance(spell, source, entity) && filter.test(source, entity))
             .map(i -> {
-                targets.computeIfAbsent(i.getUuid(), Target::new);
+                targets.computeIfAbsent(i.getUUID(), Target::new);
                 return i;
             });
     }

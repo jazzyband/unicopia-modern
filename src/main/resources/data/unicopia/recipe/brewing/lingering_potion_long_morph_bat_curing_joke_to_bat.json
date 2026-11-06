@@ -1,0 +1,20 @@
+{
+    "type":  "minecraft:brewing",
+    "input":  {
+                  "item":  "minecraft:lingering_potion",
+                  "potion_contents":  {
+                                          "potions":  "unicopia:long_morph_bat"
+                                      }
+              },
+    "output":  {
+                   "components":  {
+                                      "minecraft:potion_contents":  {
+                                                                        "potion":  "unicopia:bat"
+                                                                    }
+                                  },
+                   "id":  "minecraft:lingering_potion"
+               },
+    "reagent":  {
+                    "item":  "unicopia:curing_joke"
+                }
+}

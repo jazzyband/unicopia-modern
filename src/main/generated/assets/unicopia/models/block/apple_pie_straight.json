@@ -1,0 +1,9 @@
+{
+  "parent": "unicopia:block/pie_straight",
+  "textures": {
+    "bottom": "unicopia:block/apple_pie_bottom",
+    "inside": "unicopia:block/apple_pie_inside",
+    "side": "unicopia:block/apple_pie_side",
+    "top": "unicopia:block/apple_pie_top"
+  }
+}

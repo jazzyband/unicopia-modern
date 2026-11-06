@@ -1,20 +1,18 @@
 package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 
 import java.util.List;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.item.*;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.minelittlepony.unicopia.recipe.URecipes;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.display.RecipeDisplay;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.world.World;
 
 /**
  * Recipe for adding traits to an existing spell.
@@ -23,7 +21,7 @@ public record SpellEnhancingRecipe (IngredientWithSpell material) implements Spe
     public static final MapCodec<SpellEnhancingRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             IngredientWithSpell.CODEC.fieldOf("material").forGetter(recipe -> recipe.material)
     ).apply(instance, SpellEnhancingRecipe::new));
-    public static final PacketCodec<RegistryByteBuf, SpellEnhancingRecipe> PACKET_CODEC = IngredientWithSpell.PACKET_CODEC.xmap(SpellEnhancingRecipe::new, SpellEnhancingRecipe::material);
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpellEnhancingRecipe> PACKET_CODEC = IngredientWithSpell.PACKET_CODEC.map(SpellEnhancingRecipe::new, SpellEnhancingRecipe::material);
 
     @Override
     public RecipeSerializer<SpellEnhancingRecipe> getSerializer() {
@@ -35,7 +33,7 @@ public record SpellEnhancingRecipe (IngredientWithSpell material) implements Spe
     }
 
     @Override
-    public List<RecipeDisplay> getDisplays() {
+    public List<RecipeDisplay> display() {
         return List.of(SpellbookRecipeDisplay.of(builder -> {
             builder.input(material.getMatchingStacks());
         }));
@@ -47,13 +45,13 @@ public record SpellEnhancingRecipe (IngredientWithSpell material) implements Spe
     }
 
     @Override
-    public boolean matches(Input inventory, World world) {
+    public boolean matches(Input inventory, Level world) {
         ItemStack stack = inventory.stackToModify();
         return material.test(stack) && EnchantableItem.isEnchanted(stack);
     }
 
     @Override
-    public ItemStack craft(Input inventory, WrapperLookup registries) {
+    public ItemStack craft(Input inventory, Provider registries) {
         return SpellTraits.of(inventory.stackToModify())
                 .add(inventory.traits())
                 .applyTo(inventory.stackToModify());

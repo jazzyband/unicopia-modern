@@ -3,6 +3,7 @@ package com.minelittlepony.unicopia.client;
 import com.minelittlepony.unicopia.block.*;
 import com.minelittlepony.unicopia.client.particle.ChangelingMagicParticle;
 import com.minelittlepony.unicopia.client.particle.CloudsEscapingParticle;
+import com.minelittlepony.unicopia.client.particle.CustomParticleGroup;
 import com.minelittlepony.unicopia.client.particle.DiskParticle;
 import com.minelittlepony.unicopia.client.particle.DustCloudParticle;
 import com.minelittlepony.unicopia.client.particle.FloatingBubbleParticle;
@@ -27,41 +28,40 @@ import com.minelittlepony.unicopia.client.render.spell.SpellRendererFactory;
 import com.minelittlepony.unicopia.entity.mob.UEntities;
 import com.minelittlepony.unicopia.particle.UParticles;
 
-import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
-import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
-import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.PendingParticleFactory;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry.PendingParticleProvider;
 import net.fabricmc.fabric.api.client.rendering.v1.*;
-
-import net.minecraft.block.Block;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.client.particle.SpriteProvider;
-import net.minecraft.client.render.*;
-import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
-import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.particle.ParticleEffect;
+import net.minecraft.client.particle.ParticleProvider;
+import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.world.level.block.Block;
 
 public interface URenderers {
 
     static void bootstrap() {
-        ParticleFactoryRegistry.getInstance().register(UParticles.UNICORN_MAGIC, createFactory(MagicParticle::new));
-        ParticleFactoryRegistry.getInstance().register(UParticles.CHANGELING_MAGIC, createFactory(ChangelingMagicParticle::new));
-        ParticleFactoryRegistry.getInstance().register(UParticles.BUBBLE, createFactory(FloatingBubbleParticle::new));
-        ParticleFactoryRegistry.getInstance().register(UParticles.RAIN_DROPS, createFactory(RaindropsParticle::new));
-        ParticleFactoryRegistry.getInstance().register(UParticles.HEALTH_DRAIN, createFactory(HealthDrainParticle::create));
-        ParticleFactoryRegistry.getInstance().register(UParticles.FOOTPRINT, createFactory(FootprintParticle::new));
-        ParticleFactoryRegistry.getInstance().register(UParticles.SPIRAL, createFactory(SpiralParticle::new));
-        ParticleFactoryRegistry.getInstance().register(UParticles.RAINBOOM_RING, RainboomParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.RAINBOOM_TRAIL, RainbowTrailParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.WIND, WindParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.SHOCKWAVE, ShockwaveParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.SPHERE, SphereParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.DISK, DiskParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.GROUND_POUND, GroundPoundParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.CLOUDS_ESCAPING, CloudsEscapingParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.LIGHTNING_BOLT, LightningBoltParticle::new);
-        ParticleFactoryRegistry.getInstance().register(UParticles.DUST_CLOUD, DustCloudParticle::new);
+        CustomParticleGroup.register();
+        ParticleProviderRegistry.getInstance().register(UParticles.UNICORN_MAGIC, createFactory(MagicParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.CHANGELING_MAGIC, createFactory(ChangelingMagicParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.BUBBLE, createFactory(FloatingBubbleParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.RAIN_DROPS, createFactory(RaindropsParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.HEALTH_DRAIN, createFactory(HealthDrainParticle::create));
+        ParticleProviderRegistry.getInstance().register(UParticles.FOOTPRINT, createFactory(FootprintParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.SPIRAL, createFactory(SpiralParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.RAINBOOM_RING, createProvider(RainboomParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.RAINBOOM_TRAIL, createProvider(RainbowTrailParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.WIND, createProvider(WindParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.SHOCKWAVE, createProvider(ShockwaveParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.SPHERE, createProvider(SphereParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.DISK, createProvider(DiskParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.GROUND_POUND, createProvider(GroundPoundParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.CLOUDS_ESCAPING, createProvider(CloudsEscapingParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.LIGHTNING_BOLT, createProvider(LightningBoltParticle::new));
+        ParticleProviderRegistry.getInstance().register(UParticles.DUST_CLOUD, createProvider(DustCloudParticle::new));
 
         AccessoryFeatureRenderer.register(
                 BraceletFeatureRenderer::new, AmuletFeatureRenderer::new, GlassesFeatureRenderer::new,
@@ -69,8 +69,8 @@ public interface URenderers {
                 HeldEntityFeatureRenderer::new, DisguisedArmsFeatureRenderer::new
         );
 
-        EntityRendererRegistry.register(UEntities.THROWN_ITEM, FlyingItemEntityRenderer::new);
-        EntityRendererRegistry.register(UEntities.MUFFIN, FlyingItemEntityRenderer::new);
+        EntityRendererRegistry.register(UEntities.THROWN_ITEM, ThrownItemRenderer::new);
+        EntityRendererRegistry.register(UEntities.MUFFIN, ThrownItemRenderer::new);
         EntityRendererRegistry.register(UEntities.MAGIC_BEAM, MagicBeamEntityRenderer::new);
         EntityRendererRegistry.register(UEntities.BUTTERFLY, ButterflyEntityRenderer::new);
         EntityRendererRegistry.register(UEntities.FLOATING_ARTEFACT, FloatingArtefactEntityRenderer::new);
@@ -91,16 +91,14 @@ public interface URenderers {
         EntityRendererRegistry.register(UEntities.PALM_CHEST_BOAT, ctx -> new CustomBoatEntityRenderer<>(ctx, UEntities.PALM_BOAT, true));
         EntityRendererRegistry.register(UEntities.LEVITATING_ITEM, LevitatingItemEntityRenderer::new);
 
-        BlockEntityRendererFactories.register(UBlockEntities.WEATHER_VANE, WeatherVaneBlockEntityRenderer::new);
-        BlockEntityRendererFactories.register(UBlockEntities.FANCY_BED, CloudBedBlockEntityRenderer::new);
-        BlockEntityRendererFactories.register(UBlockEntities.CLOUD_CHEST, CloudChestBlockEntityRenderer::new);
-        BlockEntityRendererFactories.register(UBlockEntities.ITEM_JAR, ItemJarBlockEntityRenderer::new);
+        BlockEntityRenderers.register(UBlockEntities.WEATHER_VANE, WeatherVaneBlockEntityRenderer::new);
+        BlockEntityRenderers.register(UBlockEntities.FANCY_BED, CloudBedBlockEntityRenderer::new);
+        BlockEntityRenderers.register(UBlockEntities.CLOUD_CHEST, CloudChestBlockEntityRenderer::new);
+        BlockEntityRenderers.register(UBlockEntities.ITEM_JAR, ItemJarBlockEntityRenderer::new);
 
-        ColorProviderRegistry.BLOCK.register(BlockTintSource::getColor, TintedBlock.REGISTRY.stream().toArray(Block[]::new));
-        BlockRenderLayerMap.INSTANCE.putBlocks(RenderLayer.getCutout(), UBlocks.TRANSLUCENT_BLOCKS.stream().toArray(Block[]::new));
-        BlockRenderLayerMap.INSTANCE.putBlocks(RenderLayer.getTranslucent(), UBlocks.SEMI_TRANSPARENT_BLOCKS.stream().toArray(Block[]::new));
-        // for lava boats
-        BlockRenderLayerMap.INSTANCE.putFluids(RenderLayer.getTranslucent(), Fluids.LAVA, Fluids.FLOWING_LAVA);
+        BlockColorRegistry.register((state, view, pos, tints) ->
+                tints.add(BlockTintSource.getColor(state, view, pos, 0)),
+                TintedBlock.REGISTRY.stream().toArray(Block[]::new));
         LeavesAdditionsModel.bootstrap();
 
         UItemPredicates.bootstrap();
@@ -108,11 +106,19 @@ public interface URenderers {
         URenderPipelines.bootstrap();
     }
 
-    static <T extends ParticleEffect> PendingParticleFactory<T> createFactory(ParticleSupplier<T> supplier) {
-        return provider -> (effect, world, x, y, z, dx, dy, dz) -> supplier.get(effect, provider, world, x, y, z, dx, dy, dz);
+    static <T extends ParticleOptions> PendingParticleProvider<T> createFactory(ParticleSupplier<T> supplier) {
+        return provider -> (effect, world, x, y, z, dx, dy, dz, random) -> supplier.get(effect, provider, world, x, y, z, dx, dy, dz);
     }
 
-    interface ParticleSupplier<T extends ParticleEffect> {
-        Particle get(T effect, SpriteProvider provider, ClientWorld world, double x, double y, double z, double dx, double dy, double dz);
+    static <T extends ParticleOptions> ParticleProvider<T> createProvider(DirectParticleSupplier<T> supplier) {
+        return (effect, world, x, y, z, dx, dy, dz, random) -> supplier.get(effect, world, x, y, z, dx, dy, dz);
+    }
+
+    interface DirectParticleSupplier<T extends ParticleOptions> {
+        Particle get(T effect, ClientLevel world, double x, double y, double z, double dx, double dy, double dz);
+    }
+
+    interface ParticleSupplier<T extends ParticleOptions> {
+        Particle get(T effect, SpriteSet provider, ClientLevel world, double x, double y, double z, double dx, double dy, double dz);
     }
 }

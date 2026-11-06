@@ -1,7 +1,11 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.sounds.SoundSource;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -10,12 +14,6 @@ import com.minelittlepony.unicopia.ability.magic.spell.CastingMethod;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.block.state.StateMaps;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
 
 /**
  * Kirin ability to transform into a nirik
@@ -38,7 +36,7 @@ public class KirinRageAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -54,14 +52,14 @@ public class KirinRageAbility implements Ability<Hit> {
             player.getMagicalReserves().getCharge().set(0);
             SpellType.RAGE.withTraits().apply(player, CastingMethod.INNATE);
         } else {
-            int type = 1 + player.asWorld().random.nextInt(4);
-            player.asEntity().sendMessage(Text.translatable("ability.unicopia.too_calm." + type), true);
+            int type = 1 + player.asWorld().getRandom().nextInt(4);
+            player.asEntity().sendOverlayMessage(Component.translatable("ability.unicopia.too_calm." + type));
             if (type == 4) {
                 player.getMagicalReserves().getCharge().addPercent(1);
             }
-            player.asEntity().addExhaustion(1.5F);
+            player.asEntity().causeFoodExhaustion(1.5F);
 
-            if (StateMaps.BURNABLE.convert(player.asWorld(), player.getOrigin().down())) {
+            if (StateMaps.BURNABLE.convert(player.asWorld(), player.getOrigin().below())) {
                 player.playSound(USounds.SPELL_FIRE_CRACKLE, 1);
             }
         }
@@ -73,8 +71,8 @@ public class KirinRageAbility implements Ability<Hit> {
     public void warmUp(Pony player, AbilitySlot slot) {
         player.spawnParticles(ParticleTypes.LAVA, 4);
         player.getMagicalReserves().getEnergy().addPercent(1.03F);
-        if (player.asEntity().age % 15 == 0) {
-            player.asWorld().playSound(player.asEntity(), player.getOrigin(), USounds.ENTITY_PLAYER_KIRIN_RAGE, SoundCategory.PLAYERS, 1F, 0.0125F);
+        if (player.asEntity().tickCount % 15 == 0) {
+            player.asWorld().playSound(player.asEntity(), player.getOrigin(), USounds.ENTITY_PLAYER_KIRIN_RAGE, SoundSource.PLAYERS, 1F, 0.0125F);
         }
     }
 

@@ -1,52 +1,51 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.Arrays;
+import net.minecraft.util.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsage;
-import net.minecraft.item.Items;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.potion.Potions;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.state.property.IntProperty;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Util;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
-
 public interface Soakable {
-    Codec<Soakable> CODEC = Registries.BLOCK.getCodec().xmap(b -> (Soakable)b, s -> (Block)s);
+    Codec<Soakable> CODEC = BuiltInRegistries.BLOCK.byNameCodec().xmap(b -> (Soakable)b, s -> (Block)s);
 
-    IntProperty MOISTURE = IntProperty.of("moisture", 1, 7);
+    IntegerProperty MOISTURE = IntegerProperty.create("moisture", 1, 7);
     Direction[] DIRECTIONS = Arrays.stream(Direction.values()).filter(d -> d != Direction.UP).toArray(Direction[]::new);
 
     @Nullable
     BlockState getStateWithMoisture(BlockState state, int moisture);
 
     default int getMoisture(BlockState state) {
-        return state.getOrEmpty(MOISTURE).orElse(0);
+        return state.getOptionalValue(MOISTURE).orElse(0);
     }
 
-    static void addMoistureParticles(BlockState state, World world, BlockPos pos, Random random) {
+    static void addMoistureParticles(BlockState state, Level world, BlockPos pos, RandomSource random) {
         if (random.nextInt(5) == 0) {
-            world.addParticleClient(ParticleTypes.DRIPPING_WATER,
+            world.addParticle(ParticleTypes.DRIPPING_WATER,
                     pos.getX() + random.nextFloat(),
                     pos.getY(),
                     pos.getZ() + random.nextFloat(),
@@ -55,49 +54,49 @@ public interface Soakable {
         }
     }
 
-    static ActionResult tryCollectMoisture(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    static InteractionResult tryCollectMoisture(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (state.getBlock() instanceof Soakable soakable) {
-            if (stack.isOf(Items.GLASS_BOTTLE)) {
-                player.setStackInHand(hand, ItemUsage.exchangeStack(stack, player, Items.POTION.getDefaultStack(), false));
-                world.playSound(player, player.getX(), player.getY(), player.getZ(), USounds.Vanilla.ITEM_BOTTLE_FILL, SoundCategory.NEUTRAL, 1, 1);
-                world.emitGameEvent(player, GameEvent.FLUID_PICKUP, pos);
+            if (stack.is(Items.GLASS_BOTTLE)) {
+                player.setItemInHand(hand, ItemUtils.createFilledResult(stack, player, Items.POTION.getDefaultInstance(), false));
+                world.playSound(player, player.getX(), player.getY(), player.getZ(), USounds.Vanilla.BOTTLE_FILL, SoundSource.NEUTRAL, 1, 1);
+                world.gameEvent(player, GameEvent.FLUID_PICKUP, pos);
                 updateMoisture(soakable, state, world, pos, soakable.getMoisture(state) - 1);
 
-                return ActionResult.SUCCESS;
+                return InteractionResult.SUCCESS;
             }
         }
 
         return tryDepositMoisture(stack, state, world, pos, player, hand, hit);
     }
 
-    static ActionResult tryDepositMoisture(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    static InteractionResult tryDepositMoisture(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (state.getBlock() instanceof Soakable soakable) {
             if (soakable.getMoisture(state) < 7
-                    && stack.isOf(Items.POTION)
-                    && stack.getOrDefault(DataComponentTypes.POTION_CONTENTS, PotionContentsComponent.DEFAULT).matches(Potions.WATER)) {
-                player.setStackInHand(hand, ItemUsage.exchangeStack(stack, player, Items.GLASS_BOTTLE.getDefaultStack(), false));
-                world.playSound(player, player.getX(), player.getY(), player.getZ(), USounds.Vanilla.ITEM_BUCKET_EMPTY, SoundCategory.NEUTRAL, 1, 1);
-                world.emitGameEvent(player, GameEvent.FLUID_PLACE, pos);
+                    && stack.is(Items.POTION)
+                    && stack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY).is(Potions.WATER)) {
+                player.setItemInHand(hand, ItemUtils.createFilledResult(stack, player, Items.GLASS_BOTTLE.getDefaultInstance(), false));
+                world.playSound(player, player.getX(), player.getY(), player.getZ(), USounds.Vanilla.BUCKET_EMPTY, SoundSource.NEUTRAL, 1, 1);
+                world.gameEvent(player, GameEvent.FLUID_PLACE, pos);
                 updateMoisture(soakable, state, world, pos, soakable.getMoisture(state) + 1);
 
-                return ActionResult.SUCCESS;
+                return InteractionResult.SUCCESS;
             }
         }
 
-        return ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
-    static void tickMoisture(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+    static void tickMoisture(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
         if (state.getBlock() instanceof Soakable soakable) {
             int moisture = soakable.getMoisture(state);
 
-            if (world.hasRain(pos) && world.isAir(pos.up())) {
+            if (world.isRainingAt(pos) && world.isEmptyBlock(pos.above())) {
                 if (moisture < 7) {
-                    world.setBlockState(pos, soakable.getStateWithMoisture(state, moisture + 1));
+                    world.setBlockAndUpdate(pos, soakable.getStateWithMoisture(state, moisture + 1));
                 }
-            } else if (!world.isAir(pos.up())) {
+            } else if (!world.isEmptyBlock(pos.above())) {
                 if (moisture > 1) {
-                    BlockPos neighborPos = pos.offset(Util.getRandom(Soakable.DIRECTIONS, random));
+                    BlockPos neighborPos = pos.relative(Util.getRandom(Soakable.DIRECTIONS, random));
                     BlockState neighborState = world.getBlockState(neighborPos);
 
                     if (neighborState.getBlock() instanceof Soakable neighborSoakable && neighborSoakable.getMoisture(neighborState) < moisture) {
@@ -106,8 +105,8 @@ public interface Soakable {
                         BlockState newNeighborState = neighborSoakable.getStateWithMoisture(neighborState, half);
                         if (newNeighborState != null) {
                             updateMoisture(soakable, state, world, pos, moisture - half);
-                            world.setBlockState(neighborPos, soakable.getStateWithMoisture(state, half));
-                            world.emitGameEvent(null, GameEvent.BLOCK_CHANGE, neighborPos);
+                            world.setBlockAndUpdate(neighborPos, soakable.getStateWithMoisture(state, half));
+                            world.gameEvent(null, GameEvent.BLOCK_CHANGE, neighborPos);
                             return;
                         }
                     }
@@ -117,8 +116,8 @@ public interface Soakable {
         }
     }
 
-    private static void updateMoisture(Soakable soakable, BlockState state, World world, BlockPos pos, int newMoisture) {
-        world.setBlockState(pos, soakable.getStateWithMoisture(state, newMoisture));
-        world.playSound(null, pos, SoundEvents.ENTITY_SALMON_FLOP, SoundCategory.BLOCKS, 1, (float)world.random.nextTriangular(0.5, 0.3F));
+    private static void updateMoisture(Soakable soakable, BlockState state, Level world, BlockPos pos, int newMoisture) {
+        world.setBlockAndUpdate(pos, soakable.getStateWithMoisture(state, newMoisture));
+        world.playSound(null, pos, SoundEvents.SALMON_FLOP, SoundSource.BLOCKS, 1, (float)world.getRandom().triangle(0.5, 0.3F));
     }
 }

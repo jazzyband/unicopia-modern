@@ -1,15 +1,15 @@
 package com.minelittlepony.unicopia.client.gui;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 
 public interface MagicText {
     static int getColor() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        float ticks = client.player.age + client.getRenderTickCounter().getTickProgress(false);
+        Minecraft client = Minecraft.getInstance();
+        float ticks = client.player.tickCount + client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        float sin = (MathHelper.sin(ticks / 10F) + 1) * 155 * 0.25F;
-        float cos = (MathHelper.cos((ticks + 10) / 10F) + 1) * 155 * 0.25F;
+        float sin = (Mth.sin(ticks / 10F) + 1) * 155 * 0.25F;
+        float cos = (Mth.cos((ticks + 10) / 10F) + 1) * 155 * 0.25F;
 
         return (int)(sin + cos);
     }

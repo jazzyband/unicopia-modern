@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "unicopia:chiselled_chitin",
+  "result": {
+    "id": "unicopia:polished_chitin"
+  }
+}

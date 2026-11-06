@@ -28,69 +28,78 @@ import it.unimi.dsi.fastutil.objects.Object2FloatMaps;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.component.EnchantmentEffectComponentTypes;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.*;
-import net.minecraft.entity.Entity.RemovalReason;
-import net.minecraft.entity.attribute.*;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.decoration.ItemFrameEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.DamageTypeTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.*;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.LocalDifficulty;
-import net.minecraft.world.World.ExplosionSourceType;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.Level.ExplosionInteraction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
 
 public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackable, ItemImpl.ClingyItem, TickableItem, DamageChecker {
     private static final Identifier EFFECT_ID = Unicopia.id("alicorn_amulet_modifiers");
-    private static final Object2FloatMap<RegistryEntry<EntityAttribute>> EFFECT_SCALES = Object2FloatMaps.unmodifiable(new Object2FloatOpenHashMap<>(Map.of(
-            EntityAttributes.ATTACK_DAMAGE, 0.2F,
-            EntityAttributes.ATTACK_KNOCKBACK, 0.05F,
-            EntityAttributes.ATTACK_SPEED, 0.2F,
-            EntityAttributes.ARMOR_TOUGHNESS, 0.001F,
-            EntityAttributes.ARMOR, 0.01F
+    private static final Object2FloatMap<Holder<Attribute>> EFFECT_SCALES = Object2FloatMaps.unmodifiable(new Object2FloatOpenHashMap<>(Map.of(
+            Attributes.ATTACK_DAMAGE, 0.2F,
+            Attributes.ATTACK_KNOCKBACK, 0.05F,
+            Attributes.ATTACK_SPEED, 0.2F,
+            Attributes.ARMOR_TOUGHNESS, 0.001F,
+            Attributes.ARMOR, 0.01F
     )));
-    private static final Float2ObjectFunction<EntityAttributeModifier> EFFECT_FACTORY = v -> {
-        return new EntityAttributeModifier(EFFECT_ID, v, EntityAttributeModifier.Operation.ADD_VALUE);
+    private static final Float2ObjectFunction<AttributeModifier> EFFECT_FACTORY = v -> {
+        return new AttributeModifier(EFFECT_ID, v, AttributeModifier.Operation.ADD_VALUE);
     };
 
-    public AlicornAmuletItem(Item.Settings settings) {
+    public AlicornAmuletItem(Item.Properties settings) {
         super(settings, 0);
     }
 
     @Environment(EnvType.CLIENT)
     @Override
-    public void appendTooltip(ItemStack stack, Item.TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
         ItemStackDuck.of(stack).getTransientComponents().getCarrier().flatMap(Pony::of).ifPresent(pony -> {
             if (pony.getArmourStacks().anyMatch(i -> i == stack)) {
                 long ticks = pony.getArmour().getTicks(this);
                 if (ticks > 0) {
-                    textConsumer.accept(Text.literal(ItemTracker.formatTicks(ticks, context.getUpdateTickRate()).formatted(Formatting.GRAY)));
+                    textConsumer.accept(Component.literal(ItemTracker.formatTicks(ticks, context.tickRate()).formatted(ChatFormatting.GRAY)));
                 }
             }
         });
     }
 
     @Override
-    public ParticleEffect getParticleEffect(IItemEntity entity) {
-        return ((ItemEntity)entity).getWorld().random.nextBoolean() ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME;
+    public ParticleOptions getParticleEffect(IItemEntity entity) {
+        return ((ItemEntity)entity).level().getRandom().nextBoolean() ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME;
     }
 
     @Override
@@ -100,7 +109,7 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
 
     @Override
     public boolean takesDamageFrom(DamageSource source) {
-        return source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY);
+        return source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
     }
 
     @Override
@@ -114,17 +123,17 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
     }
 
     @Override
-    public void interactWithPlayer(IItemEntity item, PlayerEntity player) {
+    public void interactWithPlayer(IItemEntity item, Player player) {
         ItemEntity entity = (ItemEntity)item;
 
-        if (!player.getWorld().isClient && !entity.isRemoved() && !player.isCreative()) {
-            if (player.getPos().distanceTo(entity.getPos()) < 0.5) {
-               if (entity.getWorld().random.nextInt(150) == 0) {
-                   entity.setPickupDelay(0);
-                   entity.onPlayerCollision(player);
+        if (!player.level().isClientSide() && !entity.isRemoved() && !player.isCreative()) {
+            if (player.position().distanceTo(entity.position()) < 0.5) {
+               if (entity.level().getRandom().nextInt(150) == 0) {
+                   entity.setPickUpDelay(0);
+                   entity.playerTouch(player);
 
-                   if (player.getMainHandStack().isOf(this) && use(player.getWorld(), player, Hand.MAIN_HAND) == ActionResult.SUCCESS) {
-                       entity.setPickupDelay(1000);
+                   if (player.getMainHandItem().is(this) && use(player.level(), player, InteractionHand.MAIN_HAND) == InteractionResult.SUCCESS) {
+                       entity.setPickUpDelay(1000);
                        entity.setRemoved(RemovalReason.DISCARDED);
                    }
                }
@@ -142,32 +151,32 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
 
         LivingEntity entity = wearer.asEntity();
 
-        if (entity instanceof PlayerEntity player && player.isCreative()) {
+        if (entity instanceof Player player && player.isCreative()) {
             return;
         }
 
         float attachedTime = timeWorn / ItemTracker.HOURS;
 
-        LocalDifficulty difficulty = wearer.asWorld().getLocalDifficulty(wearer.getOrigin());
-        float amount = Math.min(entity.getMaxHealth() - 1, (attachedTime / 4) * (1 + difficulty.getClampedLocalDifficulty()));
+        float difficulty = wearer.isClient() ? 0 : wearer.asServerWorld().getCurrentDifficultyAt(wearer.getOrigin()).getSpecialMultiplier();
+        float amount = Math.min(entity.getMaxHealth() - 1, (attachedTime / 4) * (1 + difficulty));
 
         if (timeWorn > ItemTracker.DAYS) {
             amount++;
         }
 
-        if (entity instanceof PlayerEntity player) {
-            player.getHungerManager().setFoodLevel(1);
+        if (entity instanceof Player player) {
+            player.getFoodData().setFoodLevel(1);
         }
         if (!wearer.isClient()) {
-            entity.damage(wearer.asServerWorld(), wearer.damageOf(UDamageTypes.ALICORN_AMULET), amount);
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 1));
+            entity.hurtServer(wearer.asServerWorld(), wearer.damageOf(UDamageTypes.ALICORN_AMULET), amount);
+            entity.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 200, 1));
             if (timeWorn > ItemTracker.HOURS) {
-                entity.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 200, 3));
+                entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 3));
             }
         }
 
         if (attachedTime > ItemTracker.HOURS / 2) {
-            entity.takeKnockback(1, 1, 1);
+            entity.knockback(1, 1, 1, wearer.damageOf(UDamageTypes.ALICORN_AMULET), 0);
             wearer.updateVelocity();
         }
 
@@ -181,15 +190,15 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
+    public void inventoryTick(ItemStack stack, ServerLevel world, Entity entity, EquipmentSlot slot) {
 
-        if (world.isClient) {
+        if (world.isClientSide()) {
             return;
         }
 
         // if we're in the main hand, try to equip ourselves
-        if (entity instanceof PlayerEntity player && slot == EquipmentSlot.MAINHAND && !isApplicable(player, this) && world.random.nextInt(320) == 0) {
-            use(world, player, Hand.MAIN_HAND);
+        if (entity instanceof Player player && slot == EquipmentSlot.MAINHAND && !isApplicable(player, this) && world.getRandom().nextInt(320) == 0) {
+            use(world, player, InteractionHand.MAIN_HAND);
             return;
         }
 
@@ -199,18 +208,18 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
             return;
         }
 
-        if (entity instanceof PlayerEntity) {
-            if (entity.isOnFire() && world.getBlockState(entity.getBlockPos().up()).isOf(UBlocks.SPECTRAL_FIRE)) {
+        if (entity instanceof Player) {
+            if (entity.isOnFire() && world.getBlockState(entity.blockPosition().above()).is(UBlocks.SPECTRAL_FIRE)) {
                 if (UnicopiaWorldProperties.forWorld(world).isActiveAltar(entity)) {
                     if (living.asEntity().getHealth() < 2) {
-                        entity.setFireTicks(0);
-                        world.removeBlock(entity.getBlockPos().up(), false);
-                        stack.decrement(1);
-                        world.createExplosion(null, entity.getX(), entity.getY(), entity.getZ(), 0, ExplosionSourceType.NONE);
-                        world.playSound(null, entity.getBlockPos(), USounds.ENTITY_SOMBRA_LAUGH, SoundCategory.AMBIENT, 10, 1);
-                        world.getEntitiesByClass(SpellbookEntity.class, entity.getBoundingBox().expand(6), Predicates.alwaysTrue()).forEach(e -> e.kill(world));
+                        entity.setRemainingFireTicks(0);
+                        world.removeBlock(entity.blockPosition().above(), false);
+                        stack.shrink(1);
+                        world.explode(null, entity.getX(), entity.getY(), entity.getZ(), 0, ExplosionInteraction.NONE);
+                        world.playSound(null, entity.blockPosition(), USounds.ENTITY_SOMBRA_LAUGH, SoundSource.AMBIENT, 10, 1);
+                        world.getEntitiesOfClass(SpellbookEntity.class, entity.getBoundingBox().inflate(6), Predicates.alwaysTrue()).forEach(e -> e.kill(world));
 
-                        SombraEntity.startEncounter(world, entity.getBlockPos());
+                        SombraEntity.startEncounter(world, entity.blockPosition());
                     }
                     return;
                 }
@@ -221,13 +230,13 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
         final long daysAttached = attachedTicks / ItemTracker.DAYS;
         final boolean fullSecond = attachedTicks % ItemTracker.SECONDS == 0;
 
-        if (entity instanceof PlayerEntity player) {
+        if (entity instanceof Player player) {
             // healing effect
             if (daysAttached <= 4) {
                 if (player.getHealth() < player.getMaxHealth()) {
                     player.heal(0.5F);
-                } else if (player.canConsume(false)) {
-                    player.getHungerManager().add(1, 0);
+                } else if (player.canEat(false)) {
+                    player.getFoodData().eat(1, 0);
                 }
             }
 
@@ -235,12 +244,12 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
 
             // butterfingers effects
             if (daysAttached >= 2) {
-                if (pony.asWorld().random.nextInt(200) == 0 && !pony.asEntity().hasStatusEffect(UEffects.BUTTER_FINGERS)) {
-                    pony.asEntity().addStatusEffect(new StatusEffectInstance(UEffects.BUTTER_FINGERS, 2100, 1));
+                if (pony.asWorld().getRandom().nextInt(200) == 0 && !pony.asEntity().hasEffect(UEffects.BUTTER_FINGERS)) {
+                    pony.asEntity().addEffect(new MobEffectInstance(UEffects.BUTTER_FINGERS, 2100, 1));
                 }
 
-                pony.findAllEntitiesInRange(10, e -> e instanceof LivingEntity l && !l.hasStatusEffect(UEffects.CORRUPT_INFLUENCE)).forEach(e -> {
-                    ((LivingEntity)e).addStatusEffect(new StatusEffectInstance(UEffects.CORRUPT_INFLUENCE, 100, 1));
+                pony.findAllEntitiesInRange(10, e -> e instanceof LivingEntity l && !l.hasEffect(UEffects.CORRUPT_INFLUENCE)).forEach(e -> {
+                    ((LivingEntity)e).addEffect(new MobEffectInstance(UEffects.CORRUPT_INFLUENCE, 100, 1));
                 });
             }
 
@@ -248,9 +257,9 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
             if (daysAttached >= 3 && !pony.asEntity().isCreative()) {
                 TrinketsDelegate.EquippedStack amulet = getForEntity(pony.asEntity(), this);
 
-                if (!amulet.stack().isEmpty() && !EnchantmentHelper.hasAnyEnchantmentsWith(amulet.stack(), EnchantmentEffectComponentTypes.PREVENT_ARMOR_CHANGE)) {
+                if (!amulet.stack().isEmpty() && !EnchantmentHelper.has(amulet.stack(), EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)) {
                     pony.playSound(USounds.ITEM_ALICORN_AMULET_HALLUCINATION, 3, 1);
-                    amulet.stack().addEnchantment(pony.entryFor(Enchantments.BINDING_CURSE), 1);
+                    amulet.stack().enchant(pony.entryFor(Enchantments.BINDING_CURSE), 1);
                     amulet.markChanged();
                 }
             }
@@ -263,31 +272,31 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
             }
 
             // gradual corruption accumulation
-            if (fullSecond && world.random.nextInt(12) == 0 && !pony.asEntity().isCreative()) {
+            if (fullSecond && world.getRandom().nextInt(12) == 0 && !pony.asEntity().isCreative()) {
                 reserves.getEnergy().add(10);
-                pony.getCorruption().add((int)MathHelper.clamp(attachedTicks / ItemTracker.HOURS, 1, pony.getCorruption().getMax()));
+                pony.getCorruption().add((int)Mth.clamp(attachedTicks / ItemTracker.HOURS, 1, pony.getCorruption().getMax()));
             }
 
             // ambient effects
-            if (attachedTicks % ItemTracker.HOURS < 90 && world.random.nextInt(900) == 0) {
+            if (attachedTicks % ItemTracker.HOURS < 90 && world.getRandom().nextInt(900) == 0) {
                 pony.playSound(USounds.ITEM_ALICORN_AMULET_HALLUCINATION, 3, 1);
-            } else if (attachedTicks < 2 || (attachedTicks % (10 * ItemTracker.SECONDS) < 9 && world.random.nextInt(90) == 0)) {
+            } else if (attachedTicks < 2 || (attachedTicks % (10 * ItemTracker.SECONDS) < 9 && world.getRandom().nextInt(90) == 0)) {
                 if (attachedTicks % 5 == 0) {
                     InteractionManager.getInstance().playLoopingSound(player, InteractionManager.SOUND_HEART_BEAT, 0);
                 }
 
                 reserves.getExertion().addPercent(10);
                 reserves.getEnergy().add(10);
-                living.asEntity().removeStatusEffect(StatusEffects.WEAKNESS);
-                living.asEntity().removeStatusEffect(StatusEffects.NAUSEA);
+                living.asEntity().removeEffect(MobEffects.WEAKNESS);
+                living.asEntity().removeEffect(MobEffects.NAUSEA);
             }
 
             // damage effect after 4 days
             if (daysAttached >= 4) {
                 if (attachedTicks % 100 == 0) {
-                    player.getHungerManager().addExhaustion(90F);
-                    float healthDrop = MathHelper.clamp(player.getMaxHealth() - player.getHealth(), 2, 5);
-                    player.damage(world, pony.damageOf(UDamageTypes.ALICORN_AMULET), healthDrop);
+                    player.getFoodData().addExhaustion(90F);
+                    float healthDrop = Mth.clamp(player.getMaxHealth() - player.getHealth(), 2, 5);
+                    player.hurtServer(world, pony.damageOf(UDamageTypes.ALICORN_AMULET), healthDrop);
                 }
 
                 return;
@@ -301,42 +310,42 @@ public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackab
     }
 
     @Override
-    public ActionResult onGroundTick(IItemEntity item) {
+    public InteractionResult onGroundTick(IItemEntity item) {
         ItemEntity entity = (ItemEntity)item;
 
-        if (entity.getWorld().random.nextInt(500) == 0) {
-            entity.getWorld().playSound(null, entity.getBlockPos(), USounds.ITEM_ALICORN_AMULET_AMBIENT, SoundCategory.HOSTILE, 0.5F, 1);
+        if (entity.level().getRandom().nextInt(500) == 0) {
+            entity.level().playSound(null, entity.blockPosition(), USounds.ITEM_ALICORN_AMULET_AMBIENT, SoundSource.HOSTILE, 0.5F, 1);
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     @Override
-    public void inFrameTick(ItemFrameEntity entity) {
-        Random rng = entity.getWorld().random;
+    public void inFrameTick(ItemFrame entity) {
+        RandomSource rng = entity.level().getRandom();
 
         if (rng.nextInt(1500) == 0) {
-            entity.getWorld().playSound(null, entity.getBlockPos(), USounds.ITEM_ALICORN_AMULET_AMBIENT, SoundCategory.HOSTILE, 0.5F, 1);
+            entity.level().playSound(null, entity.blockPosition(), USounds.ITEM_ALICORN_AMULET_AMBIENT, SoundSource.HOSTILE, 0.5F, 1);
             for (int i = 0; i < 5; i++) {
-                entity.getWorld().addParticleClient(rng.nextBoolean() ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME,
-                        rng.nextTriangular(entity.getX(), 0.5),
-                        rng.nextTriangular(entity.getY(), 0.5),
-                        rng.nextTriangular(entity.getZ(), 0.5),
+                entity.level().addParticle(rng.nextBoolean() ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME,
+                        rng.triangle(entity.getX(), 0.5),
+                        rng.triangle(entity.getY(), 0.5),
+                        rng.triangle(entity.getZ(), 0.5),
                         0, 0, 0
                 );
             }
         }
 
-        if ((entity.age / 1000) % 10 == 0 && entity.age % 50 == 0) {
-            for (Entity target : VecHelper.findInRange(entity, entity.getWorld(), entity.getPos(), 10, EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR)) {
+        if ((entity.tickCount / 1000) % 10 == 0 && entity.tickCount % 50 == 0) {
+            for (Entity target : VecHelper.findInRange(entity, entity.level(), entity.position(), 10, EntitySelector.NO_CREATIVE_OR_SPECTATOR)) {
                 if (target instanceof LivingEntity l) {
                     for (EquipmentSlot slot : EquipmentSlot.VALUES) {
-                        ItemStack equipment = l.getEquippedStack(slot);
-                        if (equipment.isOf(UItems.GROGARS_BELL)) {
+                        ItemStack equipment = l.getItemBySlot(slot);
+                        if (equipment.is(UItems.GROGARS_BELL)) {
                             if (Charges.discharge(equipment, 3)) {
-                                ParticleUtils.spawnParticle(entity.getWorld(),
+                                ParticleUtils.spawnParticle(entity.level(),
                                         new FollowingParticleEffect(UParticles.HEALTH_DRAIN, entity, 0.4F)
-                                        .withChild(ParticleTypes.COMPOSTER), target.getEyePos(), Vec3d.ZERO);
+                                        .withChild(ParticleTypes.COMPOSTER), target.getEyePosition(), Vec3.ZERO);
                             }
                         }
                     }

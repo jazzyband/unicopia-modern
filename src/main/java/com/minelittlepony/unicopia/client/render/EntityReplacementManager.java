@@ -3,7 +3,13 @@ package com.minelittlepony.unicopia.client.render;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquinePredicates;
@@ -12,42 +18,35 @@ import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 import com.minelittlepony.unicopia.entity.behaviour.Disguise;
 import com.minelittlepony.unicopia.entity.behaviour.EntityAppearance;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.player.PlayerEntity;
-
 class EntityReplacementManager implements Disguise {
     @Nullable
     private EntityType<?> currentType;
     private final EntityAppearance disguise = new EntityAppearance();
     private final List<EntityType<?>> defaultTypes = List.of(
-            EntityType.ZOMBIE,
-            EntityType.CREEPER,
-            EntityType.HUSK,
-            EntityType.SKELETON,
-            EntityType.BLAZE,
-            EntityType.DROWNED
+            EntityTypes.ZOMBIE,
+            EntityTypes.CREEPER,
+            EntityTypes.HUSK,
+            EntityTypes.SKELETON,
+            EntityTypes.BLAZE,
+            EntityTypes.DROWNED
     );
     private final Map<EntityType<?>, List<EntityType<?>>> pools = Map.of(
-            EntityType.VILLAGER, List.of(EntityType.PILLAGER),
-            EntityType.PLAYER, List.of(EntityType.ZOMBIE),
-            EntityType.PIGLIN, List.of(EntityType.ZOMBIFIED_PIGLIN, EntityType.PIGLIN_BRUTE),
-            EntityType.SQUID, List.of(EntityType.DROWNED),
-            EntityType.DOLPHIN, List.of(EntityType.DROWNED),
-            EntityType.ENDER_DRAGON, List.of(EntityType.CHICKEN)
+            EntityTypes.VILLAGER, List.of(EntityTypes.PILLAGER),
+            EntityTypes.PLAYER, List.of(EntityTypes.ZOMBIE),
+            EntityTypes.PIGLIN, List.of(EntityTypes.ZOMBIFIED_PIGLIN, EntityTypes.PIGLIN_BRUTE),
+            EntityTypes.SQUID, List.of(EntityTypes.DROWNED),
+            EntityTypes.DOLPHIN, List.of(EntityTypes.DROWNED),
+            EntityTypes.ENDER_DRAGON, List.of(EntityTypes.CHICKEN)
     );
 
     public Optional<Disguise> getAppearanceFor(Caster<?> caster) {
 
-        if (isRageApplicable(caster.asEntity()) && EquinePredicates.RAGING.test(MinecraftClient.getInstance().player)) {
+        if (isRageApplicable(caster.asEntity()) && EquinePredicates.RAGING.test(Minecraft.getInstance().player)) {
             List<EntityType<?>> mobTypes = getMobTypePool(caster.asEntity().getType());
-            EntityType<?> type = mobTypes.get(Math.abs((int)caster.asEntity().getUuid().getMostSignificantBits()) % mobTypes.size());
+            EntityType<?> type = mobTypes.get(Math.abs((int)caster.asEntity().getUUID().getMostSignificantBits()) % mobTypes.size());
             if (type != currentType) {
                 currentType = type;
-                disguise.setAppearance(type.create(caster.asWorld(), SpawnReason.LOAD));
+                disguise.setAppearance(type.create(caster.asWorld(), EntitySpawnReason.LOAD));
             }
             return Optional.of(this);
         }
@@ -60,7 +59,7 @@ class EntityReplacementManager implements Disguise {
     }
 
     private boolean isRageApplicable(Entity entity) {
-        return entity != MinecraftClient.getInstance().player && (entity instanceof PassiveEntity || entity instanceof PlayerEntity || pools.containsKey(entity.getType()));
+        return entity != Minecraft.getInstance().player && (entity instanceof AgeableMob || entity instanceof Player || pools.containsKey(entity.getType()));
     }
 
     @Override

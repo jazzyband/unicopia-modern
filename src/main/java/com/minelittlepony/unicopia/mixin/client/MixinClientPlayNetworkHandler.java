@@ -13,47 +13,46 @@ import com.minelittlepony.unicopia.entity.behaviour.Disguise;
 import com.minelittlepony.unicopia.entity.behaviour.EntityAppearance;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.network.track.Trackable;
+import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 
-import net.minecraft.client.network.ClientCommonNetworkHandler;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-
-@Mixin(ClientPlayNetworkHandler.class)
-abstract class MixinClientPlayNetworkHandler extends ClientCommonNetworkHandler {
+@Mixin(ClientPacketListener.class)
+abstract class MixinClientPlayNetworkHandler extends ClientCommonPacketListenerImpl {
     protected MixinClientPlayNetworkHandler() { super(null, null, null); }
 
-    @Shadow private ClientWorld world;
+    @Shadow private ClientLevel level;
 
     @Nullable
-    private ClientPlayerEntity oldPlayer;
+    private LocalPlayer oldPlayer;
 
-    @Inject(method = "onEntityStatus", at = @At("TAIL"))
-    private void onOnEntityStatus(EntityStatusS2CPacket packet, CallbackInfo info) {
-        Living<?> living = Living.living(packet.getEntity(world));
+    @Inject(method = "handleEntityEvent", at = @At("TAIL"))
+    private void onOnEntityStatus(ClientboundEntityEventPacket packet, CallbackInfo info) {
+        Living<?> living = Living.living(packet.getEntity(level));
         if (living != null) {
             living.getSpellSlot()
                 .get(SpellPredicate.IS_DISGUISE)
                 .map(Disguise::getAppearance)
                 .map(EntityAppearance::getEntity)
                 .ifPresent(appearance -> {
-                    appearance.handleStatus(packet.getStatus());
+                    appearance.handleEntityEvent(packet.getEventId());
                 });
         }
     }
 
-    @Inject(method = "onPlayerRespawn", at = @At("HEAD"))
-    public void beforeOnPlayerRespawn(PlayerRespawnS2CPacket packet, CallbackInfo info) {
-        oldPlayer = client.player;
+    @Inject(method = "handleRespawn", at = @At("HEAD"))
+    public void beforeOnPlayerRespawn(ClientboundRespawnPacket packet, CallbackInfo info) {
+        oldPlayer = minecraft.player;
     }
 
-    @Inject(method = "onPlayerRespawn", at = @At("RETURN"))
-    public void afterOnPlayerRespawn(PlayerRespawnS2CPacket packet, CallbackInfo info) {
-        if (oldPlayer != null && oldPlayer != client.player) {
-            Trackable.of(oldPlayer).getDataTrackers().copyTo(Trackable.of(client.player).getDataTrackers());
-            Pony.of(client.player).copyFrom(Pony.of(oldPlayer), true);
+    @Inject(method = "handleRespawn", at = @At("RETURN"))
+    public void afterOnPlayerRespawn(ClientboundRespawnPacket packet, CallbackInfo info) {
+        if (oldPlayer != null && oldPlayer != minecraft.player) {
+            Trackable.of(oldPlayer).getDataTrackers().copyTo(Trackable.of(minecraft.player).getDataTrackers());
+            Pony.of(minecraft.player).copyFrom(Pony.of(oldPlayer), true);
         }
     }
 }

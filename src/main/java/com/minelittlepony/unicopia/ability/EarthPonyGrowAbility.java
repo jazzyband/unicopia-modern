@@ -3,7 +3,24 @@ package com.minelittlepony.unicopia.ability;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.BoneMealItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CarrotBlock;
+import net.minecraft.world.level.block.FarmlandBlock;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.ability.data.Pos;
@@ -17,25 +34,6 @@ import com.minelittlepony.unicopia.server.world.BlockDestructionManager;
 import com.minelittlepony.unicopia.server.world.ModificationType;
 import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.VecHelper;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CarrotsBlock;
-import net.minecraft.block.FarmlandBlock;
-import net.minecraft.item.BoneMealItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldEvents;
 
 /**
  * Earth Pony ability to grow crops
@@ -58,7 +56,7 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Pos> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Pos> getSerializer() {
         return Pos.CODEC;
     }
 
@@ -72,9 +70,9 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
         int count = 0;
 
         if (!applyDirectly(player, data.pos())) {
-            for (BlockPos pos : BlockPos.iterate(
-                    data.pos().add(-2, -2, -2),
-                    data.pos().add( 2,  2,  2))) {
+            for (BlockPos pos : BlockPos.betweenClosed(
+                    data.pos().offset(-2, -2, -2),
+                    data.pos().offset( 2,  2,  2))) {
                 if (player.canModifyAt(pos, ModificationType.PHYSICAL)) {
                     count += applySingle(player, player.asWorld(), player.asWorld().getBlockState(pos), pos);
                 }
@@ -89,7 +87,7 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
         return true;
     }
 
-    protected int applySingle(Pony player, World w, BlockState state, BlockPos pos) {
+    protected int applySingle(Pony player, Level w, BlockState state, BlockPos pos) {
 
         ItemStack stack = new ItemStack(Items.BONE_MEAL);
 
@@ -97,38 +95,38 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
             return growable.grow(w, state, pos) ? 1 : 0;
         }
 
-        if (state.isOf(Blocks.CARROTS)) {
-            if (state.get(CarrotsBlock.AGE) == CarrotsBlock.MAX_AGE) {
-                boolean transform = w.random.nextInt(3) == 0;
+        if (state.is(Blocks.CARROTS)) {
+            if (state.getValue(CarrotBlock.AGE) == CarrotBlock.MAX_AGE) {
+                boolean transform = w.getRandom().nextInt(3) == 0;
                 spawnConversionParticles(w, pos, transform);
                 if (transform) {
-                    w.setBlockState(pos, UBlocks.GOLD_ROOT.getDefaultState().with(CarrotsBlock.AGE, CarrotsBlock.MAX_AGE));
+                    w.setBlockAndUpdate(pos, UBlocks.GOLD_ROOT.defaultBlockState().setValue(CarrotBlock.AGE, CarrotBlock.MAX_AGE));
                 }
 
                 return 5;
             }
         }
 
-        if (w.getBlockState(pos).isIn(UTags.Blocks.UNAFFECTED_BY_GROW_ABILITY)) {
+        if (w.getBlockState(pos).is(UTags.Blocks.UNAFFECTED_BY_GROW_ABILITY)) {
             return 0;
         }
 
-        if (BoneMealItem.useOnFertilizable(stack, w, pos)) {
-            if (w.random.nextInt(350) == 0) {
-                if (w.getBlockState(pos.down()).isOf(Blocks.FARMLAND)) {
-                    FarmlandBlock.setToDirt(null, state, w, pos.down());
+        if (BoneMealItem.growCrop(stack, w, pos)) {
+            if (w.getRandom().nextInt(350) == 0) {
+                if (w.getBlockState(pos.below()).is(Blocks.FARMLAND)) {
+                    w.setBlockAndUpdate(pos.below(), Blocks.DIRT.defaultBlockState());
                 }
-                w.setBlockState(pos, UBlocks.PLUNDER_VINE_BUD.getDefaultState());
-            } else if (w.random.nextInt(5000) == 0) {
-                if (w.getBlockState(pos.down()).isOf(Blocks.FARMLAND)) {
-                    FarmlandBlock.setToDirt(null, state, w, pos.down());
+                w.setBlockAndUpdate(pos, UBlocks.PLUNDER_VINE_BUD.defaultBlockState());
+            } else if (w.getRandom().nextInt(5000) == 0) {
+                if (w.getBlockState(pos.below()).is(Blocks.FARMLAND)) {
+                    w.setBlockAndUpdate(pos.below(), Blocks.DIRT.defaultBlockState());
                 }
                 UBlocks.CURING_JOKE.grow(w, state, pos);
             }
             return 1;
         }
 
-        if (BoneMealItem.useOnGround(stack, w, pos, Direction.UP)) {
+        if (BoneMealItem.growWaterPlant(stack, w, pos, Direction.UP)) {
             return 1;
         }
 
@@ -138,36 +136,36 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
     @SuppressWarnings("unchecked")
     private boolean applyDirectly(Pony player, BlockPos pos) {
         var placementArea = new TransformCropsRecipe.PlacementArea(player, pos);
-        return StreamSupport.stream(((ServerWorld)player.asWorld()).getRecipeManager().values().spliterator(), false)
+        return StreamSupport.stream(((ServerLevel)player.asWorld()).recipeAccess().getRecipes().spliterator(), false)
                 .filter(recipe -> recipe.value().getType() == URecipes.GROWING)
-                .map(recipe -> (RecipeEntry<TransformCropsRecipe>)recipe)
+                .map(recipe -> (RecipeHolder<TransformCropsRecipe>)recipe)
                 .filter(recipe -> recipe.value().matches(placementArea, player.asWorld()))
                 .map(recipe -> recipe.value().checkPattern(player.asWorld(), pos))
                 .filter(result -> result.matchedLocations().size() + 1 >= TransformCropsRecipe.MINIMUM_INPUT)
                 .filter(result -> {
-            boolean transform = result.shoudTransform(player.asWorld().random);
+            boolean transform = result.shoudTransform(player.asWorld().getRandom());
 
             player.playSound(USounds.ENTITY_CRYSTAL_SHARDS_AMBIENT, 1);
 
             result.matchedLocations().forEach(cell -> {
-                spawnConversionParticles(player.asWorld(), cell.up(), false);
+                spawnConversionParticles(player.asWorld(), cell.above(), false);
                 BlockDestructionManager manager = BlockDestructionManager.of(player.asWorld());
                 if (transform) {
-                    if (manager.damageBlock(cell, 8) >= BlockDestructionManager.MAX_DAMAGE || player.asWorld().random.nextInt(20) == 0) {
-                        player.asWorld().setBlockState(cell, Blocks.DIRT.getDefaultState());
-                        player.asWorld().syncWorldEvent(WorldEvents.BLOCK_BROKEN, cell, Block.getRawIdFromState(player.asWorld().getBlockState(cell)));
+                    if (manager.damageBlock(cell, 8) >= BlockDestructionManager.MAX_DAMAGE || player.asWorld().getRandom().nextInt(20) == 0) {
+                        player.asWorld().setBlockAndUpdate(cell, Blocks.DIRT.defaultBlockState());
+                        player.asWorld().levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, cell, Block.getId(player.asWorld().getBlockState(cell)));
                     }
                 } else {
-                    if (manager.damageBlock(cell, 4) >= BlockDestructionManager.MAX_DAMAGE || player.asWorld().random.nextInt(20) == 0) {
-                        player.asWorld().setBlockState(cell, Blocks.DIRT.getDefaultState());
-                        player.asWorld().syncWorldEvent(WorldEvents.BLOCK_BROKEN, cell, Block.getRawIdFromState(player.asWorld().getBlockState(cell)));
+                    if (manager.damageBlock(cell, 4) >= BlockDestructionManager.MAX_DAMAGE || player.asWorld().getRandom().nextInt(20) == 0) {
+                        player.asWorld().setBlockAndUpdate(cell, Blocks.DIRT.defaultBlockState());
+                        player.asWorld().levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, cell, Block.getId(player.asWorld().getBlockState(cell)));
                     }
                 }
             });
 
             spawnConversionParticles(player.asWorld(), pos, transform);
             if (transform) {
-                player.asWorld().setBlockState(pos, result.recipe().getResult(player.asWorld(), pos));
+                player.asWorld().setBlockAndUpdate(pos, result.recipe().getResult(player.asWorld(), pos));
             }
 
             return true;
@@ -176,13 +174,13 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
         .isPresent();
     }
 
-    private static void spawnConversionParticles(World w, BlockPos pos, boolean success) {
-        Supplier<Vec3d> posSupplier = () -> pos.toCenterPos().add(VecHelper.triangular(w.random, 0, 0.5));
+    private static void spawnConversionParticles(Level w, BlockPos pos, boolean success) {
+        Supplier<Vec3> posSupplier = () -> Vec3.atCenterOf(pos).add(VecHelper.triangular(w.getRandom(), 0, 0.5));
 
         for (int i = 0; i < 25; i++) {
-            ParticleUtils.spawnParticle(w, new MagicParticleEffect(0xFFFF00), posSupplier.get(), Vec3d.ZERO);
+            ParticleUtils.spawnParticle(w, new MagicParticleEffect(0xFFFF00), posSupplier.get(), Vec3.ZERO);
             if (success) {
-                ParticleUtils.spawnParticle(w, ParticleTypes.CLOUD, posSupplier.get(), Vec3d.ZERO);
+                ParticleUtils.spawnParticle(w, ParticleTypes.CLOUD, posSupplier.get(), Vec3.ZERO);
             }
         }
     }
@@ -191,7 +189,7 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
     public void warmUp(Pony player, AbilitySlot slot) {
         player.getMagicalReserves().getExertion().addPercent(30);
 
-        if (player.asWorld().isClient()) {
+        if (player.asWorld().isClientSide()) {
             player.spawnParticles(MagicParticleEffect.UNICORN, 1);
         }
     }
@@ -202,6 +200,6 @@ public class EarthPonyGrowAbility implements Ability<Pos> {
     }
 
     public interface Growable {
-        boolean grow(World world, BlockState state, BlockPos pos);
+        boolean grow(Level world, BlockState state, BlockPos pos);
     }
 }

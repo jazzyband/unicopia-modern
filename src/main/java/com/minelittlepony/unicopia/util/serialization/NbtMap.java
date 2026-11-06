@@ -9,10 +9,9 @@ import java.util.function.Supplier;
 import org.jetbrains.annotations.Nullable;
 
 import com.mojang.serialization.Codec;
-
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 public class NbtMap<K, V> implements NbtSerialisable {
     public static <K, V> NbtMap<K, V> of(Codec<K> keyCodec, Codec<V> valueCodec) {
@@ -48,13 +47,13 @@ public class NbtMap<K, V> implements NbtSerialisable {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-        compound.put("data", codec, lookup.getOps(NbtOps.INSTANCE), data);
+    public void toNBT(CompoundTag compound, Provider lookup) {
+        compound.store("data", codec, lookup.createSerializationContext(NbtOps.INSTANCE), data);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         data.clear();
-        compound.get("data", codec, lookup.getOps(NbtOps.INSTANCE)).ifPresent(data::putAll);
+        compound.read("data", codec, lookup.createSerializationContext(NbtOps.INSTANCE)).ifPresent(data::putAll);
     }
 }

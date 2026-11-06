@@ -1,0 +1,7 @@
+{
+  "type": "unicopia:cloud_shaping",
+  "ingredient": "unicopia:cloud",
+  "result": {
+    "id": "unicopia:carved_cloud"
+  }
+}

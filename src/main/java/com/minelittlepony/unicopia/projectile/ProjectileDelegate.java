@@ -1,11 +1,9 @@
 package com.minelittlepony.unicopia.projectile;
 
 import java.util.function.Function;
-
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import com.minelittlepony.unicopia.ability.magic.Caster;
-
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
 
 public interface ProjectileDelegate {
     interface ConfigurationListener extends ProjectileDelegate {

@@ -1,7 +1,11 @@
 package com.minelittlepony.unicopia.client.render.spell;
 
 import java.util.UUID;
-
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
@@ -14,16 +18,8 @@ import com.minelittlepony.unicopia.client.render.spell.SpellRenderer.SpellRender
 import com.minelittlepony.unicopia.entity.EntityReference;
 import com.minelittlepony.unicopia.entity.EntityReference.EntityValues;
 import com.minelittlepony.unicopia.entity.mob.CastSpellEntity;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Colors;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 
 public class PortalSpellRenderer extends SpellRenderer<PortalSpell, PortalSpellRenderer.State> {
     @Override
@@ -37,21 +33,21 @@ public class PortalSpellRenderer extends SpellRenderer<PortalSpell, PortalSpellR
     }
 
     @Override
-    public void updateRenderState(PortalSpell spell, State state, CasterState casterState, Caster<?> caster, float tickDelta) {
-        super.updateRenderState(spell, state, casterState, caster, tickDelta);
+    public void updateRenderState(PortalSpell spell, State state, Caster<?> caster, float tickDelta) {
+        super.updateRenderState(spell, state, caster, tickDelta);
         state.destination.copyFrom(spell.getDestinationReference());
         state.shouldRenderContents = true;
         state.yaw = spell.getYaw();
-        state.portalUuid = caster.asEntity().getUuid();
+        state.portalUuid = caster.asEntity().getUUID();
         state.portalState = new EntityReference.EntityValues<>(caster.asEntity());
         state.orientationChange = spell.getOrientationChange();
         state.positionMatrix = spell.getPositionMatrix(caster, state.portalState.pos(), state.orientationChange, new Matrix4f());
         state.pitchChange = -spell.getTargetPitch() + spell.getPitch();
         state.yawChange = spell.getYawDifference();
-        state.strength = 1 + MathHelper.sin(caster.asEntity().age + tickDelta) * 0.1F;
+        state.strength = 1 + Mth.sin(caster.asEntity().tickCount + tickDelta) * 0.1F;
 
-        if (client.cameraEntity instanceof CastSpellEntity) {
-            double distance = caster.asEntity().distanceTo(client.cameraEntity);
+        if (client.getCameraEntity() instanceof CastSpellEntity) {
+            double distance = caster.asEntity().distanceTo(client.getCameraEntity());
             state.shouldRenderContents =
                     distance <= 50 // don't bother rendering if too far away
                     && distance >= 2; // don't render ourselves
@@ -59,57 +55,40 @@ public class PortalSpellRenderer extends SpellRenderer<PortalSpell, PortalSpellR
     }
 
     @Override
-    public void render(MatrixStack matrices, VertexConsumerProvider vertices, State spell, int light) {
-        super.render(matrices, vertices, spell, light);
+    public void render(PoseStack matrices, SubmitNodeCollector vertices, State spell, CasterState caster, int light) {
+        super.render(matrices, vertices, spell, caster, light);
 
-        VertexConsumer buff = vertices.getBuffer(RenderLayer.getEndGateway());
-
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(0, 0.02, 0);
-        SphereModel.DISK.render(matrices, buff, light, 0, 2F * spell.strength, Colors.WHITE);
-        matrices.pop();
+        SpellGeometry.render(matrices, vertices, RenderTypes.endGateway(), (stack, buffer) ->
+                SphereModel.DISK.render(stack, buffer, light, 0, 2F * spell.strength, CommonColors.WHITE));
+        matrices.popPose();
 
-        if (Unicopia.getConfig().simplifiedPortals.get() || !spell.destination.isSet()) {
-            matrices.push();
-            matrices.translate(0, -0.02, 0);
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180));
-            SphereModel.DISK.render(matrices, buff, light, 0, 2F * spell.strength, Colors.WHITE);
-            matrices.pop();
-            return;
-        }
-
-        if (!spell.shouldRenderContents) {
-            return;
-        }
-
-        matrices.push();
-        matrices.scale(spell.strength, spell.strength, spell.strength);
-
-        spell.destination.getTarget().ifPresent(target -> {
-            float grown = Math.min(spell.casterState.entityState.age, 20) / 20F;
-            matrices.push();
-            matrices.translate(0, -0.01, 0);
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-spell.yaw));
+        matrices.pushPose();
+        matrices.translate(0, -0.02, 0);
+        matrices.rotate(Axis.XP.rotationDegrees(180));
+        if (Unicopia.getConfig().simplifiedPortals.get() || !spell.destination.isSet() || !spell.shouldRenderContents) {
+            drawFallback(matrices, vertices, light, spell.strength);
+        } else {
+            float grown = Math.min(caster.entityState.ageInTicks, 20) / 20F;
             matrices.scale(grown, 1, grown);
-            boolean inRange = MinecraftClient.getInstance().player.getPos().distanceTo(target.pos()) < MinecraftClient.getInstance().gameRenderer.getViewDistanceBlocks();
-
-            PortalFrameBuffer buffer = PortalFrameBuffer.unpool(target.uuid());
-            if (buffer != null) {
-                if (inRange) {
-                    buffer.build(spell);
+            spell.destination.getTarget().ifPresentOrElse(target -> {
+                PortalFrameBuffer buffer = PortalFrameBuffer.get(target.uuid());
+                buffer.request(spell);
+                if (buffer.hasTexture()) {
+                    SpellGeometry.render(matrices, vertices, com.minelittlepony.unicopia.client.render.RenderLayers.getPortal(buffer.textureId()), (stack, vertex) ->
+                            SphereModel.DISK.render(stack, vertex, light, 0, 2F * spell.strength, CommonColors.WHITE));
+                } else {
+                    drawFallback(matrices, vertices, light, spell.strength);
                 }
-                buffer.draw(matrices, vertices);
-            }
-            if (!inRange) {
-                buffer = PortalFrameBuffer.unpool(spell.portalUuid);
-                if (buffer != null) {
-                    buffer.build(spell);
-                }
-            }
-            matrices.pop();
-        });
+            }, () -> drawFallback(matrices, vertices, light, spell.strength));
+        }
+        matrices.popPose();
+    }
 
-        matrices.pop();
+    private static void drawFallback(PoseStack matrices, SubmitNodeCollector vertices, int light, float strength) {
+        SpellGeometry.render(matrices, vertices, RenderTypes.endGateway(), (stack, buffer) ->
+                SphereModel.DISK.render(stack, buffer, light, 0, 2F * strength, CommonColors.WHITE));
     }
 
     static class State extends SpellRenderState {

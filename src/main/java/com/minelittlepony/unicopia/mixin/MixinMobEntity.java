@@ -10,15 +10,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.minelittlepony.unicopia.entity.*;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.GoalSelector;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.GoalSelector;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
-@Mixin(MobEntity.class)
+@Mixin(Mob.class)
 abstract class MixinMobEntity extends LivingEntity implements Equine.Container<Creature> {
     private MixinMobEntity() { super(null, null); }
 
@@ -27,12 +27,12 @@ abstract class MixinMobEntity extends LivingEntity implements Equine.Container<C
     @Shadow
     protected @Final GoalSelector targetSelector;
 
-    @Inject(method = "<init>(Lnet/minecraft/entity/EntityType;Lnet/minecraft/world/World;)V", at = @At("RETURN"))
-    private void init(EntityType<? extends MobEntity> entityType, World world, CallbackInfo info) {
+    @Inject(method = "<init>(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/level/Level;)V", at = @At("RETURN"))
+    private void init(EntityType<? extends Mob> entityType, Level world, CallbackInfo info) {
         get().initAi(goalSelector, targetSelector);
     }
 
-    @Inject(method = "prefersNewEquipment(Lnet/minecraft/item/ItemStack;Lnet/minecraft/item/ItemStack;Lnet/minecraft/entity/EquipmentSlot;)Z",
+    @Inject(method = "canReplaceCurrentItem(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/EquipmentSlot;)Z",
             at = @At("HEAD"), cancellable = true)
     private void onPrefersNewEquipment(ItemStack newStack, ItemStack oldStack, EquipmentSlot slot, CallbackInfoReturnable<Boolean> info) {
         if (EnchantmentUtil.prefersEquipment(newStack, oldStack)) {

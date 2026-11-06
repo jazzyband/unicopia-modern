@@ -1,7 +1,10 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Race;
@@ -9,11 +12,6 @@ import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.client.render.PlayerPoser.Animation;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
 
 public class ToggleFlightAbility implements Ability<Hit> {
 
@@ -34,14 +32,14 @@ public class ToggleFlightAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
     @Override
     public Identifier getIcon(Pony player) {
         Race race = player.getObservedSpecies();
-        return Abilities.REGISTRY.getId(this).withPath(p -> "textures/gui/ability/" + p
+        return Abilities.REGISTRY.getKey(this).withPath(p -> "textures/gui/ability/" + p
             + (player.getPhysics().isFlying() ? "_land" : "_takeoff")
             + "_" + (race.isHuman() ? Race.EARTH : race).getId().getPath()
             + ".png");
@@ -61,12 +59,12 @@ public class ToggleFlightAbility implements Ability<Hit> {
         player.subtractEnergyCost(1);
 
         if (!player.getPhysics().isFlying()) {
-            if (player.asEntity().hasVehicle()) {
-                Vec3d pos = player.asEntity().getPos();
+            if (player.asEntity().isPassenger()) {
+                Vec3 pos = player.asEntity().position();
                 player.asEntity().stopRiding();
-                player.asEntity().setPosition(pos.getX(), pos.getY() + 0.25, pos.getZ());
+                player.asEntity().setPos(pos.x(), pos.y() + 0.25, pos.z());
             }
-            player.asEntity().addVelocity(0, player.getPhysics().getGravitySignum() * 0.7F, 0);
+            player.asEntity().push(0, player.getPhysics().getGravitySignum() * 0.7F, 0);
             Living.updateVelocity(player.asEntity());
             player.getPhysics().startFlying(true);
         } else {

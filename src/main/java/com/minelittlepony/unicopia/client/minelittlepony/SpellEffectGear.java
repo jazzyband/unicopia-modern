@@ -1,26 +1,27 @@
 package com.minelittlepony.unicopia.client.minelittlepony;
 
 import java.util.UUID;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.resources.Identifier;
 import com.minelittlepony.api.model.BodyPart;
 import com.minelittlepony.api.model.PonyModel;
 import com.minelittlepony.api.model.gear.Gear;
 import com.minelittlepony.unicopia.client.render.BraceletFeatureRenderer;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
 import com.minelittlepony.unicopia.client.render.spell.SpellEffectsRenderDispatcher;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import com.minelittlepony.unicopia.client.render.RenderGeometry;
+import com.minelittlepony.client.render.entity.state.PonyRenderState;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.state.BipedEntityRenderState;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-
-class SpellEffectGear implements Gear {
+class SpellEffectGear implements Gear<com.minelittlepony.client.render.entity.state.PonyRenderState> {
     private CasterState caster;
 
     @Override
-    public boolean canRender(PonyModel<?> model, EntityRenderState entity) {
+    public boolean canRender(PonyModel<?> model, PonyRenderState entity) {
         return CasterState.of(entity).present;
     }
 
@@ -30,25 +31,17 @@ class SpellEffectGear implements Gear {
     }
 
     @Override
-    public <S extends EntityRenderState> Identifier getTexture(S entity, Context<S, ?> context) {
+    public Identifier getTexture(PonyRenderState entity, Context<PonyRenderState, ?> context) {
         return BraceletFeatureRenderer.TEXTURE;
     }
 
     @Override
-    public <S extends EntityRenderState & PonyModel.AttributedHolder> void transform(S state, PonyModel<S> model, MatrixStack matrices) {
+    public void transform(PonyRenderState state, PonyModel<PonyRenderState> model, PoseStack matrices) {
     }
 
     @Override
-    public <S extends BipedEntityRenderState & PonyModel.AttributedHolder> void pose(PonyModel<S> model, S state, boolean rainboom, UUID interpolatorId, float move, float swing, float bodySwing, float ticks) {
-        caster = CasterState.of(state);
-    }
-
-    @Override
-    public void render(MatrixStack stack, VertexConsumer consumer, int light, int overlay, int color, UUID interpolatorId) {
-        SpellEffectsRenderDispatcher.INSTANCE.render(
-            stack,
-            MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers(),
-            light, caster
-        );
+    public void render(PoseStack stack, GearRenderState<PonyRenderState> state, SubmitNodeCollector frame,
+            RenderType renderType, int overlay, int light, int color) {
+        SpellEffectsRenderDispatcher.INSTANCE.render(stack, frame, light, CasterState.of(state.entityState));
     }
 }

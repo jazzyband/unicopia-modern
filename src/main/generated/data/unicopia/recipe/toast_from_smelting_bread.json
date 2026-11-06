@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 430,
+  "experience": 0.2,
+  "group": "bread",
+  "ingredient": "minecraft:bread",
+  "result": {
+    "id": "unicopia:toast"
+  }
+}

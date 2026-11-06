@@ -13,147 +13,151 @@ import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityType;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnGroup;
-import net.minecraft.entity.SpawnLocationTypes;
-import net.minecraft.entity.mob.FlyingEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.entity.vehicle.ChestBoatEntity;
-import net.minecraft.item.Item;
-import net.minecraft.registry.*;
-import net.minecraft.registry.tag.BiomeTags;
-import net.minecraft.world.Heightmap.Type;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BiomeTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.vehicle.boat.Boat;
+import net.minecraft.world.entity.vehicle.boat.ChestBoat;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.levelgen.Heightmap.Types;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 public interface UEntities {
-    EntityType<ButterflyEntity> BUTTERFLY = register("butterfly", FabricEntityType.Builder.createMob(ButterflyEntity::new, SpawnGroup.AMBIENT, builder -> builder
-                .spawnRestriction(SpawnLocationTypes.UNRESTRICTED, Type.MOTION_BLOCKING_NO_LEAVES, ButterflyEntity::canSpawn)
+    EntityType<ButterflyEntity> BUTTERFLY = register("butterfly", FabricEntityType.Builder.createMob(ButterflyEntity::new, MobCategory.AMBIENT, builder -> builder
                 .defaultAttributes(ButterflyEntity::createButterflyAttributes))
-            .spawnableFarFromPlayer()
-            .dimensions(0.25F, 0.25F)
+            .canSpawnFarFromPlayer()
+            .sized(0.25F, 0.25F)
             .eyeHeight(0.125F));
-    EntityType<MagicProjectileEntity> THROWN_ITEM = register("thrown_item", EntityType.Builder.<MagicProjectileEntity>create(MagicProjectileEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(100)
-            .disableSummon()
-            .trackingTickInterval(2)
-            .dimensions(0.25F, 0.25F));
-    EntityType<LevitatingItemEntity> LEVITATING_ITEM = register("levitating_item", EntityType.Builder.<LevitatingItemEntity>create(LevitatingItemEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(100)
-            .disableSummon()
-            .trackingTickInterval(2)
-            .dimensions(0.25F, 0.25F));
-    EntityType<PhysicsBodyProjectileEntity> MUFFIN = register("muffin", EntityType.Builder.<PhysicsBodyProjectileEntity>create((type, world) -> new PhysicsBodyProjectileEntity(type, world, UItems.MUFFIN.getDefaultStack()), SpawnGroup.MISC)
-            .maxTrackingRange(100)
-            .disableSummon()
-            .trackingTickInterval(2)
-            .dimensions(0.25F, 0.25F));
-    EntityType<MagicBeamEntity> MAGIC_BEAM = register("magic_beam", EntityType.Builder.<MagicBeamEntity>create(MagicBeamEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(100)
-            .disableSummon()
-            .trackingTickInterval(2)
+    EntityType<MagicProjectileEntity> THROWN_ITEM = register("thrown_item", EntityType.Builder.<MagicProjectileEntity>of(MagicProjectileEntity::new, MobCategory.MISC)
+            .clientTrackingRange(100)
+            .noSummon()
+            .updateInterval(2)
+            .sized(0.25F, 0.25F));
+    EntityType<LevitatingItemEntity> LEVITATING_ITEM = register("levitating_item", EntityType.Builder.<LevitatingItemEntity>of(LevitatingItemEntity::new, MobCategory.MISC)
+            .clientTrackingRange(100)
+            .noSummon()
+            .updateInterval(2)
+            .sized(0.25F, 0.25F));
+    EntityType<PhysicsBodyProjectileEntity> MUFFIN = register("muffin", EntityType.Builder.<PhysicsBodyProjectileEntity>of((type, world) -> new PhysicsBodyProjectileEntity(type, world, UItems.MUFFIN.getDefaultInstance()), MobCategory.MISC)
+            .clientTrackingRange(100)
+            .noSummon()
+            .updateInterval(2)
+            .sized(0.25F, 0.25F));
+    EntityType<MagicBeamEntity> MAGIC_BEAM = register("magic_beam", EntityType.Builder.<MagicBeamEntity>of(MagicBeamEntity::new, MobCategory.MISC)
+            .clientTrackingRange(100)
+            .noSummon()
+            .updateInterval(2)
             .alwaysUpdateVelocity(true)
-            .dimensions(0.25F, 0.25F));
-    EntityType<FloatingArtefactEntity> FLOATING_ARTEFACT = register("floating_artefact", EntityType.Builder.create(FloatingArtefactEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(200)
-            .disableSummon()
-            .dimensions(1, 1));
-    EntityType<CastSpellEntity> CAST_SPELL = register("cast_spell", EntityType.Builder.<CastSpellEntity>create(CastSpellEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(200)
-            .disableSummon()
-            .dimensions(4, 4));
-    EntityType<FairyEntity> TWITTERMITE = register("twittermite", FabricEntityType.Builder.createMob(FairyEntity::new, SpawnGroup.MISC, builder -> builder
+            .sized(0.25F, 0.25F));
+    EntityType<FloatingArtefactEntity> FLOATING_ARTEFACT = register("floating_artefact", EntityType.Builder.of(FloatingArtefactEntity::new, MobCategory.MISC)
+            .clientTrackingRange(200)
+            .noSummon()
+            .sized(1, 1));
+    EntityType<CastSpellEntity> CAST_SPELL = register("cast_spell", EntityType.Builder.<CastSpellEntity>of(CastSpellEntity::new, MobCategory.MISC)
+            .clientTrackingRange(200)
+            .noSummon()
+            .sized(4, 4));
+    EntityType<FairyEntity> TWITTERMITE = register("twittermite", FabricEntityType.Builder.createMob(FairyEntity::new, MobCategory.MISC, builder -> builder
                 .defaultAttributes(FairyEntity::createMobAttributes))
-            .maxTrackingRange(200)
-            .dimensions(0.1F, 0.1F));
-    EntityType<FriendlyCreeperEntity> FRIENDLY_CREEPER = register("friendly_creeper", FabricEntityType.Builder.createMob(FriendlyCreeperEntity::new, SpawnGroup.MISC, builder -> builder
+            .clientTrackingRange(200)
+            .sized(0.1F, 0.1F));
+    EntityType<FriendlyCreeperEntity> FRIENDLY_CREEPER = register("friendly_creeper", FabricEntityType.Builder.createMob(FriendlyCreeperEntity::new, MobCategory.MISC, builder -> builder
                 .defaultAttributes(FriendlyCreeperEntity::createCreeperAttributes))
-            .maxTrackingRange(8)
-            .disableSummon()
-            .dimensions(0.6f, 1.7f));
-    EntityType<SpellbookEntity> SPELLBOOK = register("spellbook", FabricEntityType.Builder.createMob(SpellbookEntity::new, SpawnGroup.MISC, builder -> builder
+            .clientTrackingRange(8)
+            .noSummon()
+            .sized(0.6f, 1.7f));
+    EntityType<SpellbookEntity> SPELLBOOK = register("spellbook", FabricEntityType.Builder.createMob(SpellbookEntity::new, MobCategory.MISC, builder -> builder
                 .defaultAttributes(SpellbookEntity::createMobAttributes))
-            .maxTrackingRange(200)
-            .dimensions(0.9F, 0.5F));
-    EntityType<SombraEntity> SOMBRA = register("sombra", FabricEntityType.Builder.<SombraEntity>createMob(SombraEntity::new, SpawnGroup.MONSTER, builder -> builder
+            .clientTrackingRange(200)
+            .sized(0.9F, 0.5F));
+    EntityType<SombraEntity> SOMBRA = register("sombra", FabricEntityType.Builder.<SombraEntity>createMob(SombraEntity::new, MobCategory.MONSTER, builder -> builder
                 .defaultAttributes(SombraEntity::createMobAttributes))
-            .maxTrackingRange(200)
-            .dimensions(2F, 4F));
-    EntityType<CrystalShardsEntity> CRYSTAL_SHARDS = register("crystal_shards", EntityType.Builder.create(CrystalShardsEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(100)
-            .dimensions(1F, 1F));
-    EntityType<StormCloudEntity> STORM_CLOUD = register("storm_cloud", EntityType.Builder.create(StormCloudEntity::new, SpawnGroup.AMBIENT)
-            .maxTrackingRange(200)
-            .dimensions(20F, 20F));
-    EntityType<BoatEntity> PALM_BOAT = register("oak_boat",
-            EntityType.Builder.create(getBoatFactory(() -> UItems.PALM_BOAT), SpawnGroup.MISC)
-                .dropsNothing()
-                .dimensions(1.375F, 0.5625F)
+            .clientTrackingRange(200)
+            .sized(2F, 4F));
+    EntityType<CrystalShardsEntity> CRYSTAL_SHARDS = register("crystal_shards", EntityType.Builder.of(CrystalShardsEntity::new, MobCategory.MISC)
+            .clientTrackingRange(100)
+            .sized(1F, 1F));
+    EntityType<StormCloudEntity> STORM_CLOUD = register("storm_cloud", EntityType.Builder.of(StormCloudEntity::new, MobCategory.MISC)
+            .clientTrackingRange(200)
+            .sized(20F, 20F));
+    EntityType<Boat> PALM_BOAT = register("oak_boat",
+            EntityType.Builder.of(getBoatFactory(() -> UItems.PALM_BOAT), MobCategory.MISC)
+                .noLootTable()
+                .sized(1.375F, 0.5625F)
                 .eyeHeight(0.5625F)
-                .maxTrackingRange(10));
-    EntityType<ChestBoatEntity> PALM_CHEST_BOAT = register("palm_chest_boat",
-        EntityType.Builder.create(getChestBoatFactory(() -> UItems.PALM_CHEST_BOAT), SpawnGroup.MISC)
-            .dropsNothing()
-            .dimensions(1.375F, 0.5625F)
+                .clientTrackingRange(10));
+    EntityType<ChestBoat> PALM_CHEST_BOAT = register("palm_chest_boat",
+        EntityType.Builder.of(getChestBoatFactory(() -> UItems.PALM_CHEST_BOAT), MobCategory.MISC)
+            .noLootTable()
+            .sized(1.375F, 0.5625F)
             .eyeHeight(0.5625F)
-            .maxTrackingRange(10));
-    EntityType<AirBalloonEntity> AIR_BALLOON = register("air_balloon", FabricEntityType.Builder.createMob(AirBalloonEntity::new, SpawnGroup.MISC, builder -> builder
-                .defaultAttributes(FlyingEntity::createMobAttributes))
-            .maxTrackingRange(1000)
-            .dimensions(2.5F, 0.1F));
-    EntityType<LootBugEntity> LOOT_BUG = register("loot_bug", FabricEntityType.Builder.createMob(LootBugEntity::new, SpawnGroup.MONSTER, builder -> builder
-                .defaultAttributes(LootBugEntity::createSilverfishAttributes))
-            .maxTrackingRange(8)
-            .dimensions(0.8F, 0.6F));
-    EntityType<TentacleEntity> TENTACLE = register("ignominious_vine", EntityType.Builder.<TentacleEntity>create(TentacleEntity::new, SpawnGroup.MISC)
-            .maxTrackingRange(8)
-            .dimensions(0.8F, 0.8F));
-    EntityType<IgnominiousBulbEntity> IGNOMINIOUS_BULB = register("ignominious_bulb", FabricEntityType.Builder.<IgnominiousBulbEntity>createMob(IgnominiousBulbEntity::new, SpawnGroup.MISC, builder -> builder
+            .clientTrackingRange(10));
+    EntityType<AirBalloonEntity> AIR_BALLOON = register("air_balloon", FabricEntityType.Builder.createMob(AirBalloonEntity::new, MobCategory.MISC, builder -> builder
+                .defaultAttributes(net.minecraft.world.entity.Mob::createMobAttributes))
+            .clientTrackingRange(1000)
+            .sized(2.5F, 0.1F));
+    EntityType<LootBugEntity> LOOT_BUG = register("loot_bug", FabricEntityType.Builder.createMob(LootBugEntity::new, MobCategory.MONSTER, builder -> builder
+                .defaultAttributes(LootBugEntity::createAttributes))
+            .clientTrackingRange(8)
+            .sized(0.8F, 0.6F));
+    EntityType<TentacleEntity> TENTACLE = register("ignominious_vine", EntityType.Builder.<TentacleEntity>of(TentacleEntity::new, MobCategory.MISC)
+            .clientTrackingRange(8)
+            .sized(0.8F, 0.8F));
+    EntityType<IgnominiousBulbEntity> IGNOMINIOUS_BULB = register("ignominious_bulb", FabricEntityType.Builder.<IgnominiousBulbEntity>createMob(IgnominiousBulbEntity::new, MobCategory.MISC, builder -> builder
                 .defaultAttributes(IgnominiousBulbEntity::createMobAttributes))
-            .maxTrackingRange(8)
-            .dimensions(3, 2));
-    EntityType<SpecterEntity> SPECTER = register("specter", FabricEntityType.Builder.createMob(SpecterEntity::new, SpawnGroup.MONSTER, builder -> builder
-                .spawnRestriction(SpawnLocationTypes.ON_GROUND, Type.MOTION_BLOCKING_NO_LEAVES, HostileEntity::canSpawnInDark)
+            .clientTrackingRange(8)
+            .sized(3, 2));
+    EntityType<SpecterEntity> SPECTER = register("specter", FabricEntityType.Builder.createMob(SpecterEntity::new, MobCategory.MONSTER, builder -> builder
                 .defaultAttributes(SpecterEntity::createAttributes))
-            .makeFireImmune()
-            .spawnableFarFromPlayer()
-            .dimensions(1, 2));
-    EntityType<MimicEntity> MIMIC = register("mimic", FabricEntityType.Builder.createMob(MimicEntity::new, SpawnGroup.MONSTER, builder -> builder
+            .fireImmune()
+            .canSpawnFarFromPlayer()
+            .sized(1, 2));
+    EntityType<MimicEntity> MIMIC = register("mimic", FabricEntityType.Builder.createMob(MimicEntity::new, MobCategory.MONSTER, builder -> builder
                 .defaultAttributes(MimicEntity::createMobAttributes))
-            .makeFireImmune()
-            .disableSummon()
-            .dimensions(0.875F, 0.875F));
+            .fireImmune()
+            .noSummon()
+            .sized(0.875F, 0.875F));
 
-    private static EntityType.EntityFactory<BoatEntity> getBoatFactory(Supplier<Item> itemSupplier) {
-        return (type, world) -> new BoatEntity(type, world, itemSupplier);
+    private static EntityType.EntityFactory<Boat> getBoatFactory(Supplier<Item> itemSupplier) {
+        return (type, world) -> new Boat(type, world, itemSupplier);
     }
 
-    private static EntityType.EntityFactory<ChestBoatEntity> getChestBoatFactory(Supplier<Item> itemSupplier) {
-        return (type, world) -> new ChestBoatEntity(type, world, itemSupplier);
+    private static EntityType.EntityFactory<ChestBoat> getChestBoatFactory(Supplier<Item> itemSupplier) {
+        return (type, world) -> new ChestBoat(type, world, itemSupplier);
     }
 
     static <T extends Entity> EntityType<T> register(String name, EntityType.Builder<T> builder) {
-        var key = RegistryKey.of(RegistryKeys.ENTITY_TYPE, Unicopia.id(name));
-        return Registry.register(Registries.ENTITY_TYPE, key, builder.build(key));
+        var key = ResourceKey.create(Registries.ENTITY_TYPE, Unicopia.id(name));
+        return Registry.register(BuiltInRegistries.ENTITY_TYPE, key, builder.build(key));
     }
 
     static void bootstrap() {
+        net.minecraft.world.entity.SpawnPlacements.register(BUTTERFLY, SpawnPlacementTypes.NO_RESTRICTIONS, Types.MOTION_BLOCKING_NO_LEAVES, ButterflyEntity::canSpawn);
+        net.minecraft.world.entity.SpawnPlacements.register(SPECTER, SpawnPlacementTypes.ON_GROUND, Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
         if (!Unicopia.getConfig().disableButterflySpawning.get()) {
             final Predicate<BiomeSelectionContext> butterflySpawnable = BiomeSelectors.foundInOverworld()
-                    .and(ctx -> ctx.getBiome().hasPrecipitation() && ctx.getBiome().getTemperature() > 0.15F);
+                    .and(ctx -> ctx.getBiome().hasPrecipitation() && ctx.getBiome().getBaseTemperature() > 0.15F);
 
             BiomeModifications.addSpawn(butterflySpawnable.and(
                         BiomeSelectors.tag(BiomeTags.IS_RIVER)
                     .or(BiomeSelectors.tag(BiomeTags.IS_FOREST))
                     .or(BiomeSelectors.tag(BiomeTags.IS_HILL))
-            ), SpawnGroup.AMBIENT, BUTTERFLY, 3, 3, 12);
+            ), MobCategory.AMBIENT, BUTTERFLY, 3, 3, 12);
             BiomeModifications.addSpawn(butterflySpawnable.and(
                         BiomeSelectors.tag(BiomeTags.IS_JUNGLE)
                     .or(BiomeSelectors.tag(BiomeTags.IS_MOUNTAIN))
-            ), SpawnGroup.AMBIENT, BUTTERFLY, 7, 5, 19);
+            ), MobCategory.AMBIENT, BUTTERFLY, 7, 5, 19);
         }
 
-        BiomeModifications.addSpawn(BiomeSelectors.spawnsOneOf(EntityType.ZOMBIE), SpawnGroup.MONSTER, SPECTER, 2, 1, 2);
+        BiomeModifications.addSpawn(BiomeSelectors.spawnsOneOf(EntityTypes.ZOMBIE), MobCategory.MONSTER, SPECTER, 2, 1, 2);
 
         MimicEntity.bootstrap();
         UTradeOffers.bootstrap();

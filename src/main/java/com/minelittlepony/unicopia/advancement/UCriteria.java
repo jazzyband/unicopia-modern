@@ -1,12 +1,14 @@
 package com.minelittlepony.unicopia.advancement;
 
-import net.minecraft.advancement.criterion.Criteria;
+import com.minelittlepony.unicopia.Unicopia;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 public interface UCriteria {
-    CustomEventCriterion CUSTOM_EVENT = Criteria.register("unicopia:custom", new CustomEventCriterion());
-    RaceChangeCriterion PLAYER_CHANGE_RACE = Criteria.register("unicopia:player_change_race", new RaceChangeCriterion());
-    SendViaDragonBreathScrollCriterion SEND_DRAGON_BREATH = Criteria.register("unicopia:send_dragon_breath", new SendViaDragonBreathScrollCriterion());
-    TraitDiscoveredCriterion TRAIT_DISCOVERED = Criteria.register("unicopia:trait_discovered", new TraitDiscoveredCriterion());
+    CustomEventCriterion CUSTOM_EVENT = Registry.register(BuiltInRegistries.TRIGGER_TYPES, Unicopia.id("custom"), new CustomEventCriterion());
+    RaceChangeCriterion PLAYER_CHANGE_RACE = Registry.register(BuiltInRegistries.TRIGGER_TYPES, Unicopia.id("player_change_race"), new RaceChangeCriterion());
+    SendViaDragonBreathScrollCriterion SEND_DRAGON_BREATH = Registry.register(BuiltInRegistries.TRIGGER_TYPES, Unicopia.id("send_dragon_breath"), new SendViaDragonBreathScrollCriterion());
+    TraitDiscoveredCriterion TRAIT_DISCOVERED = Registry.register(BuiltInRegistries.TRIGGER_TYPES, Unicopia.id("trait_discovered"), new TraitDiscoveredCriterion());
 
     CustomEventCriterion.Trigger LOOK_INTO_SUN = CUSTOM_EVENT.createTrigger("look_into_sun");
     CustomEventCriterion.Trigger WEAR_SHADES = CUSTOM_EVENT.createTrigger("wear_shades");

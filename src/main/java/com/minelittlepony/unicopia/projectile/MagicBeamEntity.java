@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia.projectile;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -21,59 +23,59 @@ import com.minelittlepony.unicopia.entity.EntityPhysics;
 import com.minelittlepony.unicopia.entity.MagicImmune;
 import com.minelittlepony.unicopia.entity.Physics;
 import com.minelittlepony.unicopia.entity.mob.UEntities;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 public class MagicBeamEntity extends MagicProjectileEntity implements Caster<MagicBeamEntity>, MagicImmune {
-    private static final TrackedData<Boolean> HYDROPHOBIC = DataTracker.registerData(MagicBeamEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final TrackedData<Integer> LEVEL = DataTracker.registerData(MagicBeamEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> MAX_LEVEL = DataTracker.registerData(MagicBeamEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> CORRUPTION = DataTracker.registerData(MagicBeamEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> MAX_CORRUPTION = DataTracker.registerData(MagicBeamEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final EntityDataAccessor<Boolean> HYDROPHOBIC = SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> LEVEL = SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MAX_LEVEL = SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> CORRUPTION = SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MAX_CORRUPTION = SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
 
     private final SpellInventory spells = SpellSlots.ofSingle(this);
     private final EntityPhysics<MagicProjectileEntity> physics = new EntityPhysics<>(this);
 
     private final LevelStore level = Levelled.of(
-            () -> dataTracker.get(LEVEL),
-            l -> dataTracker.set(LEVEL, l),
-            () -> dataTracker.get(MAX_LEVEL)
+            () -> entityData.get(LEVEL),
+            l -> entityData.set(LEVEL, l),
+            () -> entityData.get(MAX_LEVEL)
     );
     private final LevelStore corruption = Levelled.of(
-            () -> dataTracker.get(CORRUPTION),
-            l -> dataTracker.set(CORRUPTION, l),
-            () -> dataTracker.get(MAX_CORRUPTION)
+            () -> entityData.get(CORRUPTION),
+            l -> entityData.set(CORRUPTION, l),
+            () -> entityData.get(MAX_CORRUPTION)
     );
 
-    public MagicBeamEntity(EntityType<MagicBeamEntity> type, World world) {
+    public MagicBeamEntity(EntityType<MagicBeamEntity> type, Level world) {
         super(type, world);
     }
 
-    public MagicBeamEntity(World world, Entity owner, float divergance, Spell spell) {
+    public MagicBeamEntity(Level world, Entity owner, float divergance, Spell spell) {
         super(UEntities.MAGIC_BEAM, world);
-        setPosition(owner.getX(), owner.getEyeY() - 0.1F, owner.getZ());
+        setPos(owner.getX(), owner.getEyeY() - 0.1F, owner.getZ());
         setOwner(owner);
-        setVelocity(owner, owner.getPitch(), owner.getYaw(), 0, 1.5F, divergance);
+        shootFromRotation(owner, owner.getXRot(), owner.getYRot(), 0, 1.5F, divergance);
         setNoGravity(true);
         spell.apply(this);
     }
 
     @Override
-    protected void initDataTracker(DataTracker.Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(HYDROPHOBIC, false)
-            .add(LEVEL, 0)
-            .add(CORRUPTION, 0)
-            .add(MAX_LEVEL, 1)
-            .add(MAX_CORRUPTION, 1);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(HYDROPHOBIC, false)
+            .define(LEVEL, 0)
+            .define(CORRUPTION, 0)
+            .define(MAX_LEVEL, 1)
+            .define(MAX_CORRUPTION, 1);
     }
 
     @Override
@@ -85,28 +87,28 @@ public class MagicBeamEntity extends MagicProjectileEntity implements Caster<Mag
         }
 
         if (getHydrophobic()) {
-            if (StatePredicate.isFluid(getWorld().getBlockState(getBlockPos()))) {
-                Vec3d vel = getVelocity();
+            if (StatePredicate.isFluid(level().getBlockState(blockPosition()))) {
+                Vec3 vel = getDeltaMovement();
 
                 double velY = vel.y;
 
                 velY *= -1;
 
-                if (!hasNoGravity()) {
+                if (!isNoGravity()) {
                     velY += 0.16;
                 }
 
-                setVelocity(new Vec3d(vel.x, velY, vel.z));
+                setDeltaMovement(new Vec3(vel.x, velY, vel.z));
             }
         }
     }
 
     public void setHydrophobic() {
-        getDataTracker().set(HYDROPHOBIC, true);
+        getEntityData().set(HYDROPHOBIC, true);
     }
 
     public boolean getHydrophobic() {
-        return getDataTracker().get(HYDROPHOBIC);
+        return getEntityData().get(HYDROPHOBIC);
     }
 
     @Override
@@ -118,10 +120,10 @@ public class MagicBeamEntity extends MagicProjectileEntity implements Caster<Mag
     public void setOwner(@Nullable Entity entity) {
         super.setOwner(entity);
         Caster.of(entity).ifPresent(caster -> {
-            dataTracker.set(LEVEL, caster.getLevel().get());
-            dataTracker.set(MAX_LEVEL, caster.getLevel().getMax());
-            dataTracker.set(CORRUPTION, caster.getCorruption().get());
-            dataTracker.set(MAX_CORRUPTION, caster.getCorruption().getMax());
+            entityData.set(LEVEL, caster.getLevel().get());
+            entityData.set(MAX_LEVEL, caster.getLevel().getMax());
+            entityData.set(CORRUPTION, caster.getCorruption().get());
+            entityData.set(MAX_CORRUPTION, caster.getCorruption().getMax());
         });
     }
 
@@ -156,8 +158,8 @@ public class MagicBeamEntity extends MagicProjectileEntity implements Caster<Mag
     }
 
     @Override
-    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
-        super.onSpawnPacket(packet);
+    public void recreateFromPacket(ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
         InteractionManager.getInstance().playLoopingSound(this, InteractionManager.SOUND_MAGIC_BEAM, getId());
     }
 
@@ -177,26 +179,26 @@ public class MagicBeamEntity extends MagicProjectileEntity implements Caster<Mag
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound compound) {
-        super.readCustomDataFromNbt(compound);
-        getDataTracker().set(HYDROPHOBIC, compound.getBoolean("hydrophobic", false));
-        physics.fromNBT(compound, getRegistryManager());
-        spells.getSlots().fromNBT(compound, getRegistryManager());
-        var level = compound.get("level", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE)).orElse(Levelled.ZERO);
-        dataTracker.set(MAX_LEVEL, level.getMax());
-        dataTracker.set(LEVEL, level.get());
-        var corruption = compound.get("corruption", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE)).orElse(Levelled.ZERO);
-        dataTracker.set(MAX_CORRUPTION, corruption.getMax());
-        dataTracker.set(CORRUPTION, corruption.get());
+    public void readAdditionalSaveData(ValueInput compound) {
+        super.readAdditionalSaveData(compound);
+        getEntityData().set(HYDROPHOBIC, compound.getBooleanOr("hydrophobic", false));
+        physics.fromValue(compound);
+        spells.getSlots().fromValue(compound, registryAccess());
+        var level = compound.read("level", Levelled.CODEC).orElse(Levelled.ZERO);
+        entityData.set(MAX_LEVEL, level.getMax());
+        entityData.set(LEVEL, level.get());
+        var corruption = compound.read("corruption", Levelled.CODEC).orElse(Levelled.ZERO);
+        entityData.set(MAX_CORRUPTION, corruption.getMax());
+        entityData.set(CORRUPTION, corruption.get());
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound compound) {
-        super.writeCustomDataToNbt(compound);
-        compound.put("level", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), level);
-        compound.put("corruption", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), corruption);
+    public void addAdditionalSaveData(ValueOutput compound) {
+        super.addAdditionalSaveData(compound);
+        compound.store("level", Levelled.CODEC, level);
+        compound.store("corruption", Levelled.CODEC, corruption);
         compound.putBoolean("hydrophobic", getHydrophobic());
-        physics.toNBT(compound, getRegistryManager());
-        spells.getSlots().toNBT(compound, getRegistryManager());
+        physics.toValue(compound);
+        spells.getSlots().toValue(compound, registryAccess());
     }
 }

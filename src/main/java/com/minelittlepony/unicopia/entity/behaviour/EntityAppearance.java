@@ -6,7 +6,39 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ambient.AmbientCreature;
+import net.minecraft.world.entity.ambient.Bat;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
+import net.minecraft.world.entity.animal.allay.Allay;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.monster.Shulker;
+import net.minecraft.world.entity.monster.spider.Spider;
+import net.minecraft.world.entity.monster.Vex;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ShulkerBullet;
+import net.minecraft.world.item.component.ResolvableProfile;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.SkullBlockEntity;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,36 +57,6 @@ import com.minelittlepony.unicopia.network.track.TrackableObject;
 import com.minelittlepony.unicopia.projectile.ProjectileUtil;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
 import com.mojang.authlib.GameProfile;
-
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.SkullBlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.Flutterer;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.boss.dragon.EnderDragonEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.decoration.AbstractDecorationEntity;
-import net.minecraft.entity.mob.AmbientEntity;
-import net.minecraft.entity.mob.FlyingEntity;
-import net.minecraft.entity.mob.ShulkerEntity;
-import net.minecraft.entity.mob.SpiderEntity;
-import net.minecraft.entity.mob.VexEntity;
-import net.minecraft.entity.passive.AllayEntity;
-import net.minecraft.entity.passive.BatEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ShulkerBulletEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
 
 public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provider, FlightType.Provider, EntityCollisions.ComplexCollidable, TrackableObject<EntityAppearance> {
     @NotNull
@@ -75,10 +77,10 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
      * This is not serialized, so should only be used for server-side data.
      */
     @Nullable
-    private transient NbtCompound tag;
+    private transient CompoundTag tag;
 
     @Nullable
-    private NbtCompound entityNbt;
+    private CompoundTag entityNbt;
 
     private boolean dirty;
 
@@ -96,16 +98,16 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         return attachments;
     }
 
-    public record Attachment(Vec3d offset, Entity entity) {}
+    public record Attachment(Vec3 offset, Entity entity) {}
 
     public void setBlockEntity(@Nullable BlockEntity blockEntity) {
         if (this.blockEntity != null) {
-            this.blockEntity.markRemoved();
+            this.blockEntity.setRemoved();
         }
         this.blockEntity = blockEntity;
     }
 
-    public void attachExtraEntity(Vec3d offset, Entity entity) {
+    public void attachExtraEntity(Vec3 offset, Entity entity) {
         attachments.add(new Attachment(offset, entity));
     }
 
@@ -125,9 +127,9 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         return isPresent() && entity != null && EntityBehaviour.forEntity(this.entity).isEqual(this.entity, entity);
     }
 
-    public NbtCompound getOrCreateTag() {
+    public CompoundTag getOrCreateTag() {
         if (tag == null) {
-            tag = new NbtCompound();
+            tag = new CompoundTag();
         }
         return tag;
     }
@@ -144,30 +146,30 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         }
         if (blockEntity != null) {
             try {
-                blockEntity.markRemoved();
+                blockEntity.setRemoved();
             } catch (Throwable ignored) {}
             blockEntity = null;
         }
     }
 
-    private synchronized void createPlayer(NbtCompound nbt, GameProfile profile, Caster<?> source) {
+    private synchronized void createPlayer(CompoundTag nbt, GameProfile profile, Caster<?> source) {
         remove();
 
         entity = InteractionManager.getInstance().createPlayer(source.asEntity(), profile);
         entity.setCustomName(source.asEntity().getName());
-        entity.readNbt(nbt.getCompoundOrEmpty("playerNbt"));
+        entity.load(TagValueInput.create(ProblemReporter.DISCARDING, source.asWorld().registryAccess(), nbt.getCompoundOrEmpty("playerNbt")));
         nbt.getByte("playerVisibleParts").ifPresent(visibilityByte -> {
-            entity.getDataTracker().set(Disguise.PlayerAccess.getModelBitFlag(), visibilityByte);
+            entity.getEntityData().set(Disguise.PlayerAccess.getModelBitFlag(), visibilityByte);
         });
-        entity.setUuid(UUID.randomUUID());
-        entity.extinguish();
+        entity.setUUID(UUID.randomUUID());
+        entity.clearFire();
 
         onEntityLoaded(source);
     }
 
     public Entity getOrCreate(Caster<?> source) {
         if (entity == null && entityNbt != null) {
-            NbtCompound nbt = entityNbt;
+            CompoundTag nbt = entityNbt;
             entity = null;
             entityNbt = null;
             attachments.clear();
@@ -175,26 +177,29 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
             if ("player".equals(entityId)) {
                 String name = nbt.getString("playerName").orElse(null);
                 createPlayer(nbt, new GameProfile(
-                    nbt.get("playerId", Uuids.CODEC).orElse(UUID.randomUUID()),
+                    nbt.read("playerId", UUIDUtil.AUTHLIB_CODEC).orElse(UUID.randomUUID()),
                     name
                 ), source);
 
-                SkullBlockEntity.fetchProfileByName(name).thenAccept(profile -> {
-                    profile.ifPresent(p -> createPlayer(nbt, p, source));
-                });
+                if (name != null && source.asWorld().getServer() != null) {
+                    ResolvableProfile.createUnresolved(name)
+                            .resolveProfile(source.asWorld().getServer().services().profileResolver())
+                            .thenAccept(profile -> createPlayer(nbt, profile, source));
+                }
             } else {
                 if (source.isClient()) {
-                    entity = EntityType.fromNbt(nbt).map(type -> type.create(source.asWorld(), SpawnReason.CONVERSION)).orElse(null);
+                    var input = TagValueInput.create(ProblemReporter.DISCARDING, source.asWorld().registryAccess(), nbt);
+                    entity = EntityType.by(input).map(type -> type.create(source.asWorld(), EntitySpawnReason.CONVERSION)).orElse(null);
                     if (entity != null) {
                         try {
-                            entity.readNbt(nbt);
+                            entity.load(TagValueInput.create(ProblemReporter.DISCARDING, source.asWorld().registryAccess(), nbt));
                         } catch (Exception ignored) {
                             // Mojang pls
                         }
                         entity = EntityBehaviour.forEntity(entity).onCreate(entity, this, true);
                     }
                 } else {
-                    entity = EntityType.loadEntityWithPassengers(nbt, source.asWorld(), SpawnReason.CONVERSION, e -> {
+                    entity = EntityType.loadEntityRecursive(TagValueInput.create(ProblemReporter.DISCARDING, source.asWorld().registryAccess(), nbt), source.asWorld(), EntitySpawnReason.CONVERSION, e -> {
                         return EntityBehaviour.forEntity(e).onCreate(e, this, true);
                     });
                 }
@@ -211,14 +216,14 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     }
 
     private void onEntityLoaded(Caster<?> source) {
-        source.asEntity().calculateDimensions();
+        source.asEntity().refreshDimensions();
 
         if (entity == null) {
             return;
         }
 
         if (entity instanceof LivingEntity l) {
-            l.getAttributeInstance(UEntityAttributes.ENTITY_GRAVITY_MODIFIER).clearModifiers();
+            l.getAttribute(UEntityAttributes.ENTITY_GRAVITY_MODIFIER).removeModifiers();
         }
 
         if (entity instanceof Guest guest) {
@@ -226,7 +231,7 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         }
 
         if (source.isClient()) {
-            source.asWorld().spawnEntity(entity);
+            source.asWorld().addFreshEntity(entity);
         } else {
             entity.setId(source.asEntity().getId());
         }
@@ -244,20 +249,19 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
 
         if (entity instanceof Owned) {
             @SuppressWarnings("unchecked")
-            Pony iplayer = Pony.of(((Owned<PlayerEntity>)entity).getMaster());
+            Pony iplayer = Pony.of(((Owned<Player>)entity).getMaster());
 
             return iplayer == null ? FlightType.NONE : iplayer.getSpecies().flightType();
         }
 
-        if (entity instanceof FlyingEntity
-                || entity instanceof AmbientEntity
-                || entity instanceof EnderDragonEntity
-                || entity instanceof VexEntity
-                || entity instanceof AllayEntity
-                || entity instanceof BatEntity
+        if (entity instanceof Mob mob && mob.getNavigation() instanceof FlyingPathNavigation
+                || entity instanceof AmbientCreature
+                || entity instanceof EnderDragon
+                || entity instanceof Vex
+                || entity instanceof Allay
+                || entity instanceof Bat
                 || entity instanceof ButterflyEntity
-                || entity instanceof ShulkerBulletEntity
-                || entity instanceof Flutterer
+                || entity instanceof ShulkerBullet
                 || entity instanceof SombraEntity
                 || ProjectileUtil.isFlyingProjectile(entity)) {
             return FlightType.INSECTOID;
@@ -272,7 +276,7 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
                 return 0.9F;
             }
 
-            return PehkUtil.ignoreScaleFor(entity, Entity::getHeight) - 0.1F;
+            return PehkUtil.ignoreScaleFor(entity, Entity::getBbHeight) - 0.1F;
         }
         return -1;
     }
@@ -288,9 +292,9 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
 
     public boolean skipsUpdate() {
         return entity instanceof FallingBlockEntity
-            || entity instanceof AbstractDecorationEntity
-            || entity instanceof PlayerEntity
-            || entity instanceof AbstractDecorationEntity;
+            || entity instanceof HangingEntity
+            || entity instanceof Player
+            || entity instanceof HangingEntity;
     }
 
     public boolean isAxisAligned() {
@@ -298,11 +302,11 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     }
 
     public boolean canClimbWalls() {
-        return entity instanceof SpiderEntity;
+        return entity instanceof Spider;
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         compound.putString("entityId", entityId);
         var nbt = getEntityNbt();
         if (nbt != null) {
@@ -311,7 +315,7 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     }
 
     @Nullable
-    private NbtCompound getEntityNbt() {
+    private CompoundTag getEntityNbt() {
         if (entityNbt == null && entity != null) {
             entityNbt = encodeEntityToNBT(entity);
         }
@@ -319,14 +323,14 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         String newId = compound.getString("entityId").orElse("");
         loadEntityFromNbt(newId, compound.getCompound("entity").orElse(null));
     }
 
-    private void loadEntityFromNbt(String newId, @Nullable NbtCompound newNbt) {
+    private void loadEntityFromNbt(String newId, @Nullable CompoundTag newNbt) {
         String newPlayerName = newNbt == null ? null : newNbt.getString("playerName").orElse(null);
-        String oldPlayerName = entity instanceof PlayerEntity player ? player.getGameProfile().getName() : null;
+        String oldPlayerName = entity instanceof Player player ? player.getGameProfile().name() : null;
 
         if (!Objects.equals(newId, entityId) || !Objects.equals(newPlayerName, oldPlayerName)) {
             entityNbt = null;
@@ -339,7 +343,7 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         if (entityNbt != null) {
             if (entity != null) {
                 try {
-                    entity.readNbt(entityNbt);
+                    entity.load(TagValueInput.create(ProblemReporter.DISCARDING, entity.registryAccess(), entityNbt));
                 } catch (Exception ignored) {
                     // Mojang pls
                 }
@@ -352,40 +356,44 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     }
 
     public static boolean isAxisAligned(@Nullable Entity entity) {
-        return entity instanceof ShulkerEntity
-            || entity instanceof AbstractDecorationEntity
+        return entity instanceof Shulker
+            || entity instanceof HangingEntity
             || entity instanceof FallingBlockEntity;
     }
 
-    private static NbtCompound encodeEntityToNBT(Entity entity) {
-        NbtCompound entityNbt = new NbtCompound();
+    private static CompoundTag encodeEntityToNBT(Entity entity) {
+        CompoundTag entityNbt = new CompoundTag();
 
-        if (entity instanceof PlayerEntity player) {
+        if (entity instanceof Player player) {
             GameProfile profile = player.getGameProfile();
 
             entityNbt.putString("id", "player");
-            entityNbt.putNullable("playerId", Uuids.CODEC, profile.getId());
-            entityNbt.putString("playerName", profile.getName());
-            entityNbt.putByte("playerVisibleParts", player.getDataTracker().get(Disguise.PlayerAccess.getModelBitFlag()));
+            entityNbt.storeNullable("playerId", UUIDUtil.AUTHLIB_CODEC, profile.id());
+            entityNbt.putString("playerName", profile.name());
+            entityNbt.putByte("playerVisibleParts", player.getEntityData().get(Disguise.PlayerAccess.getModelBitFlag()));
 
             return NbtSerialisable.subTag("playerNbt", entityNbt, playerNbt -> {
-                player.writeNbt(playerNbt);
+                var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, player.registryAccess());
+                player.saveWithoutId(output);
+                playerNbt.merge(output.buildResult());
                 playerNbt.remove("unicopia_caster");
                 Pony pony = Pony.of(player);
                 if (pony != null) {
-                    NbtSerialisable.subTag("unicopia_caster", playerNbt, comp -> pony.toSyncronisedNbt(comp, pony.asEntity().getRegistryManager()));
+                    NbtSerialisable.subTag("unicopia_caster", playerNbt, comp -> pony.toSyncronisedNbt(comp, pony.asEntity().registryAccess()));
                 }
             });
         }
 
-        entity.saveSelfNbt(entityNbt);
+        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, entity.registryAccess());
+        entity.saveAsPassenger(output);
+        entityNbt.merge(output.buildResult());
         entityNbt.remove("unicopia_caster");
 
         return entityNbt;
     }
 
     @Override
-    public void getCollissionShapes(ShapeContext context, Consumer<VoxelShape> output) {
+    public void getCollissionShapes(CollisionContext context, Consumer<VoxelShape> output) {
         EntityCollisions.getCollissionShapes(getEntity(), context, output);
         getAttachments().forEach(e -> EntityCollisions.getCollissionShapes(e.entity(), context, output));
     }
@@ -404,14 +412,14 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     }
 
     @Override
-    public void read(RegistryByteBuf buffer) {
-        loadEntityFromNbt(buffer.readString(), buffer.readNullable(PacketCodecs.NBT_COMPOUND));
+    public void read(RegistryFriendlyByteBuf buffer) {
+        loadEntityFromNbt(buffer.readUtf(), buffer.readNullable(ByteBufCodecs.COMPOUND_TAG));
     }
 
     @Override
-    public void write(RegistryByteBuf buffer) {
-        buffer.writeString(entityId);
-        buffer.writeNullable(getEntityNbt(), PacketCodecs.NBT_COMPOUND);
+    public void write(RegistryFriendlyByteBuf buffer) {
+        buffer.writeUtf(entityId);
+        buffer.writeNullable(getEntityNbt(), ByteBufCodecs.COMPOUND_TAG);
     }
 
     @Override

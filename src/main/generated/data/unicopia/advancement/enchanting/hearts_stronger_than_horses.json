@@ -1,0 +1,39 @@
+{
+  "parent": "minecraft:story/enchant_item",
+  "criteria": {
+    "enchant_with_heart_bound": {
+      "conditions": {
+        "item": {
+          "predicates": {
+            "minecraft:enchantments": [
+              {
+                "enchantments": "unicopia:heart_bound"
+              }
+            ]
+          }
+        }
+      },
+      "trigger": "minecraft:enchanted_item"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.hearts_stronger_than_horses.description"
+    },
+    "icon": {
+      "id": "minecraft:golden_apple"
+    },
+    "title": {
+      "translate": "advancements.unicopia.hearts_stronger_than_horses.title"
+    }
+  },
+  "requirements": [
+    [
+      "enchant_with_heart_bound"
+    ]
+  ],
+  "rewards": {
+    "experience": 120
+  },
+  "sends_telemetry_event": true
+}

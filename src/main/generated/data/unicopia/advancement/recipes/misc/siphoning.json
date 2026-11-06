@@ -1,0 +1,24 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_traits": {
+      "conditions": {
+        "traits": [
+          "unicopia:blood",
+          "unicopia:poison"
+        ]
+      },
+      "trigger": "unicopia:trait_discovered"
+    }
+  },
+  "requirements": [
+    [
+      "has_traits"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:siphoning"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_basket": {
+      "conditions": {
+        "items": [
+          {
+            "items": "#unicopia:baskets"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": false,
+    "description": {
+      "translate": "advancements.unicopia.basket_case.description"
+    },
+    "icon": {
+      "id": "unicopia:oak_basket"
+    },
+    "title": {
+      "translate": "advancements.unicopia.basket_case.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_basket"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

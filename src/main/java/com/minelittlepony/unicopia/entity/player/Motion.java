@@ -1,6 +1,6 @@
 package com.minelittlepony.unicopia.entity.player;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Interface for controlling flight.
@@ -21,5 +21,5 @@ public interface Motion {
 
     PlayerDimensions getDimensions();
 
-    Vec3d getTrackedVelocity();
+    Vec3 getTrackedVelocity();
 }

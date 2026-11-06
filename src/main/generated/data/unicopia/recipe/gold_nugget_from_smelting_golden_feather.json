@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smelting",
+  "cookingtime": 10,
+  "experience": 3.0,
+  "group": "gold_nugget",
+  "ingredient": "unicopia:golden_feather",
+  "result": {
+    "id": "minecraft:gold_nugget"
+  }
+}

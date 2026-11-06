@@ -7,19 +7,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.EquineContext;
 import com.minelittlepony.unicopia.InteractionManager;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.PathNavigationRegion;
+import net.minecraft.world.level.pathfinder.NodeEvaluator;
 
-import net.minecraft.entity.ai.pathing.PathNodeMaker;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.world.chunk.ChunkCache;
-
-@Mixin(PathNodeMaker.class)
+@Mixin(NodeEvaluator.class)
 abstract class MixinPathNodeMaker {
-    @Inject(method = "init", at = @At("HEAD"))
-    private void onInit(ChunkCache cachedWorld, MobEntity entity, CallbackInfo info) {
+    @Inject(method = "prepare", at = @At("HEAD"))
+    private void onInit(PathNavigationRegion cachedWorld, Mob entity, CallbackInfo info) {
         InteractionManager.getInstance().setEquineContext(EquineContext.of(entity));
     }
 
-    @Inject(method = "clear", at = @At("HEAD"))
+    @Inject(method = "done", at = @At("HEAD"))
     private void onClear(CallbackInfo info) {
         InteractionManager.getInstance().clearEquineContext();
     }

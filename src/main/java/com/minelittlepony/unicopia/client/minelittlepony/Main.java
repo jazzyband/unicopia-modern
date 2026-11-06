@@ -24,19 +24,19 @@ import com.minelittlepony.unicopia.compat.trinkets.TrinketsDelegate;
 import com.minelittlepony.unicopia.util.AnimationUtil;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.render.entity.state.AllayEntityRenderState;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.AllayEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.renderer.entity.state.AllayRenderState;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.allay.Allay;
+import net.minecraft.world.entity.player.Player;
 
 public class Main extends MineLPDelegate implements ClientModInitializer {
     private static final Map<com.minelittlepony.api.pony.meta.Race, Race> PONY_RACE_MAPPING = new HashMap<>();
     private static final Function<com.minelittlepony.api.pony.meta.Race, Race> LOOKUP_CACHE = Util.memoize(race -> {
         return Optional.ofNullable(PONY_RACE_MAPPING.get(race))
-                .or(() -> Race.REGISTRY.getOptionalValue(Unicopia.id(race.name().toLowerCase(Locale.ROOT))))
+                .or(() -> Race.REGISTRY.getOptional(Unicopia.id(race.name().toLowerCase(Locale.ROOT))))
                 .orElse(Race.UNSET);
     });
 
@@ -66,10 +66,10 @@ public class Main extends MineLPDelegate implements ClientModInitializer {
         INSTANCE = this;
 
         PonyForm.register(Unicopia.id("seapony"), PonyPosture::hasSeaponyForm, (context, slimArms) -> new AquaticPlayerPonyRenderer(context, slimArms, DefaultPonySkinHelper.SEAPONY_SKIN_TYPE_ID, entity -> {
-            return EquinePredicates.PLAYER_SEAPONY.test(entity);
+            return entity instanceof Entity e && EquinePredicates.PLAYER_SEAPONY.test(e);
         }));
         PonyForm.register(Unicopia.id("nirik"), PonyPosture::hasNirikForm, (context, slimArms) -> new FormChangingPlayerPonyRenderer(context, slimArms, DefaultPonySkinHelper.NIRIK_SKIN_TYPE_ID, entity -> {
-            return EquinePredicates.PLAYER_KIRIN.test(entity) && EquinePredicates.RAGING.test(entity);
+            return entity instanceof Entity e && EquinePredicates.PLAYER_KIRIN.test(e) && EquinePredicates.RAGING.test(e);
         }));
 
         PonyRenderStatePrepareCallback.EVENT.register(this::onPonyModelPrepared);
@@ -85,14 +85,15 @@ public class Main extends MineLPDelegate implements ClientModInitializer {
         Gear.register(SpellEffectGear::new);
     }
 
-    private void onPonyModelPrepared(PonyRenderState state, PonyModel<?> model, ModelAttributes.Mode mode) {
+    private void onPonyModelPrepared(PonyModel.AttributedHolder holder, PonyModel<?> model, ModelAttributes.Mode mode) {
         if (hookErroring) return;
         try {
+            if (!(holder instanceof PonyRenderState state)) return;
             CasterState casterState = CasterState.of(state);
             ModelAttributes attributes = state.getAttributes();
 
             if (casterState.flying) {
-                attributes.wingAngle = MathHelper.clamp(casterState.wingsAngle / 3F - (float)Math.PI * 0.4F, -2, 0);
+                attributes.wingAngle = Mth.clamp(casterState.wingsAngle / 3F - (float)Math.PI * 0.4F, -2, 0);
             }
             attributes.isGoingFast |= casterState.dashing;
             attributes.isGoingFast &= casterState.carriedEntity.state == null;
@@ -114,13 +115,13 @@ public class Main extends MineLPDelegate implements ClientModInitializer {
     }
 
     @Override
-    public Race getPlayerPonyRace(PlayerEntity player) {
+    public Race getPlayerPonyRace(Player player) {
         return toUnicopiaRace(com.minelittlepony.api.pony.Pony.getManager().getPony(player).race());
     }
 
     @Override
     public Race getRace(Entity entity) {
-        if (entity instanceof AllayEntity) {
+        if (entity instanceof Allay) {
             return MobRenderers.ALLAY.option().get() ? Race.PEGASUS : Race.HUMAN;
         }
 
@@ -129,7 +130,7 @@ public class Main extends MineLPDelegate implements ClientModInitializer {
 
     @Override
     public Race getRace(EntityRenderState state) {
-        if (state instanceof AllayEntityRenderState) {
+        if (state instanceof AllayRenderState) {
             return MobRenderers.ALLAY.option().get() ? Race.PEGASUS : Race.HUMAN;
         }
         return state instanceof PonyRenderState s ? toUnicopiaRace(s.getRace()) : Race.HUMAN;

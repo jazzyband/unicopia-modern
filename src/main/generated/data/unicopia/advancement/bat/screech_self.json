@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:bat/praise_the_sun",
+  "criteria": {
+    "screech_self": {
+      "conditions": {
+        "event": "screech_self",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.screech_self.description"
+    },
+    "frame": "challenge",
+    "icon": {
+      "id": "minecraft:black_candle"
+    },
+    "title": {
+      "translate": "advancements.unicopia.screech_self.title"
+    }
+  },
+  "requirements": [
+    [
+      "screech_self"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -1,0 +1,11 @@
+{
+  "drops": [],
+  "leaves": [
+    "unicopia:green_apple_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:oak_log",
+    "minecraft:oak_wood"
+  ]
+}

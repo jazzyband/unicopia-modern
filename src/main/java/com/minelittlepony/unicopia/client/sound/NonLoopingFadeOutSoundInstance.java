@@ -1,15 +1,15 @@
 package com.minelittlepony.unicopia.client.sound;
 
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 
 public class NonLoopingFadeOutSoundInstance extends FadeOutSoundInstance {
 
     private final long duration;
     private long ticks;
 
-    public NonLoopingFadeOutSoundInstance(SoundEvent sound, SoundCategory category, float volume, Random random, long duration) {
+    public NonLoopingFadeOutSoundInstance(SoundEvent sound, SoundSource category, float volume, RandomSource random, long duration) {
         super(sound, category, volume, random);
         this.duration = duration;
     }

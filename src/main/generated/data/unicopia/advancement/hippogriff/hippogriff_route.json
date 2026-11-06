@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:root",
+  "criteria": {
+    "be_hippogriff": {
+      "conditions": {
+        "race": "unicopia:hippogriff"
+      },
+      "trigger": "unicopia:player_change_race"
+    },
+    "be_seapony": {
+      "conditions": {
+        "race": "unicopia:seapony"
+      },
+      "trigger": "unicopia:player_change_race"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.hippogriff_route.description"
+    },
+    "icon": {
+      "id": "unicopia:hippogriff_badge"
+    },
+    "title": {
+      "translate": "advancements.unicopia.hippogriff_route.title"
+    }
+  },
+  "requirements": [
+    [
+      "be_hippogriff",
+      "be_seapony"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

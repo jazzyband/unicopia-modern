@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:unicorn/take_a_note",
+  "criteria": {
+    "send_book": {
+      "conditions": {
+        "item": {
+          "items": "minecraft:written_book"
+        },
+        "recipient_present": false
+      },
+      "trigger": "unicopia:send_dragon_breath"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.dear_princess.description"
+    },
+    "icon": {
+      "id": "unicopia:dragon_breath_scroll"
+    },
+    "title": {
+      "translate": "advancements.unicopia.dear_princess.title"
+    }
+  },
+  "requirements": [
+    [
+      "send_book"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

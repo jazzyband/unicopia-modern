@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:pegasus/pegasus_route",
+  "criteria": {
+    "has_empty_jar": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:empty_jar"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.jar.description"
+    },
+    "icon": {
+      "id": "unicopia:empty_jar"
+    },
+    "title": {
+      "translate": "advancements.unicopia.jar.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_empty_jar"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

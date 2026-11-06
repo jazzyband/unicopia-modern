@@ -1,0 +1,6 @@
+{
+  "type": "unicopia:spellbook/duplicating",
+  "material": {
+    "item": "unicopia:botched_gem"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_traits": {
+      "conditions": {
+        "traits": [
+          "unicopia:life",
+          "unicopia:chaos",
+          "unicopia:generosity",
+          "unicopia:knowledge"
+        ]
+      },
+      "trigger": "unicopia:trait_discovered"
+    }
+  },
+  "requirements": [
+    [
+      "has_traits"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:feather_fall"
+    ]
+  }
+}

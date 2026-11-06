@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:waxed_zap_wood_from_honeycomb"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_zap_wood": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:zap_wood"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_zap_wood"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:waxed_zap_wood_from_honeycomb"
+    ]
+  }
+}

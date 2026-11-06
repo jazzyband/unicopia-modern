@@ -1,22 +1,22 @@
 package com.minelittlepony.unicopia.client.particle;
 
-import org.joml.Quaternionf;
 import org.joml.Vector4f;
 
 import com.minelittlepony.unicopia.client.render.model.FanModel;
 import com.minelittlepony.unicopia.client.render.model.VertexLightSource;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.Blocks;
 
 public class DustCloudParticle extends AbstractBillboardParticle {
     protected static final int SEGMENTS = 20;
@@ -24,21 +24,21 @@ public class DustCloudParticle extends AbstractBillboardParticle {
 
     private float scaleFactor;
 
-    protected Sprite sprite;
+    protected TextureAtlasSprite sprite;
     private final FanModel model;
 
     private final VertexLightSource lightSource;
 
-    public DustCloudParticle(BlockStateParticleEffect effect, ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+    public DustCloudParticle(BlockParticleOption effect, ClientLevel world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
         super(world, x, y, z, velocityX, velocityY, velocityZ);
-        maxAge = 1000;
-        gravityStrength = 1;
-        red = 0.6F;
-        green = 0.6F;
-        blue = 0.6F;
-        alpha = (float)world.getRandom().nextTriangular(0.6, 0.2) * 0.3F;
-        scaleFactor = (float)world.getRandom().nextTriangular(2, 1.2);
-        sprite = MinecraftClient.getInstance().getBlockRenderManager().getModels().getModelParticleSprite(effect.getBlockState());
+        lifetime = 1000;
+        gravity = 1;
+        rCol = 0.6F;
+        gCol = 0.6F;
+        bCol = 0.6F;
+        alpha = (float)world.getRandom().triangle(0.6, 0.2) * 0.3F;
+        scaleFactor = (float)world.getRandom().triangle(2, 1.2);
+        sprite = Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(effect.getState()).sprite();
         lightSource = new VertexLightSource(world);
         model = new FanModel(sprite) {
             @Override
@@ -46,50 +46,48 @@ public class DustCloudParticle extends AbstractBillboardParticle {
                 return lightSource.getLight(pos, light);
             }
         };
-        if (!effect.getBlockState().isOf(Blocks.GRASS_BLOCK)) {
-            int i = MinecraftClient.getInstance().getBlockColors().getColor(effect.getBlockState(), world, BlockPos.ofFloored(x, y, z), 0);
-            red *= ColorHelper.getRedFloat(i);
-            green *= ColorHelper.getGreenFloat(i);
-            blue *= ColorHelper.getBlueFloat(i);
+        if (!effect.getState().is(Blocks.GRASS_BLOCK)) {
+            var tint = Minecraft.getInstance().getBlockColors().getTintSource(effect.getState(), 0);
+            int i = tint == null ? CommonColors.WHITE : tint.colorInWorld(effect.getState(), world, BlockPos.containing(x, y, z));
+            rCol *= ARGB.redFloat(i);
+            gCol *= ARGB.greenFloat(i);
+            bCol *= ARGB.blueFloat(i);
         }
     }
 
     @Override
     protected Identifier getTexture() {
-        return sprite.getAtlasId();
+        return sprite.atlasLocation();
     }
 
     @Override
     public void tick() {
         super.tick();
         scaleFactor += 0.001F;
-        scale(MathHelper.clamp(age / 5F, 0, 1) * scaleFactor);
+        scale(Mth.clamp(age / 5F, 0, 1) * scaleFactor);
         lightSource.tick();
     }
 
     @Override
     protected void renderQuads(VertexConsumer buffer, float x, float y, float z, float tickDelta) {
         float scale = getScale(tickDelta) * 0.5F;
-        float alpha = this.alpha * (1 - ((float)age / maxAge));
-        int color = ColorHelper.withAlpha((int)(alpha * 255), Colors.WHITE);
-        MatrixStack matrices = new MatrixStack();
+        float alpha = this.alpha * (1 - ((float)age / lifetime));
+        int color = ARGB.color((int)(alpha * 255), CommonColors.WHITE);
+        PoseStack matrices = new PoseStack();
         matrices.translate(x, y, z);
         matrices.scale(1, 0.5F, 1);
 
-        float angle = (MathHelper.sin((this.age + tickDelta) / 100F) * 360) / SEGMENTS;
-        Quaternionf rotation = new Quaternionf();
+        float angle = (Mth.sin((this.age + tickDelta) / 100F) * 360) / SEGMENTS;
 
         for (int i = 0; i < SEGMENTS; i++) {
-            matrices.push();
-            matrices.multiply(rotation.rotationXYZ(
-                    (i * angle) * MathHelper.RADIANS_PER_DEGREE,
-                    (SEPARATION * i - angle) * MathHelper.RADIANS_PER_DEGREE,
-                    (SEPARATION * i + angle) * MathHelper.RADIANS_PER_DEGREE
-            ));
-            float ringScale = 1 + MathHelper.sin(((i * 10) + age + tickDelta) * 0.05F) * 0.1F;
+            matrices.pushPose();
+            matrices.rotate(Axis.XP.rotationDegrees((i * angle)));
+            matrices.rotate(Axis.YP.rotationDegrees((SEPARATION * i - angle)));
+            matrices.rotate(Axis.ZP.rotationDegrees((SEPARATION * i + angle)));
+            float ringScale = 1 + Mth.sin(((i * 10) + age + tickDelta) * 0.05F) * 0.1F;
 
             model.render(matrices, buffer, 0, scale * ringScale, color);
-            matrices.pop();
+            matrices.popPose();
         }
     }
 }

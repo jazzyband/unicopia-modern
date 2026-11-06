@@ -23,17 +23,23 @@ import com.minelittlepony.unicopia.util.shape.*;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.*;
-import net.minecraft.fluid.*;
-import net.minecraft.nbt.*;
-import net.minecraft.state.property.Properties;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 
 public class HydrophobicSpell extends AbstractSpell {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -66,13 +72,13 @@ public class HydrophobicSpell extends AbstractSpell {
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
         if (!source.isClient()) {
-            World world = source.asWorld();
+            Level world = source.asWorld();
 
             double range = getRange(source);
             Shape area = new Sphere(false, range).translate(source.getOriginVector());
 
             storedFluidPositions.removeIf(entry -> {
-               if (!area.isPointInside(Vec3d.ofCenter(entry.pos()))) {
+               if (!area.isPointInside(Vec3.atCenterOf(entry.pos()))) {
                    if (source.canModifyAt(entry.pos())) {
                        entry.restore(world);
                    }
@@ -85,15 +91,15 @@ public class HydrophobicSpell extends AbstractSpell {
             AbstractAreaEffectSpell.allBlockPositions(source, area).forEach(pos -> {
                 BlockState state = world.getBlockState(pos);
 
-                if (state.getFluidState().isIn(affectedFluid)) {
+                if (state.getFluidState().is(affectedFluid)) {
                     Block block = state.getBlock();
 
-                    if (block instanceof FluidBlock) {
-                        world.setBlockState(pos, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
-                        storedFluidPositions.add(new Entry(new BlockPos(pos), state));
-                    } else if (state.contains(Properties.WATERLOGGED)) {
-                        world.setBlockState(pos, state.cycle(Properties.WATERLOGGED), Block.NOTIFY_LISTENERS);
-                        storedFluidPositions.add(new Entry(new BlockPos(pos), state));
+                    if (block instanceof LiquidBlock) {
+                        world.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                        storedFluidPositions.add(new Entry(pos.immutable(), state));
+                    } else if (state.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                        world.setBlock(pos, state.cycle(BlockStateProperties.WATERLOGGED), Block.UPDATE_CLIENTS);
+                        storedFluidPositions.add(new Entry(pos.immutable(), state));
                     }
                 }
             });
@@ -105,13 +111,13 @@ public class HydrophobicSpell extends AbstractSpell {
             Ether.get(source.asWorld()).getOrCreate(this, source).setRadius((float)range);
 
             source.spawnParticles(new Sphere(true, range), 10, pos -> {
-                BlockPos bp = BlockPos.ofFloored(pos);
-                if (source.canModifyAt(bp) && source.asWorld().getFluidState(bp.up()).isIn(affectedFluid)) {
-                    source.addParticle(UParticles.RAIN_DROPS, pos, Vec3d.ZERO);
+                BlockPos bp = BlockPos.containing(pos);
+                if (source.canModifyAt(bp) && source.asWorld().getFluidState(bp.above()).is(affectedFluid)) {
+                    source.addParticle(UParticles.RAIN_DROPS, pos, Vec3.ZERO);
                 }
             });
 
-            if (source.asEntity().age % 200 == 0) {
+            if (source.asEntity().tickCount % 200 == 0) {
                 source.playSound(USounds.SPELL_AMBIENT, 0.5F);
             }
 
@@ -135,16 +141,16 @@ public class HydrophobicSpell extends AbstractSpell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
-        compound.put("storedFluidPositions", Entry.SET_CODEC, lookup.getOps(NbtOps.INSTANCE), storedFluidPositions);
+        compound.store("storedFluidPositions", Entry.SET_CODEC, lookup.createSerializationContext(NbtOps.INSTANCE), storedFluidPositions);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
         storedFluidPositions.clear();
-        compound.get("storedFluidPositions", Entry.SET_CODEC, lookup.getOps(NbtOps.INSTANCE)).ifPresent(storedFluidPositions::addAll);
+        compound.read("storedFluidPositions", Entry.SET_CODEC, lookup.createSerializationContext(NbtOps.INSTANCE)).ifPresent(storedFluidPositions::addAll);
     }
     /**
      * Calculates the maximum radius of the shield. aka The area of effect.
@@ -160,37 +166,37 @@ public class HydrophobicSpell extends AbstractSpell {
     record Entry (BlockPos pos, BlockState blockState) {
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockPos.CODEC.fieldOf("pos").forGetter(Entry::pos),
-            BlockState.CODEC.optionalFieldOf("blockState", Blocks.AIR.getDefaultState()).forGetter(Entry::blockState)
+            BlockState.CODEC.optionalFieldOf("blockState", Blocks.AIR.defaultBlockState()).forGetter(Entry::blockState)
         ).apply(instance, Entry::new));
         public static final Codec<Set<Entry>> SET_CODEC = CodecUtils.setOf(CODEC);
 
-        void restore(World world) {
+        void restore(Level world) {
             BlockState state = world.getBlockState(pos);
 
             if (state.isAir()) {
-                if (blockState.contains(Properties.WATERLOGGED)) {
-                    world.setBlockState(pos, blockState.getFluidState().getBlockState(), Block.NOTIFY_LISTENERS);
+                if (blockState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                    world.setBlock(pos, blockState.getFluidState().createLegacyBlock(), Block.UPDATE_CLIENTS);
                 } else {
-                    world.setBlockState(pos, blockState, Block.NOTIFY_LISTENERS);
+                    world.setBlock(pos, blockState, Block.UPDATE_CLIENTS);
                 }
-            } else if (state.contains(Properties.WATERLOGGED)) {
-                world.setBlockState(pos, state.with(Properties.WATERLOGGED, true), Block.NOTIFY_LISTENERS);
+            } else if (state.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                world.setBlock(pos, state.setValue(BlockStateProperties.WATERLOGGED, true), Block.UPDATE_CLIENTS);
             }
         }
     }
 
-    public boolean blocksFlow(Ether.MutableEntry<?> entry, Vec3d center, BlockPos pos, FluidState fluid) {
-        return fluid.isIn(affectedFluid) && pos.isWithinDistance(center, (double)entry.radius() + 1);
+    public boolean blocksFlow(Ether.MutableEntry<?> entry, Vec3 center, BlockPos pos, FluidState fluid) {
+        return fluid.is(affectedFluid) && pos.closerToCenterThan(center, (double)entry.radius() + 1);
     }
 
-    public static boolean blocksFluidFlow(BlockView world, BlockPos pos, FluidState state) {
-        if (!(world instanceof ServerWorld sw)) {
+    public static boolean blocksFluidFlow(BlockGetter world, BlockPos pos, FluidState state) {
+        if (!(world instanceof ServerLevel sw)) {
             return false;
         }
 
         return Ether.get(sw).anyMatch(SpellType.HYDROPHOBIC, entry -> {
             var target = entry.entity.getTarget().orElse(null);
-            if (target == null || !pos.isWithinDistance(target.pos(), entry.radius() + 2)) {
+            if (target == null || !pos.closerToCenterThan(target.pos(), entry.radius() + 2)) {
                 return false;
             }
             var spell = entry.getSpell();

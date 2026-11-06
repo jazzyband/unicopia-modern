@@ -1,0 +1,184 @@
+{
+  "parent": "unicopia:pegasus/mid_flight_interruption",
+  "criteria": {
+    "lightning_struck_player_1": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_10": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 10
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_2": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 2
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_3": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 3
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_4": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 4
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_5": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 5
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_6": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 6
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_7": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 7
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_8": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 8
+      },
+      "trigger": "unicopia:custom"
+    },
+    "lightning_struck_player_9": {
+      "conditions": {
+        "event": "lightning_struck_player",
+        "flying": true,
+        "races": {
+          "include": [
+            "unicopia:changeling"
+          ]
+        },
+        "repeatCount": 9
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.lightning_bug.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:lightning_jar"
+    },
+    "title": {
+      "translate": "advancements.unicopia.lightning_bug.title"
+    }
+  },
+  "requirements": [
+    [
+      "lightning_struck_player_1"
+    ],
+    [
+      "lightning_struck_player_2"
+    ],
+    [
+      "lightning_struck_player_3"
+    ],
+    [
+      "lightning_struck_player_4"
+    ],
+    [
+      "lightning_struck_player_5"
+    ],
+    [
+      "lightning_struck_player_6"
+    ],
+    [
+      "lightning_struck_player_7"
+    ],
+    [
+      "lightning_struck_player_8"
+    ],
+    [
+      "lightning_struck_player_9"
+    ],
+    [
+      "lightning_struck_player_10"
+    ]
+  ],
+  "rewards": {
+    "experience": 90
+  },
+  "sends_telemetry_event": true
+}

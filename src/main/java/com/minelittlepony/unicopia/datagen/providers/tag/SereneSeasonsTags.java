@@ -1,10 +1,10 @@
 package com.minelittlepony.unicopia.datagen.providers.tag;
 
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 
 public interface SereneSeasonsTags {
     interface Items {
@@ -14,7 +14,7 @@ public interface SereneSeasonsTags {
         TagKey<Item> SUMMER_CROPS = item("summer_crops");
 
         private static TagKey<Item> item(String name) {
-            return TagKey.of(RegistryKeys.ITEM, Identifier.of("sereneseasons", name));
+            return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("sereneseasons", name));
         }
     }
 
@@ -25,7 +25,7 @@ public interface SereneSeasonsTags {
         TagKey<Block> SUMMER_CROPS = block("summer_crops");
 
         private static TagKey<Block> block(String name) {
-            return TagKey.of(RegistryKeys.BLOCK, Identifier.of("sereneseasons", name));
+            return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("sereneseasons", name));
         }
     }
 

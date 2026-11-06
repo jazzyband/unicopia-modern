@@ -5,64 +5,58 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.EquineContext;
 import com.minelittlepony.unicopia.container.ShapingBenchScreenHandler;
 import com.mojang.serialization.MapCodec;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.ScreenHandlerContext;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.stat.Stats;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class ShapingBenchBlock extends CloudBlock {
-    private static final MapCodec<ShapingBenchBlock> CODEC = Block.createCodec(ShapingBenchBlock::new);
-    private static final VoxelShape SHAPE = VoxelShapes.union(
-            Block.createCuboidShape(0, 13, 0, 3, 18, 3),
-            Block.createCuboidShape(13, 13, 0, 16, 18, 3),
-            Block.createCuboidShape(0, 13, 13, 3, 18, 16),
-            Block.createCuboidShape(13, 13, 13, 16, 18, 16),
-            Block.createCuboidShape(0, 13, 0, 16, 16, 16),
-            Block.createCuboidShape(2, 0, 2, 14, 17, 14),
-            Block.createCuboidShape(0, 0, 0, 16, 4, 16)
+    private static final VoxelShape SHAPE = Shapes.or(
+            Block.box(0, 13, 0, 3, 18, 3),
+            Block.box(13, 13, 0, 16, 18, 3),
+            Block.box(0, 13, 13, 3, 18, 16),
+            Block.box(13, 13, 13, 16, 18, 16),
+            Block.box(0, 13, 0, 16, 16, 16),
+            Block.box(2, 0, 2, 14, 17, 14),
+            Block.box(0, 0, 0, 16, 4, 16)
     );
 
-    public ShapingBenchBlock(Settings settings) {
+    public ShapingBenchBlock(Properties settings) {
         super(false, settings);
     }
 
-    @Override
-    public MapCodec<ShapingBenchBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context, EquineContext equineContext) {
+    protected VoxelShape getOutlineShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context, EquineContext equineContext) {
         return SHAPE;
     }
 
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (world.isClient) {
-            return ActionResult.SUCCESS;
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
+        if (world.isClientSide()) {
+            return InteractionResult.SUCCESS;
         }
-        player.openHandledScreen(state.createScreenHandlerFactory(world, pos));
-        player.incrementStat(Stats.INTERACT_WITH_STONECUTTER);
-        return ActionResult.CONSUME;
+        player.openMenu(state.getMenuProvider(world, pos));
+        player.awardStat(Stats.INTERACT_WITH_STONECUTTER);
+        return InteractionResult.CONSUME;
     }
 
     @Override
     @Nullable
-    public NamedScreenHandlerFactory createScreenHandlerFactory(BlockState state, World world, BlockPos pos) {
-        return new SimpleNamedScreenHandlerFactory((syncId, playerInventory, player) -> {
-            return new ShapingBenchScreenHandler(syncId, playerInventory, ScreenHandlerContext.create(world, pos));
+    public MenuProvider getMenuProvider(BlockState state, Level world, BlockPos pos) {
+        return new SimpleMenuProvider((syncId, playerInventory, player) -> {
+            return new ShapingBenchScreenHandler(syncId, playerInventory, ContainerLevelAccess.create(world, pos));
         }, getName());
     }
 }

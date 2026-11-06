@@ -2,36 +2,35 @@ package com.minelittlepony.unicopia.entity.damage;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.damagesource.DamageType;
 import com.minelittlepony.unicopia.Unicopia;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
 
 public interface UDamageTypes {
-    List<RegistryKey<DamageType>> REGISTRY = new ArrayList<>();
+    List<ResourceKey<DamageType>> REGISTRY = new ArrayList<>();
 
-    RegistryKey<DamageType> EXHAUSTION = register("magical_exhaustion");
-    RegistryKey<DamageType> ALICORN_AMULET = register("alicorn_amulet");
-    RegistryKey<DamageType> TRIBE_SWAP = register("tribe_swap");
-    RegistryKey<DamageType> ZAP_APPLE = register("zap");
-    RegistryKey<DamageType> KICK = register("kick");
-    RegistryKey<DamageType> SMASH = register("smash");
-    RegistryKey<DamageType> BAT_SCREECH = register("bat_screech");
-    RegistryKey<DamageType> LOVE_DRAINING = register("love_draining");
-    RegistryKey<DamageType> LIFE_DRAINING = register("life_draining");
-    RegistryKey<DamageType> RAINBOOM = register("rainboom");
-    RegistryKey<DamageType> STEAMROLLER = register("steamroller");
-    RegistryKey<DamageType> GAVITY_WELL_RECOIL = register("gravity_well_recoil");
-    RegistryKey<DamageType> SUN = register("sun");
-    RegistryKey<DamageType> SUNLIGHT = register("sunlight");
-    RegistryKey<DamageType> PETRIFIED = register("petrified");
-    RegistryKey<DamageType> ROCK = register("rock");
-    RegistryKey<DamageType> HORSESHOE = register("horseshoe");
-    RegistryKey<DamageType> SPIKES = register("spikes");
+    ResourceKey<DamageType> EXHAUSTION = register("magical_exhaustion");
+    ResourceKey<DamageType> ALICORN_AMULET = register("alicorn_amulet");
+    ResourceKey<DamageType> TRIBE_SWAP = register("tribe_swap");
+    ResourceKey<DamageType> ZAP_APPLE = register("zap");
+    ResourceKey<DamageType> KICK = register("kick");
+    ResourceKey<DamageType> SMASH = register("smash");
+    ResourceKey<DamageType> BAT_SCREECH = register("bat_screech");
+    ResourceKey<DamageType> LOVE_DRAINING = register("love_draining");
+    ResourceKey<DamageType> LIFE_DRAINING = register("life_draining");
+    ResourceKey<DamageType> RAINBOOM = register("rainboom");
+    ResourceKey<DamageType> STEAMROLLER = register("steamroller");
+    ResourceKey<DamageType> GAVITY_WELL_RECOIL = register("gravity_well_recoil");
+    ResourceKey<DamageType> SUN = register("sun");
+    ResourceKey<DamageType> SUNLIGHT = register("sunlight");
+    ResourceKey<DamageType> PETRIFIED = register("petrified");
+    ResourceKey<DamageType> ROCK = register("rock");
+    ResourceKey<DamageType> HORSESHOE = register("horseshoe");
+    ResourceKey<DamageType> SPIKES = register("spikes");
 
-    private static RegistryKey<DamageType> register(String name) {
-        RegistryKey<DamageType> key = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Unicopia.id(name));
+    private static ResourceKey<DamageType> register(String name) {
+        ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, Unicopia.id(name));
         REGISTRY.add(key);
         return key;
     }

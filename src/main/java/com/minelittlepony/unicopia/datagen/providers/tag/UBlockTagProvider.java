@@ -10,32 +10,40 @@ import com.minelittlepony.unicopia.block.UBlocks;
 import com.minelittlepony.unicopia.server.world.Tree;
 import com.minelittlepony.unicopia.server.world.UTreeGen;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagsProvider;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBlockTags;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.TagBuilder;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.DyeColor;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagBuilder;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
-public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
-    public UBlockTagProvider(FabricDataOutput output, CompletableFuture<RegistryWrapper.WrapperLookup> registriesFuture) {
+public class UBlockTagProvider extends FabricTagsProvider.BlockTagsProvider {
+    public UBlockTagProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registriesFuture) {
         super(output, registriesFuture);
     }
 
     @Override
-    protected TagBuilder getTagBuilder(TagKey<Block> tag) {
-        return super.getTagBuilder(tag);
+    protected RegistryEntryTagAppender<Block> tag(TagKey<Block> tag) {
+        return new RegistryEntryTagAppender<>(super.tag(tag), block -> block.builtInRegistryHolder().key(),
+                id -> ResourceKey.create(Registries.BLOCK, id));
     }
 
     @Override
-    protected void configure(WrapperLookup registries) {
+    protected TagBuilder getOrCreateRawBuilder(TagKey<Block> tag) {
+        return super.getOrCreateRawBuilder(tag);
+    }
+
+    @Override
+    protected void addTags(Provider registries) {
         populateConventionalTags();
         Block[] crops = {
                 UBlocks.OATS, UBlocks.OATS_STEM, UBlocks.OATS_CROWN,
@@ -44,29 +52,29 @@ public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
                 UBlocks.GOLDEN_OAK_SPROUT
         };
 
-        getOrCreateTagBuilder(UTags.Blocks.CATAPULT_IMMUNE).add(
+        tag(UTags.Blocks.CATAPULT_IMMUNE).add(
                 Blocks.STRUCTURE_VOID, Blocks.STRUCTURE_BLOCK,
                 Blocks.COMMAND_BLOCK, Blocks.CHAIN_COMMAND_BLOCK, Blocks.REPEATING_COMMAND_BLOCK,
                 Blocks.LIGHT, Blocks.JIGSAW, Blocks.BARRIER, Blocks.BEDROCK
         ).forceAddTag(BlockTags.DOORS).forceAddTag(BlockTags.TRAPDOORS).forceAddTag(BlockTags.BEDS);
-        getOrCreateTagBuilder(UTags.Blocks.ANGERS_GUARDIANS).add(
+        tag(UTags.Blocks.ANGERS_GUARDIANS).add(
                 Blocks.PRISMARINE, Blocks.PRISMARINE_SLAB, Blocks.PRISMARINE_STAIRS, Blocks.PRISMARINE_WALL,
                 Blocks.PRISMARINE_BRICKS, Blocks.PRISMARINE_BRICK_SLAB, Blocks.PRISMARINE_BRICK_STAIRS,
                 Blocks.DARK_PRISMARINE, Blocks.DARK_PRISMARINE_SLAB, Blocks.DARK_PRISMARINE_STAIRS,
                 Blocks.SEA_LANTERN, Blocks.SPONGE
         );
-        getOrCreateTagBuilder(UTags.Blocks.BUTTERFLIES_SPAWNABLE_ON).forceAddTag(BlockTags.ANIMALS_SPAWNABLE_ON).forceAddTag(BlockTags.LEAVES).forceAddTag(BlockTags.FLOWERS).forceAddTag(BlockTags.FLOWER_POTS);
-        getOrCreateTagBuilder(UTags.Blocks.JARS).add(UBlocks.JAR, UBlocks.CLOUD_JAR, UBlocks.STORM_JAR, UBlocks.LIGHTNING_JAR, UBlocks.ZAP_JAR);
-        getOrCreateTagBuilder(BlockTags.CROPS).add(crops);
-        getOrCreateTagBuilder(BlockTags.BEE_GROWABLES).add(crops);
-        getOrCreateTagBuilder(BlockTags.MAINTAINS_FARMLAND).add(crops);
-        getOrCreateTagBuilder(BlockTags.NEEDS_DIAMOND_TOOL).add(UBlocks.FROSTED_OBSIDIAN);
-        getOrCreateTagBuilder(BlockTags.PICKAXE_MINEABLE).add(UBlocks.ROCKS, UBlocks.FROSTED_OBSIDIAN, UBlocks.WEATHER_VANE).forceAddTag(UTags.Blocks.JARS);
-        getOrCreateTagBuilder(BlockTags.DRAGON_IMMUNE).add(UBlocks.FROSTED_OBSIDIAN, UBlocks.GOLDEN_OAK_LOG, UBlocks.GOLDEN_OAK_LEAVES);
-        getOrCreateTagBuilder(BlockTags.FIRE).add(UBlocks.SPECTRAL_FIRE);
-        getOrCreateTagBuilder(BlockTags.HOE_MINEABLE).add(UBlocks.HAY_BLOCK).addOptional(Unicopia.id("rice_block")).addOptional(Unicopia.id("straw_block"));
-        getOrCreateTagBuilder(BlockTags.SHOVEL_MINEABLE).add(UBlocks.WORM_BLOCK, UBlocks.SLIME);
-        getOrCreateTagBuilder(BlockTags.REPLACEABLE_BY_TREES).add(UBlocks.GREEN_APPLE, UBlocks.SOUR_APPLE, UBlocks.GOLDEN_APPLE, UBlocks.SWEET_APPLE, UBlocks.ZAP_APPLE, UBlocks.ZAP_BULB);
+        tag(UTags.Blocks.BUTTERFLIES_SPAWNABLE_ON).forceAddTag(BlockTags.ANIMALS_SPAWNABLE_ON).forceAddTag(BlockTags.LEAVES).forceAddTag(BlockTags.FLOWERS).forceAddTag(BlockTags.FLOWER_POTS);
+        tag(UTags.Blocks.JARS).add(UBlocks.JAR, UBlocks.CLOUD_JAR, UBlocks.STORM_JAR, UBlocks.LIGHTNING_JAR, UBlocks.ZAP_JAR);
+        tag(BlockTags.CROPS).add(crops);
+        tag(BlockTags.BEE_GROWABLES).add(crops);
+        tag(BlockTags.MAINTAINS_FARMLAND).add(crops);
+        tag(BlockTags.NEEDS_DIAMOND_TOOL).add(UBlocks.FROSTED_OBSIDIAN);
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(UBlocks.ROCKS, UBlocks.FROSTED_OBSIDIAN, UBlocks.WEATHER_VANE).forceAddTag(UTags.Blocks.JARS);
+        tag(BlockTags.DRAGON_IMMUNE).add(UBlocks.FROSTED_OBSIDIAN, UBlocks.GOLDEN_OAK_LOG, UBlocks.GOLDEN_OAK_LEAVES);
+        tag(BlockTags.FIRE).add(UBlocks.SPECTRAL_FIRE);
+        tag(BlockTags.MINEABLE_WITH_HOE).add(UBlocks.HAY_BLOCK).addOptional(Unicopia.id("rice_block")).addOptional(Unicopia.id("straw_block"));
+        tag(BlockTags.MINEABLE_WITH_SHOVEL).add(UBlocks.WORM_BLOCK, UBlocks.SLIME);
+        tag(BlockTags.REPLACEABLE_BY_TREES).add(UBlocks.GREEN_APPLE, UBlocks.SOUR_APPLE, UBlocks.GOLDEN_APPLE, UBlocks.SWEET_APPLE, UBlocks.ZAP_APPLE, UBlocks.ZAP_BULB);
 
         addZapWoodset();
         addPalmWoodset();
@@ -75,54 +83,54 @@ public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
         addChitinBlocksets();
         addFruitTrees();
 
-        getOrCreateTagBuilder(UTags.Blocks.CRYSTAL_HEART_BASE).add(
+        tag(UTags.Blocks.CRYSTAL_HEART_BASE).add(
                 Blocks.DIAMOND_BLOCK,
                 Blocks.QUARTZ_BLOCK, Blocks.QUARTZ_BRICKS, Blocks.QUARTZ_SLAB, Blocks.QUARTZ_STAIRS, Blocks.QUARTZ_PILLAR,
                 Blocks.SMOOTH_QUARTZ, Blocks.SMOOTH_QUARTZ_SLAB, Blocks.SMOOTH_QUARTZ_STAIRS, Blocks.CHISELED_QUARTZ_BLOCK,
                 Blocks.AMETHYST_BLOCK, Blocks.NETHERITE_BLOCK, Blocks.EMERALD_BLOCK
         );
-        getOrCreateTagBuilder(UTags.Blocks.CRYSTAL_HEART_ORNAMENT).add(Blocks.END_ROD);
+        tag(UTags.Blocks.CRYSTAL_HEART_ORNAMENT).add(Blocks.END_ROD);
 
-        getOrCreateTagBuilder(UTags.Blocks.FRAGILE)
+        tag(UTags.Blocks.FRAGILE)
             .forceAddTag(ConventionalBlockTags.GLASS_BLOCKS)
             .forceAddTag(ConventionalBlockTags.GLASS_PANES)
             .forceAddTag(UTags.Blocks.JARS)
             .add(Blocks.VINE, Blocks.LILY_PAD);
 
-        getOrCreateTagBuilder(UTags.Blocks.MIMIC_CHESTS).add(
+        tag(UTags.Blocks.MIMIC_CHESTS).add(
                 Blocks.CHEST, Blocks.TRAPPED_CHEST, UBlocks.CLOUD_CHEST
         );
 
-        getOrCreateTagBuilder(UTags.Blocks.INTERESTING).add(
+        tag(UTags.Blocks.INTERESTING).add(
                 Blocks.SEA_LANTERN, Blocks.ENDER_CHEST, Blocks.END_PORTAL_FRAME,
                 Blocks.JUKEBOX, Blocks.SPAWNER
         ).forceAddTag(ConventionalBlockTags.ORES);
 
-        getOrCreateTagBuilder(UTags.Blocks.KICKS_UP_DUST).forceAddTag(BlockTags.SAND).add(
+        tag(UTags.Blocks.KICKS_UP_DUST).forceAddTag(BlockTags.SAND).add(
                 Blocks.SUSPICIOUS_SAND,
                 Blocks.GRAVEL, Blocks.SUSPICIOUS_GRAVEL
         ).forceAddTag(ConventionalBlockTags.CONCRETES);
 
-        getOrCreateTagBuilder(UTags.Blocks.UNAFFECTED_BY_GROW_ABILITY).add(Blocks.GRASS_BLOCK);
+        tag(UTags.Blocks.UNAFFECTED_BY_GROW_ABILITY).add(Blocks.GRASS_BLOCK);
         addSeasonalCrops();
     }
 
     private void addSeasonalCrops() {
-        getOrCreateTagBuilder(SereneSeasonsTags.Blocks.AUTUMN_CROPS).add(
+        tag(SereneSeasonsTags.Blocks.AUTUMN_CROPS).add(
                 UBlocks.GREEN_APPLE_LEAVES, UBlocks.GREEN_APPLE_SPROUT, UTreeGen.GREEN_APPLE_TREE.sapling().get(),
                 UBlocks.SOUR_APPLE_LEAVES, UBlocks.SOUR_APPLE_SPROUT, UTreeGen.SOUR_APPLE_TREE.sapling().get(),
                 UBlocks.OATS_CROWN, UBlocks.OATS_STEM, UBlocks.OATS,
                 UBlocks.ROCKS
         );
-        getOrCreateTagBuilder(SereneSeasonsTags.Blocks.WINTER_CROPS).add(UBlocks.ROCKS);
-        getOrCreateTagBuilder(SereneSeasonsTags.Blocks.SPRING_CROPS).add(
+        tag(SereneSeasonsTags.Blocks.WINTER_CROPS).add(UBlocks.ROCKS);
+        tag(SereneSeasonsTags.Blocks.SPRING_CROPS).add(
                 UBlocks.SWEET_APPLE_LEAVES, UBlocks.SWEET_APPLE_SPROUT, UTreeGen.SWEET_APPLE_TREE.sapling().get(),
                 UBlocks.GOLDEN_OAK_LEAVES, UBlocks.GOLDEN_OAK_SPROUT, UTreeGen.GOLDEN_OAK_TREE.sapling().get(),
                 UBlocks.PALM_LEAVES, UBlocks.BANANAS, UTreeGen.BANANA_TREE.sapling().get(),
                 UBlocks.PINEAPPLE,
                 UBlocks.ROCKS
         );
-        getOrCreateTagBuilder(SereneSeasonsTags.Blocks.SUMMER_CROPS).add(
+        tag(SereneSeasonsTags.Blocks.SUMMER_CROPS).add(
                 UBlocks.SWEET_APPLE_LEAVES, UBlocks.SWEET_APPLE_SPROUT, UTreeGen.SWEET_APPLE_TREE.sapling().get(),
                 UBlocks.MANGO_LEAVES, UTreeGen.MANGO_TREE.sapling().get(),
                 UBlocks.OATS_CROWN, UBlocks.OATS_STEM, UBlocks.OATS,
@@ -136,18 +144,18 @@ public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
                 UBlocks.GOLDEN_OAK_LEAVES, UBlocks.MANGO_LEAVES
         };
 
-        getOrCreateTagBuilder(BlockTags.LEAVES).add(leaves);
-        getOrCreateTagBuilder(BlockTags.HOE_MINEABLE).add(leaves);
+        tag(BlockTags.LEAVES).add(leaves);
+        tag(BlockTags.MINEABLE_WITH_HOE).add(leaves);
 
         var saplings = Tree.REGISTRY.stream().flatMap(tree -> tree.sapling().stream()).toArray(Block[]::new);
 
-        getOrCreateTagBuilder(BlockTags.SAPLINGS).add(saplings);
-        getOrCreateTagBuilder(BlockTags.MAINTAINS_FARMLAND).add(saplings);
+        tag(BlockTags.SAPLINGS).add(saplings);
+        tag(BlockTags.MAINTAINS_FARMLAND).add(saplings);
     }
 
     private void addZapWoodset() {
-        getOrCreateTagBuilder(BlockTags.LEAVES).add(UBlocks.ZAP_LEAVES, UBlocks.FLOWERING_ZAP_LEAVES);
-        getOrCreateTagBuilder(UTags.Blocks.POLEARM_MINEABLE).add(
+        tag(BlockTags.LEAVES).add(UBlocks.ZAP_LEAVES, UBlocks.FLOWERING_ZAP_LEAVES);
+        tag(UTags.Blocks.POLEARM_MINEABLE).add(
                 UBlocks.ZAP_LEAVES, UBlocks.FLOWERING_ZAP_LEAVES,
                 UBlocks.ZAP_PLANKS,
                 UBlocks.ZAP_LOG, UBlocks.ZAP_WOOD, UBlocks.STRIPPED_ZAP_LOG, UBlocks.STRIPPED_ZAP_WOOD,
@@ -156,78 +164,78 @@ public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
                 UBlocks.ZAP_STAIRS
         );
 
-        getOrCreateTagBuilder(UTags.Blocks.ZAP_LOGS).add(UBlocks.ZAP_LOG, UBlocks.ZAP_WOOD, UBlocks.STRIPPED_ZAP_LOG, UBlocks.STRIPPED_ZAP_WOOD);
-        getOrCreateTagBuilder(UTags.Blocks.WAXED_ZAP_LOGS).add(UBlocks.WAXED_ZAP_LOG, UBlocks.WAXED_ZAP_WOOD, UBlocks.WAXED_STRIPPED_ZAP_LOG, UBlocks.WAXED_STRIPPED_ZAP_WOOD);
-        getOrCreateTagBuilder(BlockTags.LOGS).forceAddTag(UTags.Blocks.ZAP_LOGS).forceAddTag(UTags.Blocks.WAXED_ZAP_LOGS);
-        getOrCreateTagBuilder(BlockTags.LOGS_THAT_BURN).forceAddTag(UTags.Blocks.ZAP_LOGS);
-        getOrCreateTagBuilder(BlockTags.PLANKS).add(UBlocks.ZAP_PLANKS, UBlocks.WAXED_ZAP_PLANKS);
+        tag(UTags.Blocks.ZAP_LOGS).add(UBlocks.ZAP_LOG, UBlocks.ZAP_WOOD, UBlocks.STRIPPED_ZAP_LOG, UBlocks.STRIPPED_ZAP_WOOD);
+        tag(UTags.Blocks.WAXED_ZAP_LOGS).add(UBlocks.WAXED_ZAP_LOG, UBlocks.WAXED_ZAP_WOOD, UBlocks.WAXED_STRIPPED_ZAP_LOG, UBlocks.WAXED_STRIPPED_ZAP_WOOD);
+        tag(BlockTags.LOGS).forceAddTag(UTags.Blocks.ZAP_LOGS).forceAddTag(UTags.Blocks.WAXED_ZAP_LOGS);
+        tag(BlockTags.LOGS).forceAddTag(UTags.Blocks.ZAP_LOGS);
+        tag(BlockTags.PLANKS).add(UBlocks.ZAP_PLANKS, UBlocks.WAXED_ZAP_PLANKS);
 
         //getOrCreateTagBuilder(BlockTags.WOODEN_BUTTONS).add(UBlocks.ZAP_BUTTON);
         //getOrCreateTagBuilder(BlockTags.WOODEN_DOORS).add(UBlocks.ZAP_DOOR);
-        getOrCreateTagBuilder(BlockTags.FENCE_GATES).add(UBlocks.ZAP_FENCE_GATE, UBlocks.WAXED_ZAP_FENCE_GATE);
-        getOrCreateTagBuilder(BlockTags.WOODEN_FENCES).add(UBlocks.ZAP_FENCE, UBlocks.WAXED_ZAP_FENCE);
+        tag(BlockTags.FENCE_GATES).add(UBlocks.ZAP_FENCE_GATE, UBlocks.WAXED_ZAP_FENCE_GATE);
+        tag(BlockTags.WOODEN_FENCES).add(UBlocks.ZAP_FENCE, UBlocks.WAXED_ZAP_FENCE);
         //getOrCreateTagBuilder(BlockTags.PRESSURE_PLATES).add(UBlocks.ZAP_PRESSURE_PLATE);
         //getOrCreateTagBuilder(BlockTags.WOODEN_PRESSURE_PLATES).add(UBlocks.ZAP_PRESSURE_PLATE);
-        getOrCreateTagBuilder(BlockTags.SLABS).add(UBlocks.ZAP_SLAB, UBlocks.WAXED_ZAP_SLAB);
-        getOrCreateTagBuilder(BlockTags.WOODEN_SLABS).add(UBlocks.ZAP_SLAB, UBlocks.WAXED_ZAP_SLAB);
-        getOrCreateTagBuilder(BlockTags.STAIRS).add(UBlocks.ZAP_STAIRS, UBlocks.WAXED_ZAP_STAIRS);
-        getOrCreateTagBuilder(BlockTags.WOODEN_STAIRS).add(UBlocks.ZAP_STAIRS, UBlocks.WAXED_ZAP_STAIRS);
+        tag(BlockTags.SLABS).add(UBlocks.ZAP_SLAB, UBlocks.WAXED_ZAP_SLAB);
+        tag(BlockTags.WOODEN_SLABS).add(UBlocks.ZAP_SLAB, UBlocks.WAXED_ZAP_SLAB);
+        tag(BlockTags.STAIRS).add(UBlocks.ZAP_STAIRS, UBlocks.WAXED_ZAP_STAIRS);
+        tag(BlockTags.WOODEN_STAIRS).add(UBlocks.ZAP_STAIRS, UBlocks.WAXED_ZAP_STAIRS);
         //getOrCreateTagBuilder(BlockTags.TRAPDOORS).add(UBlocks.ZAP_TRAPDOOR);
         //getOrCreateTagBuilder(BlockTags.WOODEN_TRAPDOORS).add(UBlocks.ZAP_TRAPDOOR);
     }
 
     private void addPalmWoodset() {
-        getOrCreateTagBuilder(BlockTags.LEAVES).add(UBlocks.PALM_LEAVES);
-        getOrCreateTagBuilder(BlockTags.HOE_MINEABLE).add(UBlocks.PALM_LEAVES);
-        getOrCreateTagBuilder(UTags.Blocks.PALM_LOGS).add(UBlocks.PALM_LOG, UBlocks.PALM_WOOD, UBlocks.STRIPPED_PALM_LOG, UBlocks.STRIPPED_PALM_WOOD);
-        getOrCreateTagBuilder(BlockTags.LOGS).forceAddTag(UTags.Blocks.PALM_LOGS);
-        getOrCreateTagBuilder(BlockTags.LOGS_THAT_BURN).forceAddTag(UTags.Blocks.PALM_LOGS);
-        getOrCreateTagBuilder(BlockTags.PLANKS).add(UBlocks.PALM_PLANKS);
+        tag(BlockTags.LEAVES).add(UBlocks.PALM_LEAVES);
+        tag(BlockTags.MINEABLE_WITH_HOE).add(UBlocks.PALM_LEAVES);
+        tag(UTags.Blocks.PALM_LOGS).add(UBlocks.PALM_LOG, UBlocks.PALM_WOOD, UBlocks.STRIPPED_PALM_LOG, UBlocks.STRIPPED_PALM_WOOD);
+        tag(BlockTags.LOGS).forceAddTag(UTags.Blocks.PALM_LOGS);
+        tag(BlockTags.LOGS).forceAddTag(UTags.Blocks.PALM_LOGS);
+        tag(BlockTags.PLANKS).add(UBlocks.PALM_PLANKS);
         addSign(UBlocks.PALM_SIGN, UBlocks.PALM_WALL_SIGN, UBlocks.PALM_HANGING_SIGN, UBlocks.PALM_WALL_HANGING_SIGN);
-        getOrCreateTagBuilder(BlockTags.WOODEN_BUTTONS).add(UBlocks.PALM_BUTTON);
-        getOrCreateTagBuilder(BlockTags.WOODEN_DOORS).add(UBlocks.PALM_DOOR);
-        getOrCreateTagBuilder(BlockTags.FENCE_GATES).add(UBlocks.PALM_FENCE_GATE);
-        getOrCreateTagBuilder(BlockTags.WOODEN_FENCES).add(UBlocks.PALM_FENCE);
-        getOrCreateTagBuilder(BlockTags.PRESSURE_PLATES).add(UBlocks.PALM_PRESSURE_PLATE);
-        getOrCreateTagBuilder(BlockTags.WOODEN_PRESSURE_PLATES).add(UBlocks.PALM_PRESSURE_PLATE);
-        getOrCreateTagBuilder(BlockTags.SLABS).add(UBlocks.PALM_SLAB);
-        getOrCreateTagBuilder(BlockTags.WOODEN_SLABS).add(UBlocks.PALM_SLAB);
-        getOrCreateTagBuilder(BlockTags.STAIRS).add(UBlocks.PALM_STAIRS);
-        getOrCreateTagBuilder(BlockTags.WOODEN_STAIRS).add(UBlocks.PALM_STAIRS);
-        getOrCreateTagBuilder(BlockTags.TRAPDOORS).add(UBlocks.PALM_TRAPDOOR);
-        getOrCreateTagBuilder(BlockTags.WOODEN_TRAPDOORS).add(UBlocks.PALM_TRAPDOOR);
+        tag(BlockTags.WOODEN_BUTTONS).add(UBlocks.PALM_BUTTON);
+        tag(BlockTags.WOODEN_DOORS).add(UBlocks.PALM_DOOR);
+        tag(BlockTags.FENCE_GATES).add(UBlocks.PALM_FENCE_GATE);
+        tag(BlockTags.WOODEN_FENCES).add(UBlocks.PALM_FENCE);
+        tag(BlockTags.PRESSURE_PLATES).add(UBlocks.PALM_PRESSURE_PLATE);
+        tag(BlockTags.WOODEN_PRESSURE_PLATES).add(UBlocks.PALM_PRESSURE_PLATE);
+        tag(BlockTags.SLABS).add(UBlocks.PALM_SLAB);
+        tag(BlockTags.WOODEN_SLABS).add(UBlocks.PALM_SLAB);
+        tag(BlockTags.STAIRS).add(UBlocks.PALM_STAIRS);
+        tag(BlockTags.WOODEN_STAIRS).add(UBlocks.PALM_STAIRS);
+        tag(BlockTags.TRAPDOORS).add(UBlocks.PALM_TRAPDOOR);
+        tag(BlockTags.WOODEN_TRAPDOORS).add(UBlocks.PALM_TRAPDOOR);
     }
 
     private void addGoldenOakWoodset() {
-        getOrCreateTagBuilder(BlockTags.LEAVES).add(UBlocks.GOLDEN_OAK_LEAVES);
-        getOrCreateTagBuilder(BlockTags.PICKAXE_MINEABLE).add(UBlocks.GOLDEN_OAK_LEAVES);
-        getOrCreateTagBuilder(UTags.Blocks.GOLDEN_OAK_LOGS).add(UBlocks.GOLDEN_OAK_LOG, UBlocks.GOLDEN_OAK_WOOD, UBlocks.STRIPPED_GOLDEN_OAK_LOG, UBlocks.STRIPPED_GOLDEN_OAK_WOOD);
-        getOrCreateTagBuilder(BlockTags.LOGS).forceAddTag(UTags.Blocks.GOLDEN_OAK_LOGS);
-        getOrCreateTagBuilder(BlockTags.PLANKS).add(UBlocks.GOLDEN_OAK_PLANKS);
-        getOrCreateTagBuilder(BlockTags.GUARDED_BY_PIGLINS)
+        tag(BlockTags.LEAVES).add(UBlocks.GOLDEN_OAK_LEAVES);
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(UBlocks.GOLDEN_OAK_LEAVES);
+        tag(UTags.Blocks.GOLDEN_OAK_LOGS).add(UBlocks.GOLDEN_OAK_LOG, UBlocks.GOLDEN_OAK_WOOD, UBlocks.STRIPPED_GOLDEN_OAK_LOG, UBlocks.STRIPPED_GOLDEN_OAK_WOOD);
+        tag(BlockTags.LOGS).forceAddTag(UTags.Blocks.GOLDEN_OAK_LOGS);
+        tag(BlockTags.PLANKS).add(UBlocks.GOLDEN_OAK_PLANKS);
+        tag(BlockTags.GUARDED_BY_PIGLINS)
             .forceAddTag(UTags.Blocks.GOLDEN_OAK_LOGS)
             .add(UBlocks.GOLDEN_OAK_PLANKS, UBlocks.GOLDEN_OAK_LEAVES, UBlocks.GOLDEN_OAK_SPROUT, UBlocks.GOLDEN_APPLE);
     }
 
     private void addCloudBlocksets() {
-        getOrCreateTagBuilder(BlockTags.PICKAXE_MINEABLE).add(
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(
                 UBlocks.CLOUD_BRICKS, UBlocks.CLOUD_BRICK_SLAB, UBlocks.CLOUD_BRICK_STAIRS, UBlocks.COMPACTED_CLOUD_BRICKS, UBlocks.CARVED_CLOUD,
                 UBlocks.ETCHED_CLOUD, UBlocks.ETCHED_CLOUD_SLAB, UBlocks.ETCHED_CLOUD_STAIRS, UBlocks.COMPACTED_ETCHED_CLOUD
         );
-        getOrCreateTagBuilder(BlockTags.AXE_MINEABLE).add(
+        tag(BlockTags.MINEABLE_WITH_AXE).add(
                 UBlocks.CLOUD_PLANKS, UBlocks.CLOUD_PLANK_SLAB, UBlocks.CLOUD_PLANK_STAIRS, UBlocks.COMPACTED_CLOUD_PLANKS
         );
 
-        getOrCreateTagBuilder(UTags.Blocks.CLOUD_BEDS).add(UBlocks.CLOUD_BED);
-        getOrCreateTagBuilder(UTags.Blocks.CLOUD_SLABS).add(
+        tag(UTags.Blocks.CLOUD_BEDS).add(UBlocks.CLOUD_BED);
+        tag(UTags.Blocks.CLOUD_SLABS).add(
                 UBlocks.CLOUD_SLAB, UBlocks.SOGGY_CLOUD_SLAB, UBlocks.DENSE_CLOUD_SLAB, UBlocks.ETCHED_CLOUD_SLAB,
                 UBlocks.CLOUD_PLANK_SLAB, UBlocks.CLOUD_BRICK_SLAB
         );
-        getOrCreateTagBuilder(UTags.Blocks.CLOUD_STAIRS).add(
+        tag(UTags.Blocks.CLOUD_STAIRS).add(
                 UBlocks.CLOUD_STAIRS, UBlocks.SOGGY_CLOUD_STAIRS, UBlocks.DENSE_CLOUD_STAIRS, UBlocks.ETCHED_CLOUD_STAIRS,
                 UBlocks.CLOUD_PLANK_STAIRS, UBlocks.CLOUD_BRICK_STAIRS
         );
-        getOrCreateTagBuilder(UTags.Blocks.CLOUD_BLOCKS).add(
+        tag(UTags.Blocks.CLOUD_BLOCKS).add(
                 UBlocks.CLOUD, UBlocks.CLOUD_PLANKS, UBlocks.CLOUD_BRICKS, UBlocks.DENSE_CLOUD,
                 UBlocks.ETCHED_CLOUD, UBlocks.CARVED_CLOUD, UBlocks.CLOUD_PILLAR,
                 UBlocks.COMPACTED_CLOUD, UBlocks.COMPACTED_CLOUD_PLANKS, UBlocks.COMPACTED_CLOUD_BRICKS,
@@ -236,7 +244,7 @@ public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
     }
 
     private void addChitinBlocksets() {
-        getOrCreateTagBuilder(UTags.Blocks.CHITIN_BLOCKS).add(
+        tag(UTags.Blocks.CHITIN_BLOCKS).add(
                 UBlocks.CHITIN, UBlocks.SURFACE_CHITIN,
                 UBlocks.CHISELLED_CHITIN, UBlocks.CHISELLED_CHITIN_HULL, UBlocks.CHISELLED_CHITIN_SLAB, UBlocks.CHISELLED_CHITIN_STAIRS,
                 UBlocks.POLISHED_CHITIN, UBlocks.POLISHED_CHITIN_HULL, UBlocks.POLISHED_CHITIN_SLAB, UBlocks.POLISHED_CHITIN_STAIRS,
@@ -244,28 +252,28 @@ public class UBlockTagProvider extends FabricTagProvider.BlockTagProvider {
         );
 
 
-        getOrCreateTagBuilder(BlockTags.PICKAXE_MINEABLE).add(
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(
                 UBlocks.CHISELLED_CHITIN, UBlocks.CHISELLED_CHITIN_HULL, UBlocks.CHISELLED_CHITIN_SLAB, UBlocks.CHISELLED_CHITIN_STAIRS,
                 UBlocks.POLISHED_CHITIN, UBlocks.POLISHED_CHITIN_HULL, UBlocks.POLISHED_CHITIN_SLAB, UBlocks.POLISHED_CHITIN_STAIRS,
                 UBlocks.CHITIN_SPIKES
         );
-        getOrCreateTagBuilder(BlockTags.SHOVEL_MINEABLE).add(UBlocks.CHITIN, UBlocks.SURFACE_CHITIN);
+        tag(BlockTags.MINEABLE_WITH_SHOVEL).add(UBlocks.CHITIN, UBlocks.SURFACE_CHITIN);
 
-        getOrCreateTagBuilder(BlockTags.WALLS).add(UBlocks.CHISELLED_CHITIN_WALL, UBlocks.POLISHED_CHITIN_WALL);
+        tag(BlockTags.WALLS).add(UBlocks.CHISELLED_CHITIN_WALL, UBlocks.POLISHED_CHITIN_WALL);
     }
 
     private void addSign(Block standing, Block wall, Block hanging, Block wallHanging) {
-        getOrCreateTagBuilder(BlockTags.STANDING_SIGNS).add(standing);
-        getOrCreateTagBuilder(BlockTags.WALL_SIGNS).add(wall);
+        tag(BlockTags.STANDING_SIGNS).add(standing);
+        tag(BlockTags.WALL_SIGNS).add(wall);
 
-        getOrCreateTagBuilder(BlockTags.CEILING_HANGING_SIGNS).add(hanging);
-        getOrCreateTagBuilder(BlockTags.WALL_HANGING_SIGNS).add(wallHanging);
+        tag(BlockTags.CEILING_HANGING_SIGNS).add(hanging);
+        tag(BlockTags.WALL_HANGING_SIGNS).add(wallHanging);
     }
 
     private void populateConventionalTags() {
-        getOrCreateTagBuilder(UConventionalTags.Blocks.CONCRETE_POWDERS).add(Arrays.stream(DyeColor.values()).map(i -> Registries.BLOCK.get(Identifier.of(i.getId() + "_concrete_powder"))).toArray(Block[]::new));
-        getOrCreateTagBuilder(UConventionalTags.Blocks.CORAL_BLOCKS).add(Blocks.TUBE_CORAL_BLOCK, Blocks.BRAIN_CORAL_BLOCK, Blocks.BUBBLE_CORAL_BLOCK, Blocks.FIRE_CORAL_BLOCK, Blocks.HORN_CORAL_BLOCK);
-        getOrCreateTagBuilder(UConventionalTags.Blocks.CORAL_FANS).add(Blocks.TUBE_CORAL_FAN, Blocks.BRAIN_CORAL_FAN, Blocks.BUBBLE_CORAL_FAN, Blocks.FIRE_CORAL_FAN, Blocks.HORN_CORAL_FAN);
-        getOrCreateTagBuilder(UConventionalTags.Blocks.CORALS).add(Blocks.TUBE_CORAL, Blocks.BRAIN_CORAL, Blocks.BUBBLE_CORAL, Blocks.FIRE_CORAL, Blocks.HORN_CORAL);
+        tag(UConventionalTags.Blocks.CONCRETE_POWDERS).add(Arrays.stream(DyeColor.values()).map(i -> BuiltInRegistries.BLOCK.getValue(Identifier.parse(i.getName() + "_concrete_powder"))).toArray(Block[]::new));
+        tag(UConventionalTags.Blocks.CORAL_BLOCKS).add(Blocks.TUBE_CORAL_BLOCK, Blocks.BRAIN_CORAL_BLOCK, Blocks.BUBBLE_CORAL_BLOCK, Blocks.FIRE_CORAL_BLOCK, Blocks.HORN_CORAL_BLOCK);
+        tag(UConventionalTags.Blocks.CORAL_FANS).add(Blocks.TUBE_CORAL_FAN, Blocks.BRAIN_CORAL_FAN, Blocks.BUBBLE_CORAL_FAN, Blocks.FIRE_CORAL_FAN, Blocks.HORN_CORAL_FAN);
+        tag(UConventionalTags.Blocks.CORALS).add(Blocks.TUBE_CORAL, Blocks.BRAIN_CORAL, Blocks.BUBBLE_CORAL, Blocks.FIRE_CORAL, Blocks.HORN_CORAL);
     }
 }

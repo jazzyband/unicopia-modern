@@ -16,12 +16,11 @@ import com.minelittlepony.unicopia.server.world.ModificationType;
 import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.util.shape.Shape;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Internal.
@@ -58,31 +57,31 @@ public class RainboomAbilitySpell extends AbstractSpell {
             if (boundParticle == null) {
                 boundParticle = InteractionManager.getInstance().createBoundParticle(getUuid());
             }
-            boundParticle.addParticle(new TargetBoundParticleEffect(UParticles.RAINBOOM_TRAIL, source.asEntity()), source.getOriginVector(), Vec3d.ZERO);
+            boundParticle.addParticle(new TargetBoundParticleEffect(UParticles.RAINBOOM_TRAIL, source.asEntity()), source.getOriginVector(), Vec3.ZERO);
 
             if (age == 0) {
-                source.addParticle(new OrientedBillboardParticleEffect(UParticles.RAINBOOM_RING, source.getPhysics().getMotionAngle()), source.getOriginVector(), Vec3d.ZERO);
+                source.addParticle(new OrientedBillboardParticleEffect(UParticles.RAINBOOM_RING, source.getPhysics().getMotionAngle()), source.getOriginVector(), Vec3.ZERO);
             }
         } else {
             source.findAllEntitiesInRange(RADIUS, e -> !source.isOwnerOrFriend(e)).forEach(e -> {
-                e.damage((ServerWorld)source.asWorld(), source.damageOf(UDamageTypes.RAINBOOM, source), 6);
+                e.hurtServer((ServerLevel)source.asWorld(), source.damageOf(UDamageTypes.RAINBOOM, source), 6);
             });
         }
         EFFECT_RANGE.translate(source.getOrigin()).getBlockPositions().forEach(pos -> {
             BlockState state = source.asWorld().getBlockState(pos);
-            if (state.isIn(UTags.Blocks.FRAGILE) && source.canModifyAt(pos, ModificationType.PHYSICAL)) {
-                source.asWorld().breakBlock(pos, true);
+            if (state.is(UTags.Blocks.FRAGILE) && source.canModifyAt(pos, ModificationType.PHYSICAL)) {
+                source.asWorld().destroyBlock(pos, true);
             }
         });
 
-        Vec3d motion = source.asEntity().getRotationVec(1).multiply(1.5);
-        Vec3d velocity = source.asEntity().getVelocity().add(motion);
+        Vec3 motion = source.asEntity().getViewVector(1).scale(1.5);
+        Vec3 velocity = source.asEntity().getDeltaMovement().add(motion);
 
         while (velocity.length() > 3) {
-            velocity = velocity.multiply(0.6);
+            velocity = velocity.scale(0.6);
         }
 
-        source.asEntity().setVelocity(velocity);
+        source.asEntity().setDeltaMovement(velocity);
         if (source instanceof Pony pony) {
             pony.getMagicalReserves().getExhaustion().multiply(0.2F);
         }
@@ -91,15 +90,15 @@ public class RainboomAbilitySpell extends AbstractSpell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.putInt("age", age);
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        age = compound.getInt("age", 0);
+        age = compound.getIntOr("age", 0);
         boundParticle = null;
     }
 }

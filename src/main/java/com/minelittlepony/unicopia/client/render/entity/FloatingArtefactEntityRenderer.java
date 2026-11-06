@@ -4,31 +4,32 @@ import com.minelittlepony.unicopia.client.render.RenderLayers;
 import com.minelittlepony.unicopia.entity.mob.FloatingArtefactEntity;
 import com.minelittlepony.unicopia.entity.mob.StationaryObjectEntity;
 import com.minelittlepony.unicopia.item.UItems;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.item.ItemModelManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.OverlayVertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexConsumers;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.render.item.ItemRenderState;
-import net.minecraft.client.render.model.ModelBaker;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.SheetedDecalTextureGenerator;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.util.Mth;
+import net.minecraft.util.CommonColors;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 
 public class FloatingArtefactEntityRenderer extends EntityRenderer<FloatingArtefactEntity, FloatingArtefactEntityRenderer.State> {
 
-    private final ItemModelManager itemModelManager;
+    private final ItemModelResolver itemModelManager;
 
-    public FloatingArtefactEntityRenderer(EntityRendererFactory.Context ctx) {
+    public FloatingArtefactEntityRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
-        itemModelManager = ctx.getItemModelManager();
+        itemModelManager = ctx.getItemModelResolver();
     }
 
     @Override
@@ -37,13 +38,13 @@ public class FloatingArtefactEntityRenderer extends EntityRenderer<FloatingArtef
     }
 
     @Override
-    public void updateRenderState(FloatingArtefactEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+    public void extractRenderState(FloatingArtefactEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
 
         ItemStack stack = entity.getStack();
 
         if (stack.isEmpty()) {
-            stack = UItems.EMPTY_JAR.getDefaultStack();
+            stack = UItems.EMPTY_JAR.getDefaultInstance();
         }
 
         state.stack = stack;
@@ -52,25 +53,25 @@ public class FloatingArtefactEntityRenderer extends EntityRenderer<FloatingArtef
         state.verticalOffset = entity.getVerticalOffset(tickDelta);
         state.yaw = entity.getRotation(tickDelta);
         state.destructionStage = getDestructionStage(entity);
-        itemModelManager.clearAndUpdate(state.itemState, stack, ItemDisplayContext.GROUND, entity.getWorld(), null, 0);
+        itemModelManager.updateForTopItem(state.itemState, stack, ItemDisplayContext.GROUND, entity.level(), null, 0);
     }
 
     @Override
-    public void render(State state, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        matrices.push();
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertices, CameraRenderState camera) {
+        matrices.pushPose();
         matrices.scale(state.scale, state.scale, state.scale);
         matrices.translate(0, state.verticalOffset + state.variance * state.modelScaleY, 0);
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(state.yaw));
-        state.itemState.render(matrices, getDestructionOverlayProvider(matrices, vertices, 4F, state.destructionStage), light, OverlayTexture.DEFAULT_UV);
-        matrices.pop();
-        super.render(state, matrices, vertices, light);
+        matrices.rotate(Axis.YP.rotationDegrees(state.yaw));
+        state.itemState.submit(matrices, vertices, state.lightCoords, OverlayTexture.NO_OVERLAY, CommonColors.WHITE);
+        matrices.popPose();
+        super.submit(state, matrices, vertices, camera);
     }
 
     public static class State extends EntityRenderState {
         public float variance = 0.25F;
         public float scale = 1.6F;
         public ItemStack stack;
-        public final ItemRenderState itemState = new ItemRenderState();
+        public final ItemStackRenderState itemState = new ItemStackRenderState();
         public float verticalOffset;
         public float modelScaleY;
         public float yaw;
@@ -87,19 +88,7 @@ public class FloatingArtefactEntityRenderer extends EntityRenderer<FloatingArtef
     }
 
     static int getDestructionStage(float health, float maxHealth) {
-        return (int)(MathHelper.clamp(1F - (health / maxHealth), 0F, 1F) * (ModelBaker.MAX_BLOCK_DESTRUCTION_STAGE - 1F));
+        return (int)(Mth.clamp(1F - (health / maxHealth), 0F, 1F) * 9F);
     }
 
-    static VertexConsumerProvider getDestructionOverlayProvider(MatrixStack matrices, VertexConsumerProvider vertices, float scale, int stage) {
-        if (stage <= 0) {
-            return vertices;
-        }
-        final MatrixStack.Entry entry = matrices.peek();
-        final OverlayVertexConsumer destructionOverlay = new OverlayVertexConsumer(
-                MinecraftClient.getInstance().getBufferBuilders().getEffectVertexConsumers().getBuffer(RenderLayers.getCrumbling(MathHelper.clamp(stage, 0, ModelBaker.MAX_BLOCK_DESTRUCTION_STAGE - 1))),
-                entry,
-                scale
-        );
-        return layer -> layer.hasCrumbling() ? VertexConsumers.union(destructionOverlay, vertices.getBuffer(layer)) : vertices.getBuffer(layer);
-    }
 }

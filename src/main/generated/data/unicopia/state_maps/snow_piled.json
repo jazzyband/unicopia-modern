@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "apply": {
+        "type": "unicopia:cycle_property",
+        "property": "layers"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:snow{layers<7}"
+      }
+    }
+  ]
+}

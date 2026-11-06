@@ -1,21 +1,21 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.util.DyeColor;
+import static net.minecraft.util.ARGB.*;
 
-import static net.minecraft.util.math.ColorHelper.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.item.DyeColor;
 
 public interface ColorHelper {
     static int getRainbowColor(Entity entity, int speed, float tickDelta) {
-        int n = entity.age / speed + entity.getId();
+        int n = entity.tickCount / speed + entity.getId();
         int o = DyeColor.values().length;
         int p = n % o;
         int q = (n + 1) % o;
-        float r = (entity.age % speed + tickDelta) / 25.0f;
-        int fs = SheepEntity.getRgbColor(DyeColor.byIndex(p));
-        int gs = SheepEntity.getRgbColor(DyeColor.byIndex(q));
-        return lerp(r, fs, gs);
+        float r = (entity.tickCount % speed + tickDelta) / 25.0f;
+        int fs = DyeColor.byId(p).getTextureDiffuseColor();
+        int gs = DyeColor.byId(q).getTextureDiffuseColor();
+        return srgbLerp(r, fs, gs);
     }
 
     static float[] changeSaturation(float red, float green, float blue, float intensity) {
@@ -44,10 +44,10 @@ public interface ColorHelper {
     }
 
     static int saturate(int color, float intensity) {
-        float a = getAlpha(color) / 255F,
-                red = getRed(color) / 255F,
-                green = getGreen(color) / 255F,
-                blue = getBlue(color) / 255F;
+        float a = alpha(color) / 255F,
+                red = red(color) / 255F,
+                green = green(color) / 255F,
+                blue = blue(color) / 255F;
         float avg = (red + green + blue) / 3F;
         float r = avg + (red - avg) * intensity,
                 g = avg + (green - avg) * intensity,
@@ -69,6 +69,6 @@ public interface ColorHelper {
             b = 1;
         }
 
-        return fromFloats(a, r, g, b);
+        return colorFromFloat(a, r, g, b);
     }
 }

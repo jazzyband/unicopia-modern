@@ -1,6 +1,7 @@
 package com.minelittlepony.unicopia.client.render;
 
 import java.util.Optional;
+import java.util.Locale;
 
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.USounds;
@@ -9,21 +10,22 @@ import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
 import com.minelittlepony.unicopia.command.CommandArgumentEnum;
 import com.minelittlepony.unicopia.util.AnimationUtil;
 import com.minelittlepony.unicopia.util.serialization.PacketCodecUtils;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.command.argument.EnumArgumentType;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Hand;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.math.*;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.commands.arguments.StringRepresentableArgument;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.Mth;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 
 public class PlayerPoser {
     public static final PlayerPoser INSTANCE = new PlayerPoser();
@@ -31,48 +33,64 @@ public class PlayerPoser {
     private static final float HEAD_NOD_DURATION = 15F;
     private static final float HEAD_NOD_GAP = HEAD_NOD_DURATION / 3F;
 
-    public void applyPosing(MatrixStack matrices, PlayerEntityRenderState state, BipedEntityModel<?> model, Context context) {
+    public void applyBodyTransform(PoseStack matrices, AvatarRenderState state) {
+        CasterState caster = CasterState.of(state);
+        boolean equine = MineLPDelegate.getInstance().getRace(state).isEquine();
+        if (!equine || !caster.animation.canPlay(true)) {
+            return;
+        }
+        float progress = switch (caster.animation.animation()) {
+            case HANG, CLIMB -> 1;
+            case ARMS_UP, STOMP -> AnimationUtil.seesaw(caster.animationTime);
+            default -> 0;
+        };
+        if (progress != 0) {
+            rearUpTransform(matrices, progress);
+        }
+    }
+
+    public void applyPosing(PoseStack matrices, AvatarRenderState state, HumanoidModel<?> model, Context context) {
         CasterState pony = CasterState.of(state);
         float progress = pony.animationTime;
         AnimationInstance animation = pony.animation;
         Race ponyRace = MineLPDelegate.getInstance().getRace(state);
-        Arm mainArm = state.mainArm;
+        HumanoidArm mainArm = state.mainArm;
 
-        boolean liftLeftArm = mainArm == Arm.LEFT || !ponyRace.isEquine();
-        boolean liftRightArm = mainArm == Arm.RIGHT || !ponyRace.isEquine();
+        boolean liftLeftArm = mainArm == HumanoidArm.LEFT || !ponyRace.isEquine();
+        boolean liftRightArm = mainArm == HumanoidArm.RIGHT || !ponyRace.isEquine();
 
         ModelPart head = model.getHead();
 
-        if (context == Context.THIRD_PERSON && !state.isInSneakingPose) {
-            Hand leftHand = mainArm == Arm.LEFT ? Hand.MAIN_HAND : Hand.OFF_HAND;
-            Hand rightHand = mainArm == Arm.LEFT ? Hand.OFF_HAND : Hand.MAIN_HAND;
+        if (context == Context.THIRD_PERSON && !state.isCrouching) {
+            InteractionHand leftHand = mainArm == HumanoidArm.LEFT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+            InteractionHand rightHand = mainArm == HumanoidArm.LEFT ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
 
 
             float pitchChange = -0.5F;
             float yawChange = 0.8F;
 
-            if (pony.isRightPolearm && (!ponyRace.isEquine() || model.rightArm.pitch != 0)) {
-                model.rightArm.pitch += pitchChange;
-                model.rightArm.yaw += yawChange;
-                if (state.handSwingProgress > 0 && rightHand == Hand.MAIN_HAND) {
-                    model.rightArm.yaw -= 0.5F;
-                    model.rightArm.pitch += 1.5F;
+            if (pony.isRightPolearm && (!ponyRace.isEquine() || model.rightArm.xRot != 0)) {
+                model.rightArm.xRot += pitchChange;
+                model.rightArm.yRot += yawChange;
+                if (state.swingAnimation > 0 && rightHand == InteractionHand.MAIN_HAND) {
+                    model.rightArm.yRot -= 0.5F;
+                    model.rightArm.xRot += 1.5F;
                 }
             }
 
-            if (pony.isLeftPolearm && (!ponyRace.isEquine() || model.leftArm.pitch != 0)) {
-                model.leftArm.pitch += pitchChange;
-                model.leftArm.yaw -= yawChange;
-                if (state.handSwingProgress > 0 && leftHand == Hand.MAIN_HAND) {
-                    model.leftArm.yaw -= 0.5F;
-                    model.leftArm.pitch += 1.5F;
+            if (pony.isLeftPolearm && (!ponyRace.isEquine() || model.leftArm.xRot != 0)) {
+                model.leftArm.xRot += pitchChange;
+                model.leftArm.yRot -= yawChange;
+                if (state.swingAnimation > 0 && leftHand == InteractionHand.MAIN_HAND) {
+                    model.leftArm.yRot -= 0.5F;
+                    model.leftArm.xRot += 1.5F;
                 }
             }
         }
 
         if (pony.hasCoolShades) {
-            final float bop = AnimationUtil.beat(state.age, HEAD_NOD_DURATION, HEAD_NOD_GAP) * 3F;
-            head.pitch += bop / 10F;
+            final float bop = AnimationUtil.beat(state.ageInTicks, HEAD_NOD_DURATION, HEAD_NOD_GAP) * 3F;
+            head.xRot += bop / 10F;
 
             float beat30 = bop / 30F;
 
@@ -80,36 +98,36 @@ public class PlayerPoser {
                 float beat50 = bop / 50F;
                 float beat20 = bop / 20F;
 
-                model.leftArm.roll -= beat50;
-                model.rightArm.roll += beat50;
+                model.leftArm.zRot -= beat50;
+                model.rightArm.zRot += beat50;
 
-                model.leftLeg.roll -= beat30;
-                model.leftLeg.pitch -= beat20;
-                model.rightLeg.roll += beat30;
-                model.rightLeg.pitch += beat20;
+                model.leftLeg.zRot -= beat30;
+                model.leftLeg.xRot -= beat20;
+                model.rightLeg.zRot += beat30;
+                model.rightLeg.xRot += beat20;
             } else {
-                model.leftArm.roll -= beat30;
-                model.rightArm.roll += beat30;
+                model.leftArm.zRot -= beat30;
+                model.rightArm.zRot += beat30;
             }
         }
 
         if (animation.canPlay(ponyRace.isEquine())) {
             switch (animation.animation()) {
                 case NECK_SNAP: {
-                    head.yaw += 3F;
-                    head.pitch *= -1;
+                    head.yRot += 3F;
+                    head.xRot *= -1;
                     break;
                 }
                 case WOLOLO: {
-                    float roll = MathHelper.sin(state.age / 10F);
-                    float yaw = MathHelper.cos(state.age / 10F);
+                    float roll = Mth.sin(state.ageInTicks / 10F);
+                    float yaw = Mth.cos(state.ageInTicks / 10F);
 
                     if (liftLeftArm) {
                         rotateArm(model.leftArm, 1, yaw, -roll);
                     }
 
                     if (liftRightArm) {
-                        rotateArm(model.leftArm, 1, yaw, roll);
+                        rotateArm(model.rightArm, 1, yaw, roll);
                     }
 
                     break;
@@ -131,7 +149,7 @@ public class PlayerPoser {
                     break;
                 }
                 case HANG: {
-                    float saw = MathHelper.sin(state.limbSwingAmplitude);
+                    float saw = Mth.sin(state.walkAnimationSpeed);
 
                     float pitch = 0.8F * saw;
 
@@ -141,7 +159,7 @@ public class PlayerPoser {
 
                         if (ponyRace.isEquine()) {
                             rearUp(matrices, model, 1);
-                            model.head.pitch += 0.8F;
+                            model.head.xRot += 0.8F;
                             basePitch = 2.25F;
                         }
 
@@ -157,20 +175,20 @@ public class PlayerPoser {
                         float y = ponyRace.isEquine() ? -3 : -1;
                         float z = ponyRace.isEquine() ? -8 : -6;
 
-                        float cameraPitch = state.pitch * MathHelper.RADIANS_PER_DEGREE;
+                        float cameraPitch = state.xRot * Mth.DEG_TO_RAD;
 
                         rotateArm(model.leftArm, 0, 0, -0.4F + pitch);
                         rotateArm(model.rightArm, 0, 0, 0.4F + pitch);
 
-                        model.leftArm.originX += x;
-                        model.leftArm.originY += y;
-                        model.leftArm.originZ += z;
-                        model.leftArm.roll -= cameraPitch;
+                        model.leftArm.x += x;
+                        model.leftArm.y += y;
+                        model.leftArm.z += z;
+                        model.leftArm.zRot -= cameraPitch;
 
-                        model.rightArm.originX -= x;
-                        model.rightArm.originY += y;
-                        model.rightArm.originZ += z;
-                        model.rightArm.roll += cameraPitch;
+                        model.rightArm.x -= x;
+                        model.rightArm.y += y;
+                        model.rightArm.z += z;
+                        model.rightArm.zRot += cameraPitch;
                     }
                     break;
                 }
@@ -182,22 +200,22 @@ public class PlayerPoser {
 
                     if (ponyRace.isEquine()) {
                         rearUp(matrices, model, saw);
-                        model.head.pitch += saw * 0.5F;
+                        model.head.xRot += saw * 0.5F;
                         pitch = saw * 2F;
                     }
 
                     if (liftLeftArm) {
                         rotateArm(model.leftArm, pitch, -yaw, yaw);
                     } else if (ponyRace.isEquine()) {
-                        model.leftArm.pitch -= saw / 4F;
-                        model.leftArm.roll -= saw / 4F;
+                        model.leftArm.xRot -= saw / 4F;
+                        model.leftArm.zRot -= saw / 4F;
                     }
 
                     if (liftRightArm) {
                         rotateArm(model.rightArm, pitch, yaw, -yaw);
                     } else if (ponyRace.isEquine()) {
-                        model.rightArm.pitch += saw / 4F;
-                        model.rightArm.roll += saw / 4F;
+                        model.rightArm.xRot += saw / 4F;
+                        model.rightArm.zRot += saw / 4F;
                     }
 
                     break;
@@ -205,14 +223,14 @@ public class PlayerPoser {
                 case CLIMB: {
                     float saw = AnimationUtil.seesaw(progress);
 
-                    float pitch = MathHelper.clamp(3F * saw, 1, 2);
+                    float pitch = Mth.clamp(3F * saw, 1, 2);
                     float yaw = 0.5F * saw;
 
                     if (context == Context.THIRD_PERSON) {
                         if (ponyRace.isEquine()) {
                             rearUp(matrices, model, 1);
                             pitch = saw * 2F;
-                            model.head.pitch += saw * 0.5F;
+                            model.head.xRot += saw * 0.5F;
 
                             rotateArm(model.leftArm, pitch, -yaw, yaw / 2F);
                             rotateArm(model.rightLeg, pitch / 2F, yaw, 0);
@@ -229,7 +247,7 @@ public class PlayerPoser {
 
                             saw = AnimationUtil.seesaw((progress + 0.5F) % 1);
 
-                            pitch = MathHelper.clamp(3F * saw, 1, 2) * (ponyRace.isEquine() ? 2 : 1);
+                            pitch = Mth.clamp(3F * saw, 1, 2) * (ponyRace.isEquine() ? 2 : 1);
                             yaw = 0.5F * saw;
 
                             rotateArm(model.rightArm, pitch, yaw, -yaw / 2F);
@@ -241,21 +259,21 @@ public class PlayerPoser {
                         float y = ponyRace.isEquine() ? -3 : 0;
                         float z = ponyRace.isEquine() ? -8 : -2;
 
-                        float cameraPitch = state.pitch * MathHelper.RADIANS_PER_DEGREE;
-                        pitch = MathHelper.sin((progress * 2) * MathHelper.PI) * 0.6F;
+                        float cameraPitch = state.xRot * Mth.DEG_TO_RAD;
+                        pitch = Mth.sin((progress * 2) * Mth.PI) * 0.6F;
 
                         rotateArm(model.leftArm, 0, 0, pitch);
                         rotateArm(model.rightArm, 0, 0, pitch);
 
-                        model.leftArm.originX += x;
-                        model.leftArm.originY += y;
-                        model.leftArm.originZ += z;
-                        model.leftArm.roll -= cameraPitch;
+                        model.leftArm.x += x;
+                        model.leftArm.y += y;
+                        model.leftArm.z += z;
+                        model.leftArm.zRot -= cameraPitch;
 
-                        model.rightArm.originX -= x;
-                        model.rightArm.originY += y;
-                        model.rightArm.originZ += z;
-                        model.rightArm.roll += cameraPitch;
+                        model.rightArm.x -= x;
+                        model.rightArm.y += y;
+                        model.rightArm.z += z;
+                        model.rightArm.zRot += cameraPitch;
                     }
 
                     break;
@@ -266,16 +284,16 @@ public class PlayerPoser {
 
                     if (animation.isOf(Animation.WAVE_TWO) && ponyRace.isEquine()) {
                         rearUp(matrices, model, progress);
-                        model.head.pitch += progress * 0.5F;
+                        model.head.xRot += progress * 0.5F;
                     }
 
-                    float wave = 2.5F + progress * MathHelper.sin(state.age / 3F);
+                    float wave = 2.5F + progress * Mth.sin(state.ageInTicks / 3F);
 
-                    if (animation.isOf(Animation.WAVE_TWO) || mainArm == Arm.LEFT) {
-                        model.leftArm.roll = -wave;
+                    if (animation.isOf(Animation.WAVE_TWO) || mainArm == HumanoidArm.LEFT) {
+                        model.leftArm.zRot = -wave;
                     }
-                    if (animation.isOf(Animation.WAVE_TWO) || mainArm == Arm.RIGHT) {
-                        model.rightArm.roll = wave;
+                    if (animation.isOf(Animation.WAVE_TWO) || mainArm == HumanoidArm.RIGHT) {
+                        model.rightArm.zRot = wave;
                     }
                     break;
                 }
@@ -283,31 +301,31 @@ public class PlayerPoser {
                     if (ponyRace.isEquine()) {
                         float roll = (progress + 1) / 2F;
 
-                        model.rightLeg.pitch = roll * 1.5F;
-                        model.rightLeg.yaw = -roll / 7F;
+                        model.rightLeg.xRot = roll * 1.5F;
+                        model.rightLeg.yRot = -roll / 7F;
 
-                        model.leftLeg.pitch = roll * 1.5F;
-                        model.leftLeg.yaw = roll / 7F;
+                        model.leftLeg.xRot = roll * 1.5F;
+                        model.leftLeg.yRot = roll / 7F;
 
-                        model.leftArm.pitch = 0;
-                        model.leftArm.roll = MathHelper.lerp(progress, model.leftArm.roll, 0);
-                        model.rightArm.pitch = 0;
-                        model.rightArm.roll = MathHelper.lerp(progress, model.rightArm.roll, 0);
+                        model.leftArm.xRot = 0;
+                        model.leftArm.zRot = Mth.lerp(progress, model.leftArm.zRot, 0);
+                        model.rightArm.xRot = 0;
+                        model.rightArm.zRot = Mth.lerp(progress, model.rightArm.zRot, 0);
                         break;
                     }
 
                     float roll = (progress + 1) / 2F;
 
-                    model.rightArm.pitch += roll / 5F;
-                    model.leftArm.roll -= roll / 5F;
-                    model.rightArm.roll += roll / 5F;
+                    model.rightArm.xRot += roll / 5F;
+                    model.leftArm.zRot -= roll / 5F;
+                    model.rightArm.zRot += roll / 5F;
 
-                    if (state.mainArm == Arm.LEFT) {
-                        model.rightLeg.pitch = -roll * 1.5F;
-                        model.rightLeg.roll = roll / 10F;
+                    if (state.mainArm == HumanoidArm.LEFT) {
+                        model.rightLeg.xRot = -roll * 1.5F;
+                        model.rightLeg.zRot = roll / 10F;
                     } else {
-                        model.leftLeg.pitch = -roll * 1.5F;
-                        model.leftLeg.roll = -roll / 10F;
+                        model.leftLeg.xRot = -roll * 1.5F;
+                        model.leftLeg.zRot = -roll / 10F;
                     }
                     break;
                 }
@@ -315,20 +333,20 @@ public class PlayerPoser {
                     progress = AnimationUtil.seesaw(progress);
 
                     if (!ponyRace.isEquine()) {
-                        if (mainArm == Arm.LEFT) {
-                            model.rightLeg.roll = -progress / 9F;
-                            model.rightLeg.originY -= progress * 5;
+                        if (mainArm == HumanoidArm.LEFT) {
+                            model.rightLeg.zRot = -progress / 9F;
+                            model.rightLeg.y -= progress * 5;
                         } else {
-                            model.leftLeg.roll = -progress / 9F;
-                            model.leftLeg.originY -= progress * 5;
+                            model.leftLeg.zRot = -progress / 9F;
+                            model.leftLeg.y -= progress * 5;
                         }
                         break;
                     }
 
                     rearUp(matrices, model, progress);
-                    model.head.pitch += progress * 0.5F;
-                    model.leftArm.pitch += progress / 2F;
-                    model.rightArm.pitch += progress / 2F;
+                    model.head.xRot += progress * 0.5F;
+                    model.leftArm.xRot += progress / 2F;
+                    model.rightArm.xRot += progress / 2F;
                     break;
                 }
                 case WIGGLE_NOSE: {
@@ -336,10 +354,10 @@ public class PlayerPoser {
                         break;
                     }
 
-                    progress = AnimationUtil.seesaw(progress) * MathHelper.sin(state.age) / 7F;
+                    progress = AnimationUtil.seesaw(progress) * Mth.sin(state.ageInTicks) / 7F;
 
-                    model.getHead().getChild("mare").originY = progress;
-                    model.getHead().getChild("stallion").originY = progress;
+                    if (head.hasChild("mare")) head.getChild("mare").y = progress;
+                    if (head.hasChild("stallion")) head.getChild("stallion").y = progress;
                     break;
                 }
                 default:
@@ -348,49 +366,64 @@ public class PlayerPoser {
 
         if (pony.carriedEntity.state != null) {
             if (ponyRace.isEquine() && pony.flying) {
-                model.leftLeg.pitch = 1;
-                model.rightLeg.pitch = 1;
-                model.leftLeg.yaw = 0.3F;
-                model.rightLeg.yaw = -0.3F;
+                model.leftLeg.xRot = 1;
+                model.rightLeg.xRot = 1;
+                model.leftLeg.yRot = 0.3F;
+                model.rightLeg.yRot = -0.3F;
             } else {
-                model.leftArm.pitch = -1;
-                model.rightArm.pitch = -1;
+                model.leftArm.xRot = -1;
+                model.rightArm.xRot = -1;
             }
-            model.leftArm.yaw = -0.3F;
-            model.rightArm.yaw = 0.3F;
-            model.leftArm.roll = 0;
-            model.rightArm.roll = 0;
+            model.leftArm.yRot = -0.3F;
+            model.rightArm.yRot = 0.3F;
+            model.leftArm.zRot = 0;
+            model.rightArm.zRot = 0;
         }
 
-        if (model instanceof PlayerEntityModel m) {
-            m.leftSleeve.copyTransform(m.leftArm);
-            m.rightSleeve.copyTransform(m.rightArm);
-            m.leftPants.copyTransform(m.leftLeg);
-            m.rightPants.copyTransform(m.rightLeg);
+        if (model instanceof PlayerModel m) {
+            copySiblingPose(m.leftArm, m.leftSleeve);
+            copySiblingPose(m.rightArm, m.rightSleeve);
+            copySiblingPose(m.leftLeg, m.leftPants);
+            copySiblingPose(m.rightLeg, m.rightPants);
+        }
+        copySiblingPose(model.head, model.hat);
+    }
+
+    private static void copySiblingPose(ModelPart parent, ModelPart overlay) {
+        // Child layers already inherit the parent's transform. Copying it into
+        // their local pose applies the movement twice and displaces the layer.
+        if (!parent.getAllParts().contains(overlay)) {
+            overlay.loadPose(parent.storePose());
         }
     }
 
     private void rotateArm(ModelPart arm, float pitch, float yaw, float roll) {
-        arm.pitch -= pitch;
-        arm.roll = roll;
-        arm.yaw = yaw;
+        arm.xRot -= pitch;
+        arm.zRot = roll;
+        arm.yRot = yaw;
     }
 
-    private void rearUp(MatrixStack matrices, BipedEntityModel<?> model, float progress) {
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-45 * progress), 0, 0, 0.5F);
+    private void rearUp(PoseStack matrices, HumanoidModel<?> model, float progress) {
+        rearUpTransform(matrices, progress);
 
         float roll = progress / 2F;
 
-        model.rightLeg.pitch = roll * 1.5F;
-        model.rightLeg.yaw = -roll / 7F;
+        model.rightLeg.xRot = roll * 1.5F;
+        model.rightLeg.yRot = -roll / 7F;
 
-        model.leftLeg.pitch = roll * 1.5F;
-        model.leftLeg.yaw = roll / 7F;
+        model.leftLeg.xRot = roll * 1.5F;
+        model.leftLeg.yRot = roll / 7F;
+    }
+
+    private static void rearUpTransform(PoseStack matrices, float progress) {
+        matrices.translate(0, 0, 0.5);
+        matrices.rotate(Axis.XP.rotationDegrees(-45 * progress));
+        matrices.translate(0, 0, -0.5);
     }
 
     public record AnimationInstance(Animation animation, Animation.Recipient recipient) {
         public static final AnimationInstance NONE = new AnimationInstance(Animation.NONE, Animation.Recipient.ANYONE);
-        public static final PacketCodec<ByteBuf, AnimationInstance> PACKET_CODEC = PacketCodec.tuple(
+        public static final StreamCodec<ByteBuf, AnimationInstance> PACKET_CODEC = StreamCodec.composite(
                 PacketCodecUtils.ofEnum(Animation.class), AnimationInstance::animation,
                 PacketCodecUtils.ofEnum(Animation.Recipient.class), AnimationInstance::recipient,
                 AnimationInstance::new
@@ -445,12 +478,13 @@ public class PlayerPoser {
             return sound;
         }
 
-        public static EnumArgumentType<Animation> argument() {
+        public static StringRepresentableArgument<Animation> argument() {
             return new ArgumentType();
         }
 
-        public static final class ArgumentType extends EnumArgumentType<Animation> {
-            static final Codec<Animation> CODEC = StringIdentifiable.createCodec(Animation::values);
+        public static final class ArgumentType extends StringRepresentableArgument<Animation> {
+            static final Codec<Animation> CODEC = Codec.withAlternative(StringRepresentable.fromEnum(Animation::values),
+                    StringRepresentable.fromEnumWithMapping(Animation::values, name -> name.toLowerCase(Locale.ROOT)));
 
             protected ArgumentType() {
                 super(CODEC, Animation::values);
@@ -462,12 +496,13 @@ public class PlayerPoser {
             PONY,
             ANYONE;
 
-            public static EnumArgumentType<Recipient> argument() {
-                return new ArgumentType();
+            public static StringRepresentableArgument<Recipient> argument() {
+                return new com.minelittlepony.unicopia.client.render.PlayerPoser.Animation.Recipient.ArgumentType();
             }
 
-            public static final class ArgumentType extends EnumArgumentType<Recipient> {
-                static final Codec<Recipient> CODEC = StringIdentifiable.createCodec(Recipient::values);
+            public static final class ArgumentType extends StringRepresentableArgument<Recipient> {
+                static final Codec<Recipient> CODEC = Codec.withAlternative(StringRepresentable.fromEnum(Recipient::values),
+                        StringRepresentable.fromEnumWithMapping(Recipient::values, name -> name.toLowerCase(Locale.ROOT)));
 
                 protected ArgumentType() {
                     super(CODEC, Recipient::values);

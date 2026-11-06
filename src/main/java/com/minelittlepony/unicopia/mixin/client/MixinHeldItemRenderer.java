@@ -1,68 +1,65 @@
 package com.minelittlepony.unicopia.mixin.client;
 
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Invoker;
-import org.spongepowered.asm.mixin.injection.*;
-import org.spongepowered.asm.mixin.injection.At.Shift;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
 import com.minelittlepony.unicopia.client.FirstPersonRendererOverrides;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.item.HeldItemRenderer;
-import net.minecraft.client.render.item.HeldItemRenderer.HandRenderType;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.FirstPersonHandsAndItemsRenderState;
+import net.minecraft.client.renderer.state.level.PlayerRenderState;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.item.ItemStack;
 
-@Mixin(HeldItemRenderer.class)
+@Mixin(FirstPersonHandsAndItemsRenderer.class)
 abstract class MixinHeldItemRenderer implements FirstPersonRendererOverrides.ArmRenderer {
-    @Shadow
-    private float equipProgressMainHand;
-    @Shadow
-    private float lastEquipProgressMainHand;
+    @Unique private PlayerRenderState unicopia_playerState;
+    @Unique private FirstPersonHandsAndItemsRenderState unicopia_handState;
+    @Unique private float unicopia_tickDelta;
 
-    @Shadow
-    private float equipProgressOffHand;
-    @Shadow
-    private float lastEquipProgressOffHand;
-
-    @Override
-    @Invoker("renderArmHoldingItem")
-    public abstract void invokeRenderArmHoldingItem(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float equipProgress, float swingProgress, Arm arm);
+    @Invoker("submitArmWithItem")
+    protected abstract void unicopia_submitArmWithItem(PlayerRenderState playerState,
+            FirstPersonHandsAndItemsRenderState handState, float tickDelta, float pitch,
+            InteractionHand hand, float swingProgress, ItemStack stack, float equipProgress,
+            PoseStack matrices, SubmitNodeCollector vertices, int light);
 
     @Override
-    public float getEquipProgress(Hand hand, float tickDelta) {
-        return MathHelper.lerp(tickDelta,
-                hand == Hand.MAIN_HAND ? lastEquipProgressMainHand : lastEquipProgressOffHand,
-                hand == Hand.MAIN_HAND ? equipProgressMainHand : equipProgressOffHand
-        );
+    public void invokeRenderArmHoldingItem(PoseStack matrices, SubmitNodeCollector vertices,
+            int light, float equipProgress, float swingProgress, HumanoidArm arm) {
+        InteractionHand hand = Minecraft.getInstance().player.getMainArm() == arm
+                ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        unicopia_submitArmWithItem(unicopia_playerState, unicopia_handState, unicopia_tickDelta,
+                0, hand, swingProgress, ItemStack.EMPTY, equipProgress, matrices, vertices, light);
     }
 
-    @Inject(
-        method = "getHandRenderType",
-        at = @At("HEAD"),
-        cancellable = true
-    )
-    private static void onGetHandRenderType(ClientPlayerEntity player, CallbackInfoReturnable<HandRenderType> info) {
-        FirstPersonRendererOverrides.INSTANCE.getHandRenderType(player).ifPresent(info::setReturnValue);
+    @Override
+    public float getEquipProgress(InteractionHand hand, float tickDelta) {
+        return hand == InteractionHand.MAIN_HAND
+                ? Mth.lerp(tickDelta, unicopia_handState.oldMainHandHeight, unicopia_handState.mainHandHeight)
+                : Mth.lerp(tickDelta, unicopia_handState.oldOffHandHeight, unicopia_handState.offHandHeight);
     }
 
-    @Inject(
-        method = "renderItem(FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;Lnet/minecraft/client/network/ClientPlayerEntity;I)V",
-        at = @At(
-            value = "FIELD",
-            target = "net/minecraft/client/render/item/HeldItemRenderer$HandRenderType.renderMainHand:Z",
-            opcode = Opcodes.GETFIELD,
-            shift = Shift.BEFORE
-        ),
-        cancellable = true)
-    private void onRenderItem(float tickDelta, MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers, ClientPlayerEntity player, int light, CallbackInfo info) {
-        if (FirstPersonRendererOverrides.INSTANCE.beforeRenderHands(this, tickDelta, matrices, vertexConsumers, player, light)) {
+    @Inject(method = "submitHandsWithItems", at = @At("HEAD"), cancellable = true)
+    private void unicopia_beforeSubmit(float tickDelta, PoseStack matrices, SubmitNodeCollector vertices,
+            PlayerRenderState playerState, FirstPersonHandsAndItemsRenderState handState, CallbackInfo info) {
+        unicopia_playerState = playerState;
+        unicopia_handState = handState;
+        unicopia_tickDelta = tickDelta;
+        var player = Minecraft.getInstance().player;
+        if (player == null) {
+            return;
+        }
+        FirstPersonRendererOverrides.INSTANCE.getHandRenderType(player)
+                .ifPresent(selection -> handState.handRenderSelection = selection);
+        if (FirstPersonRendererOverrides.INSTANCE.beforeRenderHands(this, tickDelta, matrices,
+                vertices, player, playerState, playerState.avatarRenderState.lightCoords)) {
             info.cancel();
         }
     }

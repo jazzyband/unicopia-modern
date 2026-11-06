@@ -1,0 +1,26 @@
+{
+  "drops": [
+    {
+      "item": "unicopia:sour_apple",
+      "weight": 1
+    },
+    {
+      "item": "minecraft:apple",
+      "weight": 3
+    },
+    {
+      "item": "unicopia:green_apple",
+      "weight": 2
+    }
+  ],
+  "leaves": [
+    "minecraft:flowering_azalea_leaves",
+    "minecraft:azalea_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:oak_log",
+    "minecraft:oak_wood"
+  ],
+  "rarity": 5
+}

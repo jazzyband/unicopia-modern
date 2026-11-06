@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/apple_route",
+  "criteria": {
+    "has_zap_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:zap_apple"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.trick_apple.description"
+    },
+    "icon": {
+      "id": "unicopia:zap_bulb"
+    },
+    "title": {
+      "translate": "advancements.unicopia.trick_apple.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_zap_apple"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

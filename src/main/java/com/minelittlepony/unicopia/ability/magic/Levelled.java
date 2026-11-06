@@ -2,13 +2,12 @@ package com.minelittlepony.unicopia.ability.magic;
 
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
-
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
 
 /**
  * Object with levelling capabilities.
@@ -18,9 +17,9 @@ public interface Levelled {
             Codec.INT.fieldOf("value").forGetter(LevelStore::get),
             Codec.INT.fieldOf("max").forGetter(LevelStore::getMax)
     ).apply(instance, Levelled::of));
-    PacketCodec<ByteBuf, LevelStore> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.INTEGER, LevelStore::get,
-            PacketCodecs.INTEGER, LevelStore::getMax,
+    StreamCodec<ByteBuf, LevelStore> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.INT, LevelStore::get,
+            ByteBufCodecs.INT, LevelStore::getMax,
             Levelled::of
     );
 

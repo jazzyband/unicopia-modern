@@ -1,15 +1,14 @@
 package com.minelittlepony.unicopia.server.world.gen;
 
 import com.minelittlepony.unicopia.Unicopia;
-
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.biome.Biome;
 
 public interface UBiomes {
-    RegistryKey<Biome> SWEET_APPLE_ORCHARD = of("sweet_apple_orchard");
+    ResourceKey<Biome> SWEET_APPLE_ORCHARD = of("sweet_apple_orchard");
 
-    static RegistryKey<Biome> of(String name) {
-        return Unicopia.key(RegistryKeys.BIOME, name);
+    static ResourceKey<Biome> of(String name) {
+        return ResourceKey.create(Registries.BIOME, Unicopia.id(name));
     }
 }

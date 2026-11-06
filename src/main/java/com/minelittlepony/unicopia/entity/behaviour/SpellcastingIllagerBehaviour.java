@@ -1,29 +1,28 @@
 package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.world.entity.monster.illager.SpellcasterIllager;
 
-import net.minecraft.entity.mob.SpellcastingIllagerEntity;
-
-public class SpellcastingIllagerBehaviour extends EntityBehaviour<SpellcastingIllagerEntity> {
+public class SpellcastingIllagerBehaviour extends EntityBehaviour<SpellcasterIllager> {
     @Override
-    public void update(Pony player, SpellcastingIllagerEntity entity, Disguise s) {
+    public void update(Pony player, SpellcasterIllager entity, Disguise s) {
         if (player.sneakingChanged()) {
             SpellCastAccess.setSpell(player, entity, s);
         }
     }
 
-    private static abstract class SpellCastAccess extends SpellcastingIllagerEntity {
+    private static abstract class SpellCastAccess extends SpellcasterIllager {
         SpellCastAccess() {super(null, null);}
 
-        static void setSpell(Pony player, SpellcastingIllagerEntity entity, Disguise s) {
-            if (player.asEntity().isSneaking()) {
-                SpellcastingIllagerEntity.Spell[] spells = SpellcastingIllagerEntity.Spell.values();
-                SpellcastingIllagerEntity.Spell spell = spells[entity.getWorld().random.nextInt(spells.length - 1) + 1];
+        static void setSpell(Pony player, SpellcasterIllager entity, Disguise s) {
+            if (player.asEntity().isShiftKeyDown()) {
+                SpellcasterIllager.IllagerSpell[] spells = SpellcasterIllager.IllagerSpell.values();
+                SpellcasterIllager.IllagerSpell spell = spells[entity.level().getRandom().nextInt(spells.length - 1) + 1];
 
-                entity.setSpell(spell);
+                entity.setIsCastingSpell(spell);
                 entity.setTarget(entity);
             } else {
-                entity.setSpell(SpellcastingIllagerEntity.Spell.NONE);
+                entity.setIsCastingSpell(SpellcasterIllager.IllagerSpell.NONE);
                 entity.setTarget(null);
             }
         }

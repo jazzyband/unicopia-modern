@@ -1,0 +1,16 @@
+{
+  "values": [
+    "minecraft:cookie",
+    "unicopia:oatmeal_cookie",
+    "unicopia:chocolate_oatmeal_cookie",
+    "unicopia:pinecone_cookie",
+    {
+      "id": "farmersdelight:sweet_berry_cookie",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:honey_cookie",
+      "required": false
+    }
+  ]
+}

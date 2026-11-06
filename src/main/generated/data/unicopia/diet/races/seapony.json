@@ -1,0 +1,62 @@
+{
+  "default_multiplier": 0.5,
+  "effects": [
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "tags": [
+        "unicopia:fish/cooked",
+        "unicopia:fish/raw",
+        "unicopia:fish/rotten"
+      ]
+    },
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:healing",
+          "health": 3.0
+        }
+      },
+      "tags": [
+        "unicopia:pinecone"
+      ]
+    }
+  ],
+  "foraging_multiplier": 0.8,
+  "multipliers": [
+    {
+      "hunger": 1.5,
+      "saturation": 1.2,
+      "tags": [
+        "unicopia:fish/cooked"
+      ]
+    },
+    {
+      "hunger": 0.85,
+      "saturation": 0.95,
+      "tags": [
+        "unicopia:fish/raw"
+      ]
+    },
+    {
+      "hunger": 0.24,
+      "saturation": 0.25,
+      "tags": [
+        "unicopia:fish/rotten"
+      ]
+    },
+    {
+      "hunger": 1.0,
+      "saturation": 1.0,
+      "tags": [
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:special_shells",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:shells"
+      ]
+    }
+  ]
+}

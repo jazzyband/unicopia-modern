@@ -4,15 +4,15 @@ import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 
 public class MagicAuraSoundInstance extends FadeOutSoundInstance {
 
     private final Living<?> living;
 
-    public MagicAuraSoundInstance(SoundCategory category, Living<?> living, Random random) {
+    public MagicAuraSoundInstance(SoundSource category, Living<?> living, RandomSource random) {
         super(USounds.ITEM_MAGIC_AURA, category, 0.1F, random);
         this.relative = false;
         this.living = living;
@@ -40,8 +40,10 @@ public class MagicAuraSoundInstance extends FadeOutSoundInstance {
 
         BlockPos origin = living.getOrigin();
 
-        double volume = BlockPos.findClosest(origin, radius, radius, p -> living.asWorld().getBlockState(p).isIn(UTags.Blocks.INTERESTING))
-            .map(p -> living.getOriginVector().squaredDistanceTo(p.getX(), p.getY(), p.getZ()))
+        double volume = java.util.stream.StreamSupport.stream(BlockPos.withinManhattan(origin, radius).spliterator(), false)
+            .filter(p -> living.asWorld().getBlockState(p).is(UTags.Blocks.INTERESTING))
+            .min(java.util.Comparator.comparingDouble(p -> p.distSqr(origin)))
+            .map(p -> living.getOriginVector().distanceToSqr(p.getX(), p.getY(), p.getZ()))
             .map(find -> (1 - (Math.sqrt(find) / radius)))
             .orElse(-1D);
 

@@ -1,38 +1,38 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.block.dispenser.DispenserBehavior;
-import net.minecraft.block.dispenser.ItemDispenserBehavior;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPointer;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.core.dispenser.BlockSource;
+import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
+import net.minecraft.core.dispenser.DispenseItemBehavior;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.ItemStack;
 
 public interface Dispensable {
-    default DispenserBehavior createDispenserBehaviour() {
-        return new ItemDispenserBehavior() {
-            private ActionResult result;
+    default DispenseItemBehavior createDispenserBehaviour() {
+        return new DefaultDispenseItemBehavior() {
+            private InteractionResult result;
             @Override
-            protected ItemStack dispenseSilently(BlockPointer source, ItemStack stack) {
+            protected ItemStack execute(BlockSource source, ItemStack stack) {
                 result = dispenseStack(source, stack);
 
-                if (!result.isAccepted()) {
-                    return super.dispenseSilently(source, stack);
+                if (!result.consumesAction()) {
+                    return super.execute(source, stack);
                 }
 
-                return result instanceof ActionResult.Success success ? success.getNewHandStack() : stack.split(1);
+                return result instanceof InteractionResult.Success success ? success.heldItemTransformedTo() : stack.split(1);
             }
 
             @Override
-            protected void playSound(BlockPointer pointer) {
-                if (!result.isAccepted()) {
+            protected void playSound(BlockSource pointer) {
+                if (!result.consumesAction()) {
                     super.playSound(pointer);
                 }
             }
 
             @Override
-            protected void spawnParticles(BlockPointer pointer, Direction side) {
-                if (!result.isAccepted()) {
-                    super.spawnParticles(pointer, side);
+            protected void playAnimation(BlockSource pointer, Direction side) {
+                if (!result.consumesAction()) {
+                    super.playAnimation(pointer, side);
                 }
             }
         };
@@ -41,5 +41,5 @@ public interface Dispensable {
     /**
      * Called to dispense this stack.
      */
-    ActionResult dispenseStack(BlockPointer source, ItemStack stack);
+    InteractionResult dispenseStack(BlockSource source, ItemStack stack);
 }

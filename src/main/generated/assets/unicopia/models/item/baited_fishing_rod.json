@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld_rod",
+  "textures": {
+    "layer0": "unicopia:item/baited_fishing_rod"
+  }
+}

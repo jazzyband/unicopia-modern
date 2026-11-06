@@ -17,10 +17,9 @@ import com.minelittlepony.unicopia.item.FriendshipBraceletItem;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.server.world.Ether;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 public class AreaProtectionSpell extends AbstractAreaEffectSpell {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -51,11 +50,11 @@ public class AreaProtectionSpell extends AbstractAreaEffectSpell {
         float radius = (float)getRange(source);
 
         if (source.isClient()) {
-            Vec3d origin = source.getOriginVector();
+            Vec3 origin = source.getOriginVector();
 
             source.spawnParticles(origin, new Sphere(true, radius), (int)(radius * 6), pos -> {
-                if (!source.asWorld().isAir(BlockPos.ofFloored(pos))) {
-                    source.addParticle(new MagicParticleEffect(getType().getColor()), pos, Vec3d.ZERO);
+                if (!source.asWorld().isEmptyBlock(BlockPos.containing(pos))) {
+                    source.addParticle(new MagicParticleEffect(getType().getColor()), pos, Vec3.ZERO);
                 }
             });
         } else {
@@ -72,7 +71,7 @@ public class AreaProtectionSpell extends AbstractAreaEffectSpell {
     }
 
     private double getRange(Caster<?> source) {
-        float multiplier = source instanceof Pony pony && pony.asEntity().isSneaking() ? 1 : 2;
+        float multiplier = source instanceof Pony pony && pony.asEntity().isShiftKeyDown() ? 1 : 2;
         float min = RANGE.get(getTraits());
         double range = (min + (source.getLevel().getScaled(4) * 2)) / multiplier;
         if (source instanceof Pony && range > 2) {
@@ -81,7 +80,7 @@ public class AreaProtectionSpell extends AbstractAreaEffectSpell {
         return range;
     }
 
-    public boolean blocksMagicFor(Caster<?> source, Caster<?> other, Vec3d position) {
+    public boolean blocksMagicFor(Caster<?> source, Caster<?> other, Vec3 position) {
         return !FriendshipBraceletItem.isComrade(other, other.asEntity())
                 && source.getOriginVector().distanceTo(position) <= getRange(source);
     }

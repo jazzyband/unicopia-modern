@@ -1,16 +1,14 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.ability.data.Rot;
 import com.minelittlepony.unicopia.ability.magic.spell.CastingMethod;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.server.world.UGameRules;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
 
 public class TimeChangeAbility implements Ability<Rot> {
 
@@ -35,14 +33,14 @@ public class TimeChangeAbility implements Ability<Rot> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Rot> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Rot> getSerializer() {
         return Rot.CODEC;
     }
 
     @Override
     public Optional<Rot> prepare(Pony player) {
 
-        if (!player.asWorld().getServer().getGameRules().getBoolean(UGameRules.DO_TIME_MAGIC)) {
+        if (!player.asWorld().getServer().getGameRules().get(UGameRules.DO_TIME_MAGIC)) {
             return Optional.empty();
         }
 
@@ -55,7 +53,7 @@ public class TimeChangeAbility implements Ability<Rot> {
 
     @Override
     public boolean apply(Pony player, Rot data) {
-        if (!player.asWorld().getServer().getGameRules().getBoolean(UGameRules.DO_TIME_MAGIC)) {
+        if (!player.asWorld().getServer().getGameRules().get(UGameRules.DO_TIME_MAGIC)) {
             return false;
         }
 

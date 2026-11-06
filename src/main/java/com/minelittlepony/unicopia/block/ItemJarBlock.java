@@ -11,71 +11,68 @@ import com.minelittlepony.unicopia.block.jar.FakeFluidJarContents;
 
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.InventoryProvider;
-import net.minecraft.block.TransparentBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.SidedInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsage;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldAccess;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.WorldlyContainerHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.TransparentBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.BlockHitResult;
 
-public class ItemJarBlock extends JarBlock implements BlockEntityProvider, InventoryProvider {
-    public static final MapCodec<ItemJarBlock> CODEC = createCodec(ItemJarBlock::new);
+public class ItemJarBlock extends JarBlock implements EntityBlock, WorldlyContainerHolder {
 
-    public ItemJarBlock(Settings settings) {
+    public ItemJarBlock(Properties settings) {
         super(settings);
     }
 
+
     @Override
-    protected MapCodec<? extends TransparentBlock> getCodec() {
-        return CODEC;
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
 
     @Override
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
-    }
-
-    @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (hand == Hand.OFF_HAND) {
-            return ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION;
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (hand == InteractionHand.OFF_HAND) {
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
-        return world.getBlockEntity(pos, UBlockEntities.ITEM_JAR).map(data -> data.interact(player, hand)).orElse(ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION);
+        return world.getBlockEntity(pos, UBlockEntities.ITEM_JAR).map(data -> data.interact(player, hand)).orElse(InteractionResult.TRY_WITH_EMPTY_HAND);
     }
 
     @Override
-    protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
-        if (!moved && !state.isOf(world.getBlockState(pos).getBlock())) {
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+        if (!moved && !state.is(world.getBlockState(pos).getBlock())) {
             world.getBlockEntity(pos, UBlockEntities.ITEM_JAR).ifPresent(data -> {
                 data.getContents().onDestroyed();
             });
         }
-        super.onStateReplaced(state, world, pos, moved);
+        super.affectNeighborsAfterRemoval(state, world, pos, moved);
     }
 
     @Override
-    protected boolean hasComparatorOutput(BlockState state) {
+    protected boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
+    protected int getAnalogOutputSignal(BlockState state, Level world, BlockPos pos, net.minecraft.core.Direction direction) {
         return world.getBlockEntity(pos, UBlockEntities.ITEM_JAR)
                 .map(TileData::getItems)
                 .map(data -> Math.min(16, data.stacks().size()))
@@ -83,20 +80,20 @@ public class ItemJarBlock extends JarBlock implements BlockEntityProvider, Inven
     }
 
     @Override
-    protected boolean onSyncedBlockEvent(BlockState state, World world, BlockPos pos, int type, int data) {
-        super.onSyncedBlockEvent(state, world, pos, type, data);
+    protected boolean triggerEvent(BlockState state, Level world, BlockPos pos, int type, int data) {
+        super.triggerEvent(state, world, pos, type, data);
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        return blockEntity != null && blockEntity.onSyncedBlockEvent(type, data);
+        return blockEntity != null && blockEntity.triggerEvent(type, data);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileData(pos, state);
     }
 
     @Nullable
     @Override
-    public SidedInventory getInventory(BlockState state, WorldAccess world, BlockPos pos) {
+    public WorldlyContainer getContainer(BlockState state, LevelAccessor world, BlockPos pos) {
         return world.getBlockEntity(pos, UBlockEntities.ITEM_JAR).map(TileData::getItems).orElse(null);
     }
 
@@ -108,10 +105,10 @@ public class ItemJarBlock extends JarBlock implements BlockEntityProvider, Inven
             super(UBlockEntities.ITEM_JAR, pos, state);
         }
 
-        public ActionResult interact(PlayerEntity player, Hand hand) {
+        public InteractionResult interact(Player player, InteractionHand hand) {
             TypedActionResult<JarContents> result = contents.interact(player, hand);
             contents = result.value();
-            return result.result().isAccepted() ? ActionResult.SUCCESS : result.result() == ActionResult.FAIL ? ActionResult.FAIL : ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION;
+            return result.result().consumesAction() ? InteractionResult.SUCCESS : result.result() == InteractionResult.FAIL ? InteractionResult.FAIL : InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         public JarContents getContents() {
@@ -139,60 +136,60 @@ public class ItemJarBlock extends JarBlock implements BlockEntityProvider, Inven
         }
 
         @Override
-        public Packet<ClientPlayPacketListener> toUpdatePacket() {
-            return BlockEntityUpdateS2CPacket.create(this);
+        public Packet<ClientGamePacketListener> getUpdatePacket() {
+            return ClientboundBlockEntityDataPacket.create(this);
         }
 
         @Override
-        public NbtCompound toInitialChunkDataNbt(WrapperLookup lookup) {
-            return createNbt(lookup);
+        public CompoundTag getUpdateTag(Provider lookup) {
+            return saveWithoutMetadata(lookup);
         }
 
         @Override
-        public void markDirty() {
-            super.markDirty();
-            if (getWorld() instanceof ServerWorld sw) {
-                sw.getChunkManager().markForUpdate(getPos());
+        public void setChanged() {
+            super.setChanged();
+            if (getLevel() instanceof ServerLevel sw) {
+                sw.getChunkSource().blockChanged(getBlockPos());
             }
         }
 
         @Override
-        public void readNbt(NbtCompound nbt, WrapperLookup lookup) {
-            if (nbt.contains("items")) {
-                contents = new ItemsJarContents(this, nbt.getCompoundOrEmpty("items"), lookup);
-            } else if (nbt.contains("entity")) {
-                contents = new EntityJarContents(this, nbt.getCompoundOrEmpty("entity"));
-            } else if (nbt.contains("fluid")) {
-                contents = new FluidOnlyJarContents(this, nbt.getCompoundOrEmpty("fluid"), lookup);
-            } else if (nbt.contains("fakeFluid")) {
-                contents = new FakeFluidJarContents(this, nbt.getCompoundOrEmpty("fakeFluid"));
+        protected void loadAdditional(ValueInput nbt) {
+            if (nbt.read("items", CompoundTag.CODEC).isPresent()) {
+                contents = new ItemsJarContents(this, nbt.read("items", CompoundTag.CODEC).orElseGet(CompoundTag::new), nbt.lookup());
+            } else if (nbt.read("entity", CompoundTag.CODEC).isPresent()) {
+                contents = new EntityJarContents(this, nbt.read("entity", CompoundTag.CODEC).orElseGet(CompoundTag::new));
+            } else if (nbt.read("fluid", CompoundTag.CODEC).isPresent()) {
+                contents = new FluidOnlyJarContents(this, nbt.read("fluid", CompoundTag.CODEC).orElseGet(CompoundTag::new), nbt.lookup());
+            } else if (nbt.read("fakeFluid", CompoundTag.CODEC).isPresent()) {
+                contents = new FakeFluidJarContents(this, nbt.read("fakeFluid", CompoundTag.CODEC).orElseGet(CompoundTag::new));
             }
         }
 
         @Override
-        protected void writeNbt(NbtCompound nbt, WrapperLookup lookup) {
+        protected void saveAdditional(ValueOutput nbt) {
             var items = getItems();
             if (items != null) {
-                nbt.put("items", items.toNBT(new NbtCompound(), lookup));
+                nbt.store("items", CompoundTag.CODEC, items.toNBT(new CompoundTag(), getLevel().registryAccess()));
             } else if (getEntity() != null) {
-                nbt.put("entity", getEntity().toNBT(new NbtCompound(), lookup));
+                nbt.store("entity", CompoundTag.CODEC, getEntity().toNBT(new CompoundTag(), getLevel().registryAccess()));
             } else if (getFluid() != null) {
-                nbt.put("fluid", getFluid().toNBT(new NbtCompound(), lookup));
+                nbt.store("fluid", CompoundTag.CODEC, getFluid().toNBT(new CompoundTag(), getLevel().registryAccess()));
             } else if (getFakeFluid() != null) {
-                nbt.put("fakeFluid", getFakeFluid().toNBT(new NbtCompound(), lookup));
+                nbt.store("fakeFluid", CompoundTag.CODEC, getFakeFluid().toNBT(new CompoundTag(), getLevel().registryAccess()));
             }
         }
     }
 
     public interface JarContents {
-        TypedActionResult<JarContents> interact(PlayerEntity player, Hand hand);
+        TypedActionResult<JarContents> interact(Player player, InteractionHand hand);
 
         void onDestroyed();
 
-        NbtCompound toNBT(NbtCompound compound, WrapperLookup lookup);
+        CompoundTag toNBT(CompoundTag compound, Provider lookup);
 
-        default void consumeAndSwap(PlayerEntity player, Hand hand, ItemStack output) {
-            player.setStackInHand(hand, ItemUsage.exchangeStack(player.getStackInHand(hand), player, output.copy()));
+        default void consumeAndSwap(Player player, InteractionHand hand, ItemStack output) {
+            player.setItemInHand(hand, ItemUtils.createFilledResult(player.getItemInHand(hand), player, output.copy()));
         }
     }
 

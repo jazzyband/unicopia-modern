@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": "#c:glass_blocks"
+  },
+  "pattern": [
+    "##"
+  ],
+  "result": {
+    "id": "unicopia:sunglasses"
+  }
+}

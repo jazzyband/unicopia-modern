@@ -1,8 +1,7 @@
 package com.minelittlepony.unicopia.container.inventory;
 
 import com.minelittlepony.unicopia.Unicopia;
-
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 public interface SpellbookSlot {
     Identifier EMPTY_TEXTURE = Unicopia.id("transparent");

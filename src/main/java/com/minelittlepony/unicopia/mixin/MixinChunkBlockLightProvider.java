@@ -9,81 +9,80 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.server.world.LightSources;
-
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.chunk.light.ChunkBlockLightProvider;
-import net.minecraft.world.chunk.light.ChunkLightProvider;
-import net.minecraft.world.chunk.light.LightStorage;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.lighting.BlockLightEngine;
+import net.minecraft.world.level.lighting.LayerLightSectionStorage;
+import net.minecraft.world.level.lighting.LightEngine;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-@Mixin(ChunkBlockLightProvider.class)
-abstract class MixinChunkBlockLightProvider extends ChunkLightProvider {
+@Mixin(BlockLightEngine.class)
+abstract class MixinChunkBlockLightProvider extends LightEngine {
     @Shadow
-    private @Final BlockPos.Mutable mutablePos;
+    private @Final BlockPos.MutableBlockPos mutablePos;
 
     MixinChunkBlockLightProvider() { super(null, null); }
 
-    @Inject(method = "propagateLight", at = @At("TAIL"))
+    @Inject(method = "propagateLightSources", at = @At("TAIL"))
     private void onPropagateLight(ChunkPos chunkPos, CallbackInfo info) {
-        if (chunkProvider.getChunk(chunkPos.x, chunkPos.z) instanceof WorldChunk chunk && chunk.getWorld() instanceof ServerWorld world) {
+        if (chunkSource.getChunkForLighting(chunkPos.x(), chunkPos.z()) instanceof LevelChunk chunk && chunk.getLevel() instanceof ServerLevel world) {
             LightSources.get(world).forEachLightSource(chunkPos, (pos, level) -> {
-                method_51566(pos, ChunkLightProvider.class_8531.method_51573(level, false));
+                enqueueIncrease(pos, LightEngine.QueueEntry.increaseLightFromEmission(level, false));
             });
         }
     }
 
-    @Inject(method = "method_51529", at = @At("TAIL"))
+    @Inject(method = "checkNode", at = @At("TAIL"))
     private void onMethod_51529(long blockPos, CallbackInfo info) {
-        long sectionPos = ChunkSectionPos.fromBlockPos(blockPos);
-        if (!((MutableBlockLightStorage)lightStorage).invokeHasSection(sectionPos)) {
+        long sectionPos = SectionPos.blockToSection(blockPos);
+        if (!((MutableBlockLightStorage)storage).invokeHasSection(sectionPos)) {
             return;
         }
 
-        int x = ChunkSectionPos.getSectionCoord(BlockPos.unpackLongX(blockPos));
-        int z = ChunkSectionPos.getSectionCoord(BlockPos.unpackLongZ(blockPos));
-        if (chunkProvider.getChunk(x, z) instanceof WorldChunk chunk) {
-            int lightSourceLight = LightSources.get(chunk.getWorld()).getLuminance(blockPos);
+        int x = SectionPos.blockToSectionCoord(BlockPos.getX(blockPos));
+        int z = SectionPos.blockToSectionCoord(BlockPos.getZ(blockPos));
+        if (chunkSource.getChunkForLighting(x, z) instanceof LevelChunk chunk) {
+            int lightSourceLight = LightSources.get(chunk.getLevel()).getLuminance(blockPos);
             if (lightSourceLight > 0) {
-                method_51566(blockPos, ChunkLightProvider.class_8531.method_51573(lightSourceLight, false));
+                enqueueIncrease(blockPos, LightEngine.QueueEntry.increaseLightFromEmission(lightSourceLight, false));
             }
         }
     }
 
-    @Inject(method = "method_51530", at = @At("TAIL"))
+    @Inject(method = "propagateDecrease", at = @At("TAIL"))
     private void onMethod_51530(long blockPos, long flags, CallbackInfo info) {
-        int x = ChunkSectionPos.getSectionCoord(BlockPos.unpackLongX(blockPos));
-        int z = ChunkSectionPos.getSectionCoord(BlockPos.unpackLongZ(blockPos));
-        if (chunkProvider.getChunk(x, z) instanceof WorldChunk chunk) {
-            int lightLevel = ChunkLightProvider.class_8531.getLightLevel(flags);
-            for (Direction direction : DIRECTIONS) {
+        int x = SectionPos.blockToSectionCoord(BlockPos.getX(blockPos));
+        int z = SectionPos.blockToSectionCoord(BlockPos.getZ(blockPos));
+        if (chunkSource.getChunkForLighting(x, z) instanceof LevelChunk chunk) {
+            int lightLevel = LightEngine.QueueEntry.getFromLevel(flags);
+            for (Direction direction : PROPAGATION_DIRECTIONS) {
                 int j;
                 long m;
-                if (!ChunkLightProvider.class_8531.isDirectionBitSet(flags, direction)
-                        || !((MutableBlockLightStorage)lightStorage).invokeHasSection(ChunkSectionPos.fromBlockPos(m = BlockPos.offset(blockPos, direction)))
-                        || (j = ((MutableBlockLightStorage)lightStorage).invokeGet(m)) == 0) continue;
+                if (!LightEngine.QueueEntry.shouldPropagateInDirection(flags, direction)
+                        || !((MutableBlockLightStorage)storage).invokeHasSection(SectionPos.blockToSection(m = BlockPos.offset(blockPos, direction)))
+                        || (j = ((MutableBlockLightStorage)storage).invokeGet(m)) == 0) continue;
                 if (j <= lightLevel - 1) {
-                    int lightSourceLight = LightSources.get(chunk.getWorld()).getLuminance(blockPos);
+                    int lightSourceLight = LightSources.get(chunk.getLevel()).getLuminance(blockPos);
                     if (lightSourceLight <= 0) continue;
-                    method_51566(m, ChunkLightProvider.class_8531.method_51573(lightSourceLight, false));
+                    enqueueIncrease(m, LightEngine.QueueEntry.increaseLightFromEmission(lightSourceLight, false));
                     continue;
                 }
-                method_51566(m, ChunkLightProvider.class_8531.method_51579(j, false, direction.getOpposite()));
+                enqueueIncrease(m, LightEngine.QueueEntry.increaseOnlyOneDirection(j, false, direction.getOpposite()));
             }
         }
     }
 }
 
-@Mixin(LightStorage.class)
+@Mixin(LayerLightSectionStorage.class)
 interface MutableBlockLightStorage {
-    @Invoker("hasSection")
+    @Invoker("storingLightForSection")
     boolean invokeHasSection(long sectionPos);
-    @Invoker("get")
+    @Invoker("getStoredLevel")
     int invokeGet(long blockPos);
-    @Invoker("set")
+    @Invoker("setStoredLevel")
     void invokeSet(long blockPos, int light);
 }

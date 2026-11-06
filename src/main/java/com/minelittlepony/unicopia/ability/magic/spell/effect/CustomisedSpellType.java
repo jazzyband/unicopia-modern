@@ -4,7 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.component.DataComponentGetter;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipProvider;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.InteractionManager;
@@ -17,26 +26,15 @@ import com.minelittlepony.unicopia.client.TextHelper;
 import com.minelittlepony.unicopia.entity.effect.EffectUtils;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 import com.minelittlepony.unicopia.util.TypedActionResult;
-import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.component.ComponentsAccess;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipAppender;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 
 public record CustomisedSpellType<T extends Spell> (
         SpellType<T> type,
         SpellTraits traits,
         Supplier<SpellTraits> traitsDifferenceSupplier
-    ) implements SpellPredicate<T>, TooltipAppender {
-    public static final MapCodec<CustomisedSpellType<?>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    ) implements SpellPredicate<T>, TooltipProvider {
+    public static final Codec<CustomisedSpellType<?>> CODEC = RecordCodecBuilder.create(i -> i.group(
         SpellType.CODEC.fieldOf("effect_id").forGetter(CustomisedSpellType::type),
         SpellTraits.CODEC.fieldOf("traits").forGetter(CustomisedSpellType::traits)
     ).apply(i, (type, traits) -> type.withTraits(traits)));
@@ -69,7 +67,7 @@ public record CustomisedSpellType<T extends Spell> (
     }
 
     @Nullable
-    public T create(NbtCompound compound, WrapperLookup lookup) {
+    public T create(CompoundTag compound, Provider lookup) {
         T spell = create();
         if (spell != null) {
             spell.fromNBT(compound, lookup);
@@ -114,25 +112,25 @@ public record CustomisedSpellType<T extends Spell> (
     }
 
     @Override
-    public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {
+    public void addToTooltip(Item.TooltipContext context, Consumer<Component> textConsumer, TooltipFlag type, DataComponentGetter components) {
         if (isEmpty()) {
             return;
         }
-        MutableText lore = Text.translatable(type().getTranslationKey() + ".lore").formatted(type().getAffinity().getColor());
+        MutableComponent lore = Component.translatable(type().getTranslationKey() + ".lore").withStyle(type().getAffinity().getColor());
 
         if (!InteractionManager.getInstance().getClientSpecies().canCast()) {
-            lore = lore.formatted(Formatting.OBFUSCATED);
+            lore = lore.withStyle(ChatFormatting.OBFUSCATED);
         }
         TextHelper.wrap(lore, 180).forEach(textConsumer);
         float corruption = ((int)traits().getCorruption() * 10) + type().getAffinity().getCorruption();
-        List<Text> modifiers = new ArrayList<>();
+        List<Component> modifiers = new ArrayList<>();
         type().getTooltip().appendTooltip(this, modifiers);
         if (corruption != 0) {
             modifiers.add(EffectUtils.formatModifierChange("affinity.unicopia.corruption", corruption, true));
         }
         if (!modifiers.isEmpty()) {
-            textConsumer.accept(Text.empty());
-            textConsumer.accept(Text.translatable("affinity.unicopia.when_cast").formatted(Formatting.GRAY));
+            textConsumer.accept(Component.empty());
+            textConsumer.accept(Component.translatable("affinity.unicopia.when_cast").withStyle(ChatFormatting.GRAY));
             modifiers.forEach(textConsumer);
         }
     }
@@ -141,14 +139,14 @@ public record CustomisedSpellType<T extends Spell> (
         return isEmpty() ? TypedActionResult.fail(this) : TypedActionResult.pass(this);
     }
 
-    public NbtCompound toNbt(NbtCompound compound) {
+    public CompoundTag toNbt(CompoundTag compound) {
         type.toNbt(compound);
         compound.put("traits", traits.toNbt());
         return compound;
     }
 
-    public static <T extends Spell> CustomisedSpellType<T> fromNBT(NbtCompound compound) {
-        SpellType<T> type = compound.get("effect_id", SpellType.<T>codec()).orElseGet(SpellType::empty);
-        return type.withTraits(compound.get("traits", SpellTraits.CODEC).orElse(type.getTraits()));
+    public static <T extends Spell> CustomisedSpellType<T> fromNBT(CompoundTag compound) {
+        SpellType<T> type = compound.read("effect_id", SpellType.<T>codec()).orElseGet(SpellType::empty);
+        return type.withTraits(compound.read("traits", SpellTraits.CODEC).orElse(type.getTraits()));
     }
 }

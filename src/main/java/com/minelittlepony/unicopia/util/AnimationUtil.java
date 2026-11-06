@@ -1,13 +1,13 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 public interface AnimationUtil {
     /**
      * Converts a smooth 0-1 transition to a smooth 0-1-0 transition
      */
     static float seesaw(float progress) {
-        return Math.max(0, MathHelper.cos((progress - 0.5F) * (float)Math.PI));
+        return Math.max(0, Mth.cos((progress - 0.5F) * (float)Math.PI));
     }
 
     /**

@@ -1,21 +1,21 @@
 package com.minelittlepony.unicopia.util;
 
 import java.util.Iterator;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
 
 public record ItemStackSet(Int2ObjectMap<Entry> stacks) implements Iterable<ItemStack> {
     static final ItemStackSet EMPTY = new ItemStackSet(new Int2ObjectOpenHashMap<>());
 
-    public ItemStackSet(Inventory inventory) {
+    public ItemStackSet(Container inventory) {
         this(new Int2ObjectOpenHashMap<>());
         InventoryUtil.stream(inventory).forEach(stack -> {
-            stacks.computeIfAbsent(ItemStack.hashCode(stack), i -> new Entry(stack)).count += stack.getCount();
+            stacks.computeIfAbsent(ItemStack.hashItemAndComponents(stack), i -> new Entry(stack)).count += stack.getCount();
         });
     }
 
@@ -60,7 +60,7 @@ public record ItemStackSet(Int2ObjectMap<Entry> stacks) implements Iterable<Item
     public ItemStackSet add(ItemStack stack) {
         if (!stack.isEmpty()) {
             ItemStackSet copy = new ItemStackSet(this);
-            copy.stacks.computeIfAbsent(ItemStack.hashCode(stack), i -> new Entry(stack)).count += stack.getCount();
+            copy.stacks.computeIfAbsent(ItemStack.hashItemAndComponents(stack), i -> new Entry(stack)).count += stack.getCount();
             return copy;
         }
         return this;
@@ -69,7 +69,7 @@ public record ItemStackSet(Int2ObjectMap<Entry> stacks) implements Iterable<Item
     public ItemStackSet subtract(ItemStack stack) {
         if (!stack.isEmpty()) {
             ItemStackSet copy = new ItemStackSet(this);
-            copy.stacks.computeIfPresent(ItemStack.hashCode(stack), (e, entry) -> entry.add(-stack.getCount()));
+            copy.stacks.computeIfPresent(ItemStack.hashItemAndComponents(stack), (e, entry) -> entry.add(-stack.getCount()));
             return copy;
         }
         return this;
@@ -109,7 +109,7 @@ public record ItemStackSet(Int2ObjectMap<Entry> stacks) implements Iterable<Item
 
                 @Override
                 public ItemStack next() {
-                    int stackSize = Math.min(stack.getMaxCount(), countRemaining);
+                    int stackSize = Math.min(stack.getMaxStackSize(), countRemaining);
                     countRemaining -= stackSize;
                     return stack.copyWithCount(stackSize);
                 }

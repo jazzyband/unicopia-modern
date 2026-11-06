@@ -1,0 +1,8 @@
+{
+  "type": "unicopia:crafting_zap_apple",
+  "appearance": "unicopia:pineapple",
+  "ingredients": [
+    "unicopia:zap_apple",
+    "unicopia:pineapple_crown"
+  ]
+}

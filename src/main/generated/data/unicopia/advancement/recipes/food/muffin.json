@@ -1,0 +1,76 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_egg": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:egg"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_juice": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:juice"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_potato": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:potato"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_sugar": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:sugar"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:muffin"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_wheat_worms": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:wheat_worms"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_sugar",
+      "has_egg",
+      "has_potato",
+      "has_juice",
+      "has_wheat_worms"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:muffin"
+    ]
+  }
+}

@@ -1,59 +1,49 @@
 package com.minelittlepony.unicopia.block;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.SpreadingSnowyBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LightEngine;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.SnowBlock;
-import net.minecraft.block.SpreadableBlock;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-import net.minecraft.world.chunk.light.ChunkLightProvider;
-
-public class GrowableBlock extends SpreadableBlock {
-    public static final MapCodec<GrowableBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            CodecUtils.supplierOf(Registries.BLOCK.getCodec()).fieldOf("dead").forGetter(b -> b.dead),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, GrowableBlock::new));
+public class GrowableBlock extends SpreadingSnowyBlock {
 
     private final Supplier<Block> dead;
 
-    protected GrowableBlock(Supplier<Block> converted, Settings settings) {
-        super(settings);
+    protected GrowableBlock(Supplier<Block> converted, Properties settings) {
+        super(settings, Blocks.DIRT.builtInRegistryHolder().key());
         this.dead = converted;
     }
 
-    @Override
-    protected MapCodec<? extends GrowableBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
-        super.randomDisplayTick(state, world, pos, random);
+    public void animateTick(BlockState state, Level world, BlockPos pos, RandomSource random) {
+        super.animateTick(state, world, pos, random);
         if (random.nextInt(2) == 0) {
-            world.addParticleClient(ParticleTypes.MYCELIUM, pos.getX() + random.nextDouble(), pos.getY() + 1.1, pos.getZ() + random.nextDouble(), 0, 0, 0);
+            world.addParticle(ParticleTypes.MYCELIUM, pos.getX() + random.nextDouble(), pos.getY() + 1.1, pos.getZ() + random.nextDouble(), 0, 0, 0);
         }
         if (random.nextInt(1500) == 0) {
-            world.playSoundAtBlockCenterClient(pos, USounds.BLOCK_CHITIN_AMBIENCE, SoundCategory.BLOCKS, 0.13F, 0.2F, true);
+            world.playLocalSound(pos, USounds.BLOCK_CHITIN_AMBIENCE, SoundSource.BLOCKS, 0.13F, 0.2F, true);
 
             for (int i = 0; i < 9; i++) {
-                world.addParticleClient(random.nextInt(2) == 0 ? ParticleTypes.SPORE_BLOSSOM_AIR : ParticleTypes.CRIMSON_SPORE,
+                world.addParticle(random.nextInt(2) == 0 ? ParticleTypes.SPORE_BLOSSOM_AIR : ParticleTypes.CRIMSON_SPORE,
                         pos.getX() + random.nextDouble(),
                         pos.getY() + 1.1, pos.getZ() + random.nextDouble(),
                         random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5
@@ -63,7 +53,7 @@ public class GrowableBlock extends SpreadableBlock {
 
         if (random.nextInt(20) == 0) {
             for (int i = 0; i < 9; i++) {
-                world.addParticleClient(ParticleTypes.ASH,
+                world.addParticle(ParticleTypes.ASH,
                         pos.getX() + random.nextDouble(),
                         pos.getY() + 1.1, pos.getZ() + random.nextDouble(),
                         random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5
@@ -73,44 +63,44 @@ public class GrowableBlock extends SpreadableBlock {
     }
 
     @Override
-    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (!canSurvive(state, world, pos)) {
-            world.setBlockState(pos, dead.get().getDefaultState());
+    protected void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        if (!canBeGrass(state, world, pos)) {
+            world.setBlockAndUpdate(pos, dead.get().defaultBlockState());
             return;
         }
 
-        if (world.getLightLevel(pos.up()) >= 9) {
-            BlockState blockState = getDefaultState();
+        if (world.getMaxLocalRawBrightness(pos.above()) >= 9) {
+            BlockState blockState = defaultBlockState();
             for (int i = 0; i < 4; i++) {
-                BlockPos blockPos = pos.add(
+                BlockPos blockPos = pos.offset(
                         random.nextInt(3) - 1,
                         random.nextInt(5) - 3,
                         random.nextInt(3) - 1
                 );
 
-                if (canSpread(blockState, world, blockPos)) {
-                    world.setBlockState(blockPos, blockState.with(SNOWY, world.getBlockState(blockPos.up()).isOf(Blocks.SNOW)));
+                if (canPropagate(blockState, world, blockPos)) {
+                    world.setBlockAndUpdate(blockPos, blockState.setValue(SNOWY, world.getBlockState(blockPos.above()).is(Blocks.SNOW)));
                 }
             }
         }
     }
 
-    private boolean canSpread(BlockState state, WorldView world, BlockPos pos) {
-        return world.getBlockState(pos).isOf(dead.get())
-                && !world.getFluidState(pos.up()).isIn(FluidTags.WATER)
-                && canSurvive(state, world, pos);
+    private boolean canPropagate(BlockState state, LevelReader world, BlockPos pos) {
+        return world.getBlockState(pos).is(dead.get())
+                && !world.getFluidState(pos.above()).is(FluidTags.WATER)
+                && canBeGrass(state, world, pos);
     }
 
-    private boolean canSurvive(BlockState state, WorldView world, BlockPos pos) {
-        BlockPos above = pos.up();
+    private boolean canBeGrass(BlockState state, LevelReader world, BlockPos pos) {
+        BlockPos above = pos.above();
         BlockState stateAbove = world.getBlockState(above);
-        if (stateAbove.isOf(Blocks.SNOW) && stateAbove.get(SnowBlock.LAYERS) == 1) {
+        if (stateAbove.is(Blocks.SNOW) && stateAbove.getValue(SnowLayerBlock.LAYERS) == 1) {
             return true;
         }
-        if (stateAbove.getFluidState().getLevel() == 8) {
+        if (stateAbove.getFluidState().getAmount() == 8) {
             return false;
         }
 
-        return ChunkLightProvider.getRealisticOpacity(state, stateAbove, Direction.UP, stateAbove.getOpacity()) < 15;
+        return stateAbove.getLightDampening() < 15;
     }
 }

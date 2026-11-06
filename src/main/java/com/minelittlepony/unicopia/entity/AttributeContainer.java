@@ -1,52 +1,52 @@
 package com.minelittlepony.unicopia.entity;
 
 import java.util.Map;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import org.jetbrains.annotations.Nullable;
 
 import it.unimi.dsi.fastutil.floats.Float2ObjectFunction;
-import net.minecraft.entity.attribute.EntityAttribute;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
 
 public interface AttributeContainer {
     @Nullable
-    EntityAttributeInstance getAttributeInstance(RegistryEntry<EntityAttribute> attribute);
+    AttributeInstance getAttributeInstance(Holder<Attribute> attribute);
 
-    default void updateAttributeModifier(Identifier id, RegistryEntry<EntityAttribute> attribute, float desiredValue, Float2ObjectFunction<EntityAttributeModifier> modifierSupplier, boolean permanent) {
+    default void updateAttributeModifier(Identifier id, Holder<Attribute> attribute, float desiredValue, Float2ObjectFunction<AttributeModifier> modifierSupplier, boolean permanent) {
         @Nullable
-        EntityAttributeInstance instance = getAttributeInstance(attribute);
+        AttributeInstance instance = getAttributeInstance(attribute);
         if (instance == null) {
             return;
         }
 
         @Nullable
-        EntityAttributeModifier modifier = instance.getModifier(id);
+        AttributeModifier modifier = instance.getModifier(id);
 
-        if (!MathHelper.approximatelyEquals(desiredValue, modifier == null ? 0 : modifier.value())) {
+        if (!Mth.equal(desiredValue, modifier == null ? 0 : modifier.amount())) {
             instance.removeModifier(id);
 
             if (desiredValue != 0) {
                 if (permanent) {
-                    instance.addPersistentModifier(modifierSupplier.get(desiredValue));
+                    instance.addPermanentModifier(modifierSupplier.get(desiredValue));
                 } else {
-                    instance.addTemporaryModifier(modifierSupplier.get(desiredValue));
+                    instance.addTransientModifier(modifierSupplier.get(desiredValue));
                 }
             }
         }
     }
 
-    default void applyAttributeModifiers(Map<RegistryEntry<EntityAttribute>, EntityAttributeModifier> modifiers, boolean permanent, boolean apply) {
+    default void applyAttributeModifiers(Map<Holder<Attribute>, AttributeModifier> modifiers, boolean permanent, boolean apply) {
         modifiers.forEach((attribute, modifier) -> {
             applyAttributeModifier(attribute, modifier, permanent, apply);
         });
     }
 
-    default void applyAttributeModifier(RegistryEntry<EntityAttribute> attribute, EntityAttributeModifier modifier, boolean permanent, boolean apply) {
+    default void applyAttributeModifier(Holder<Attribute> attribute, AttributeModifier modifier, boolean permanent, boolean apply) {
         @Nullable
-        EntityAttributeInstance instance = getAttributeInstance(attribute);
+        AttributeInstance instance = getAttributeInstance(attribute);
         if (instance == null) {
             return;
         }
@@ -57,9 +57,9 @@ public interface AttributeContainer {
         if (present != apply) {
             if (apply) {
                 if (permanent) {
-                    instance.addPersistentModifier(modifier);
+                    instance.addPermanentModifier(modifier);
                 } else {
-                    instance.addTemporaryModifier(modifier);
+                    instance.addTransientModifier(modifier);
                 }
             } else {
                 instance.removeModifier(modifier.id());

@@ -2,7 +2,25 @@ package com.minelittlepony.unicopia.datagen.providers.recipe;
 
 import java.util.List;
 import java.util.Map;
-
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.data.worldgen.BootstrapContext;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.BlockFamily.Variant;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.recipes.ShapelessRecipeBuilder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Blocks;
 import com.minelittlepony.unicopia.UConventionalTags;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.Unicopia;
@@ -13,61 +31,39 @@ import com.minelittlepony.unicopia.datagen.FarmersDelightContent;
 import com.minelittlepony.unicopia.datagen.UBlockFamilies;
 import com.minelittlepony.unicopia.item.UItems;
 
-import net.minecraft.block.Blocks;
-import net.minecraft.data.family.BlockFamily.Variant;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.data.recipe.RecipeGenerator;
-import net.minecraft.data.recipe.ShapelessRecipeJsonBuilder;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.Items;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.book.RecipeCategory;
-import net.minecraft.registry.RegistryEntryLookup;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Identifier;
+public class UFarmersDelightRecipeGenerator extends RecipeProvider implements CraftingMaterialHelper {
+    private final HolderGetter<Item> items;
+    private final RecipeOutput output;
 
-public class UFarmersDelightRecipeGenerator extends RecipeGenerator implements CraftingMaterialHelper {
-    private final RegistryEntryLookup<Item> items;
-
-    UFarmersDelightRecipeGenerator(WrapperLookup registries, RecipeExporter exporter) {
-        super(registries, exporter);
-        items = registries.getOrThrow(RegistryKeys.ITEM);
+    UFarmersDelightRecipeGenerator(Provider registries, BootstrapContext<Recipe<?>> recipes, BootstrapContext<Advancement> advancements, RecipeOutput exporter) {
+        super(recipes, advancements);
+        output = exporter;
+        items = registries.lookupOrThrow(Registries.ITEM);
     }
 
     @Override
-    public void generate() {
+    public void buildRecipes() {
      // unwaxing
         UBlockFamilies.WAXED_ZAP.getVariants().forEach((variant, waxed) -> {
             if (variant == Variant.WALL_SIGN) return;
-            var unwaxed = UBlockFamilies.ZAP.getVariant(variant);
+            var unwaxed = UBlockFamilies.ZAP.get(variant);
             CuttingBoardRecipeJsonBuilder.create(unwaxed, "axe_strip")
-                .input(waxed).criterion(hasItem(waxed), conditionsFromItem(waxed))
+                .input(waxed).criterion(getHasName(waxed), has(waxed))
                 .result(unwaxed)
                 .result(Items.HONEYCOMB)
-                .sound(SoundEvents.ITEM_AXE_WAX_OFF)
-                .offerTo(exporter, recipeId(getItemPath(unwaxed) + "_from_waxed"));
+                .sound(SoundEvents.AXE_WAX_OFF.value())
+                .offerTo(output, recipeId(getItemName(unwaxed) + "_from_waxed"));
         });
         List.of(UBlockFamilies.ZAP, UBlockFamilies.PALM).forEach(family -> {
             family.getVariants().forEach((variant, block) -> {
-                if (variant == Variant.WALL_SIGN) return;
+                if (variant == Variant.WALL_SIGN || variant == Variant.WALL_HANGING_SIGN) return;
                 CuttingBoardRecipeJsonBuilder.create(family.getBaseBlock(), "axe_strip")
-                    .input(block).criterion(hasItem(block), conditionsFromItem(block))
+                    .input(block).criterion(getHasName(block), has(block))
                     .result(family.getBaseBlock())
-                    .sound(SoundEvents.ITEM_AXE_STRIP)
-                    .offerTo(exporter, recipeId(getItemPath(block)));
+                    .sound(SoundEvents.AXE_STRIP.value())
+                    .offerTo(output, recipeId(getItemName(block)));
             });
         });
-        CuttingBoardRecipeJsonBuilder.create(UBlocks.PALM_PLANKS, "axe_dig")
-            .input(UBlocks.PALM_HANGING_SIGN).criterion(hasItem(UBlocks.PALM_HANGING_SIGN), conditionsFromItem(UBlocks.PALM_HANGING_SIGN))
-            .sound(SoundEvents.ITEM_AXE_STRIP)
-            .result(UBlocks.PALM_PLANKS)
-            .offerTo(exporter);
-
         Map.of(
                 UBlocks.PALM_LOG, UBlocks.STRIPPED_PALM_LOG,
                 UBlocks.PALM_WOOD, UBlocks.STRIPPED_PALM_WOOD,
@@ -75,58 +71,51 @@ public class UFarmersDelightRecipeGenerator extends RecipeGenerator implements C
                 UBlocks.ZAP_WOOD, UBlocks.STRIPPED_ZAP_WOOD
         ).forEach((unstripped, stripped) -> {
             CuttingBoardRecipeJsonBuilder.create(stripped, "axe_strip")
-                .input(unstripped).criterion(hasItem(unstripped), conditionsFromItem(unstripped))
-                .sound(SoundEvents.ITEM_AXE_STRIP)
+                .input(unstripped).criterion(getHasName(unstripped), has(unstripped))
+                .sound(SoundEvents.AXE_STRIP.value())
                 .result(stripped)
-                .result(Identifier.of("farmersdelight:tree_bark"))
-                .offerTo(exporter, recipeId(convertBetween(stripped, unstripped)));
+                .result(Identifier.parse("farmersdelight:tree_bark"))
+                .offerTo(output, recipeId(getConversionRecipeName(stripped, unstripped)));
         });
         Map.of(
                 UBlocks.GOLDEN_OAK_LOG, UBlocks.STRIPPED_GOLDEN_OAK_LOG,
                 UBlocks.GOLDEN_OAK_WOOD, UBlocks.STRIPPED_GOLDEN_OAK_WOOD
         ).forEach((unstripped, stripped) -> {
             CuttingBoardRecipeJsonBuilder.create(stripped, "axe_strip")
-                .input(unstripped).criterion(hasItem(unstripped), conditionsFromItem(unstripped))
-                .sound(SoundEvents.ITEM_AXE_STRIP)
+                .input(unstripped).criterion(getHasName(unstripped), has(unstripped))
+                .sound(SoundEvents.AXE_STRIP.value())
                 .result(stripped)
                 .result(Items.GOLD_NUGGET, 8)
-                .offerTo(exporter, recipeId(convertBetween(stripped, unstripped)));
+                .offerTo(output, recipeId(getConversionRecipeName(stripped, unstripped)));
         });
 
-        ShapelessRecipeJsonBuilder.create(items, RecipeCategory.MISC, UItems.APPLE_PIE)
-            .input(FarmersDelightContent.APPLE_PIE).criterion(hasItem(FarmersDelightContent.APPLE_PIE), conditionsFromItem(FarmersDelightContent.APPLE_PIE))
-            .offerTo(exporter, recipeId("apple_pie_to_apple_pie"));
-        ShapelessRecipeJsonBuilder.create(items, RecipeCategory.MISC, FarmersDelightContent.APPLE_PIE)
-            .input(UItems.APPLE_PIE).criterion(hasItem(UItems.APPLE_PIE), conditionsFromItem(UItems.APPLE_PIE))
-            .offerTo(exporter, recipeId("apple_pie_from_apple_pie"));
-
         CuttingBoardRecipeJsonBuilder.create(UItems.HAY_FRIES, "axe_dig")
-                .input(Blocks.HAY_BLOCK).criterion(hasItem(Blocks.HAY_BLOCK), conditionsFromItem(Blocks.HAY_BLOCK))
-                .sound(SoundEvents.ITEM_AXE_SCRAPE)
+                .input(Blocks.HAY_BLOCK).criterion(getHasName(Blocks.HAY_BLOCK), has(Blocks.HAY_BLOCK))
+                .sound(SoundEvents.AXE_SCRAPE.value())
                 .result(UItems.HAY_FRIES, 9)
-                .offerTo(exporter);
+                .offerTo(output);
 
-        CuttingBoardRecipeJsonBuilder.create(UItems.APPLE_PIE_SLICE, Ingredient.fromTag(items.getOrThrow(UConventionalTags.Items.TOOL_KNIVES)))
-            .input(UBlocks.APPLE_PIE).criterion(hasItem(UBlocks.APPLE_PIE), conditionsFromItem(UBlocks.APPLE_PIE))
+        CuttingBoardRecipeJsonBuilder.create(UItems.APPLE_PIE_SLICE, Ingredient.of(items.getOrThrow(UConventionalTags.Items.TOOL_KNIVES)))
+            .input(UBlocks.APPLE_PIE).criterion(getHasName(UBlocks.APPLE_PIE), has(UBlocks.APPLE_PIE))
             .sound(USounds.BLOCK_PIE_SLICE)
             .result(UItems.APPLE_PIE_SLICE, 4)
-            .offerTo(exporter);
+            .offerTo(output);
     }
 
-    public void offerSpell(RecipeExporter exporter, ItemConvertible gemstone, SpellType<?> output, SpellTraits.Builder traits) {
+    public void offerSpell(RecipeOutput exporter, ItemLike gemstone, SpellType<?> output, SpellTraits.Builder traits) {
         SpellcraftingRecipeJsonBuilder.create(RecipeCategory.MISC, gemstone, output)
             .traits(traits)
             .offerTo(exporter);
     }
 
-    public void offerSpellFromSpell(RecipeExporter exporter, ItemConvertible gemstone, SpellType<?> output, SpellType<?> input, SpellTraits.Builder traits) {
+    public void offerSpellFromSpell(RecipeOutput exporter, ItemLike gemstone, SpellType<?> output, SpellType<?> input, SpellTraits.Builder traits) {
         SpellcraftingRecipeJsonBuilder.create(RecipeCategory.MISC, gemstone, output)
             .input(gemstone, input)
             .traits(traits)
             .offerTo(exporter);
     }
 
-    public void offerSpellFromTwoSpells(RecipeExporter exporter, ItemConvertible gemstone, SpellType<?> output, SpellType<?> input1, SpellType<?> input2, SpellTraits.Builder traits) {
+    public void offerSpellFromTwoSpells(RecipeOutput exporter, ItemLike gemstone, SpellType<?> output, SpellType<?> input1, SpellType<?> input2, SpellTraits.Builder traits) {
         SpellcraftingRecipeJsonBuilder.create(RecipeCategory.MISC, gemstone, output)
             .input(gemstone, input1)
             .input(gemstone, input2)
@@ -134,8 +123,8 @@ public class UFarmersDelightRecipeGenerator extends RecipeGenerator implements C
             .offerTo(exporter);
     }
 
-    public static RegistryKey<Recipe<?>> recipeId(String key) {
-        return RegistryKey.of(RegistryKeys.RECIPE, Unicopia.id(key));
+    public static ResourceKey<Recipe<?>> recipeId(String key) {
+        return ResourceKey.create(Registries.RECIPE, Unicopia.id(key));
     }
 
 }

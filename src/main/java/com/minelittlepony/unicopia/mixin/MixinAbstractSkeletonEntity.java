@@ -10,28 +10,27 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.minelittlepony.unicopia.entity.Equine;
 import com.minelittlepony.unicopia.entity.ai.TargettingUtil;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.AbstractSkeletonEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.util.math.Vec3d;
-
-@Mixin(AbstractSkeletonEntity.class)
-abstract class MixinAbstractSkeletonEntity extends HostileEntity {
+@Mixin(AbstractSkeleton.class)
+abstract class MixinAbstractSkeletonEntity extends Monster {
     MixinAbstractSkeletonEntity() { super(null, null); }
 
     @Inject(
-            method = "shootAt(Lnet/minecraft/entity/LivingEntity;F)V",
+            method = "performRangedAttack(Lnet/minecraft/world/entity/LivingEntity;F)V",
             at = @At(value = "INVOKE",
-                target = "net/minecraft/entity/projectile/ProjectileEntity.spawnWithVelocity(Lnet/minecraft/entity/projectile/ProjectileEntity;Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/item/ItemStack;DDDFF)Lnet/minecraft/entity/projectile/ProjectileEntity;",
+                target = "Lnet/minecraft/world/entity/projectile/Projectile;spawnProjectileUsingShoot(Lnet/minecraft/world/entity/projectile/Projectile;Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/item/ItemStack;DDDFF)Lnet/minecraft/world/entity/projectile/Projectile;",
                 shift = Shift.AFTER))
-    private void modifyAccuracy(LivingEntity target, float pullProgress, CallbackInfo info, @Local PersistentProjectileEntity projectile) {
+    private void modifyAccuracy(LivingEntity target, float pullProgress, CallbackInfo info, @Local AbstractArrow projectile) {
         if (Equine.of(target).orElse(null) instanceof Pony pony && pony.getPhysics().isFlying()) {
-            Vec3d targetPos = TargettingUtil.getProjectedPos(pony.asEntity())
-                    .add(0, pony.asEntity().getHeight() * 0.33333F, 0)
-                    .subtract(pony.asEntity().getPos());
-            projectile.setVelocity(targetPos.x, targetPos.y + targetPos.horizontalLength() * 0.2, targetPos.z, 1.6F, (14 - getWorld().getDifficulty().getId() * 4) * 0.25F);
+            Vec3 targetPos = TargettingUtil.getProjectedPos(pony.asEntity())
+                    .add(0, pony.asEntity().getBbHeight() * 0.33333F, 0)
+                    .subtract(pony.asEntity().position());
+            projectile.shoot(targetPos.x, targetPos.y + targetPos.horizontalDistance() * 0.2, targetPos.z, 1.6F, (14 - level().getDifficulty().getId() * 4) * 0.25F);
         }
     }
 }

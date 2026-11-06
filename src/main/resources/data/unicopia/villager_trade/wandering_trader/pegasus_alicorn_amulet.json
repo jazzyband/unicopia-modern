@@ -1,0 +1,11 @@
+{
+  "wants": {
+    "id": "unicopia:pegasus_amulet"
+  },
+  "gives": {
+    "id": "unicopia:alicorn_amulet"
+  },
+  "max_uses": 2,
+  "xp": 6,
+  "reputation_discount": 0.05
+}

@@ -1,0 +1,42 @@
+{
+  "values": [
+    "minecraft:blue_orchid",
+    "minecraft:red_tulip",
+    "minecraft:orange_tulip",
+    "minecraft:pink_tulip",
+    "minecraft:cornflower",
+    "minecraft:peony",
+    "minecraft:sunflower",
+    "minecraft:dandelion",
+    "minecraft:lilac",
+    "minecraft:tall_grass",
+    "minecraft:dead_bush",
+    "minecraft:pink_petals",
+    "#c:foods/mushroom",
+    "#minecraft:saplings",
+    {
+      "id": "farmersdelight:sandy_shrub",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:wild_cabbages",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:wild_onions",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:wild_carrots",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:wild_beetroots",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:wild_rice",
+      "required": false
+    }
+  ]
+}

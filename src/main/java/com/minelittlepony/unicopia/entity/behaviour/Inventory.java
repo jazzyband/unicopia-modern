@@ -2,22 +2,19 @@ package com.minelittlepony.unicopia.entity.behaviour;
 
 import java.util.*;
 import java.util.function.Consumer;
-
+import net.minecraft.core.NonNullList;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.collection.DefaultedList;
-
 public record Inventory (
         Map<EquipmentSlot, ItemStack> equipment,
-        Optional<DefaultedList<ItemStack>> mainInventory
+        Optional<NonNullList<ItemStack>> mainInventory
     ) {
     public static final Codec<Inventory> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.unboundedMap(EquipmentSlot.CODEC, ItemStack.CODEC).fieldOf("equipment").forGetter(Inventory::equipment),
@@ -27,14 +24,14 @@ public record Inventory (
     public static Optional<Inventory> of(LivingEntity entity) {
         Map<EquipmentSlot, ItemStack> equipment = new EnumMap<>(EquipmentSlot.class);
         for (var slot : EquipmentSlot.values()) {
-            equipment.put(slot, entity.getEquippedStack(slot));
+            equipment.put(slot, entity.getItemBySlot(slot));
         }
 
-        if (entity instanceof PlayerEntity player) {
-            PlayerInventory inventory = player.getInventory();
-            DefaultedList<ItemStack> mainInventory = DefaultedList.ofSize(inventory.size(), ItemStack.EMPTY);
+        if (entity instanceof Player player) {
+            net.minecraft.world.entity.player.Inventory inventory = player.getInventory();
+            NonNullList<ItemStack> mainInventory = NonNullList.withSize(inventory.getContainerSize(), ItemStack.EMPTY);
             for (int i = 0; i < mainInventory.size(); i++) {
-                mainInventory.set(i, inventory.getStack(i));
+                mainInventory.set(i, inventory.getItem(i));
             }
 
             return Optional.of(new Inventory(equipment, Optional.of(mainInventory)));
@@ -48,33 +45,33 @@ public record Inventory (
      *
      * @return Returns the left overs that could not be copied
      */
-    public Inventory copyInto(ServerWorld world, LivingEntity into) {
-        if (into instanceof PlayerEntity player) {
+    public Inventory copyInto(ServerLevel world, LivingEntity into) {
+        if (into instanceof Player player) {
             mainInventory().ifPresentOrElse(main -> {
-                PlayerInventory pe = player.getInventory();
+                net.minecraft.world.entity.player.Inventory pe = player.getInventory();
                 int i = 0;
-                for (; i < pe.size(); i++) {
-                    pe.setStack(i, i < main.size() ? main.get(i) : ItemStack.EMPTY);
+                for (; i < pe.getContainerSize(); i++) {
+                    pe.setItem(i, i < main.size() ? main.get(i) : ItemStack.EMPTY);
                 }
                 for (; i < main.size(); i++) {
-                    into.dropStack(world, main.get(i));
+                    into.spawnAtLocation(world, main.get(i));
                 }
             }, () -> {
-                PlayerInventory pe = player.getInventory();
-                for (int i = 0; i < pe.size(); i++) {
-                    pe.setStack(i, ItemStack.EMPTY);
+                net.minecraft.world.entity.player.Inventory pe = player.getInventory();
+                for (int i = 0; i < pe.getContainerSize(); i++) {
+                    pe.setItem(i, ItemStack.EMPTY);
                 }
-                equipment().forEach(player::equipStack);
+                equipment().forEach(player::setItemSlot);
             });
 
             return null;
         }
 
-        equipment().forEach(into::equipStack);
+        equipment().forEach(into::setItemSlot);
         return this;
     }
 
-    public static void swapInventories(ServerWorld world, LivingEntity me, Optional<Inventory> myInv, LivingEntity them, Optional<Inventory> theirInv,
+    public static void swapInventories(ServerLevel world, LivingEntity me, Optional<Inventory> myInv, LivingEntity them, Optional<Inventory> theirInv,
             Consumer<Inventory> outOverflowConsumer,
             Consumer<Inventory> inOverflowConsumer) {
         Optional<Inventory> outOverflow = Inventory.copyInventoryInto(world, myInv, them);
@@ -84,7 +81,7 @@ public record Inventory (
         inOverflow.ifPresent(inOverflowConsumer);
     }
 
-    public static Optional<Inventory> copyInventoryInto(ServerWorld world, Optional<Inventory> inventory, LivingEntity to) {
+    public static Optional<Inventory> copyInventoryInto(ServerLevel world, Optional<Inventory> inventory, LivingEntity to) {
         return inventory.map(inv -> inv.copyInto(world, to));
     }
 }

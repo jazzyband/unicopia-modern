@@ -1,26 +1,25 @@
 package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.entity.Living;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.monster.Enderman;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 
-import net.minecraft.entity.mob.EndermanEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.util.Hand;
-
-public class EndermanBehaviour extends EntityBehaviour<EndermanEntity> {
+public class EndermanBehaviour extends EntityBehaviour<Enderman> {
     @Override
-    public void update(Living<?> source, EndermanEntity entity, Disguise spell) {
-        entity.setInvulnerable(!EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR.test(source.asEntity()));
-        if (source.asEntity().isSneaking() || source.asEntity().isSprinting()) {
+    public void update(Living<?> source, Enderman entity, Disguise spell) {
+        entity.setPermanentlyInvulnerable(!EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(source.asEntity()));
+        if (source.asEntity().isShiftKeyDown() || source.asEntity().isSprinting()) {
             entity.setTarget(entity);
         } else {
             entity.setTarget(null);
         }
 
-        ItemStack stack = source.asEntity().getStackInHand(Hand.MAIN_HAND);
+        ItemStack stack = source.asEntity().getItemInHand(InteractionHand.MAIN_HAND);
         if (stack.getItem() instanceof BlockItem bi) {
-            entity.setCarriedBlock(bi.getBlock().getDefaultState());
+            entity.setCarriedBlock(bi.getBlock().defaultBlockState());
         } else {
             entity.setCarriedBlock(null);
         }

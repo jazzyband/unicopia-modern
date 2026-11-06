@@ -1,0 +1,26 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:apply_status_effect",
+      "amplifier": {
+        "max": 2,
+        "min": 2
+      },
+      "chance": 4,
+      "effect": "unicopia:food_poisoning",
+      "seconds": {
+        "max": 250,
+        "min": 250
+      }
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 3,
+      "saturation": 1.8000001
+    }
+  },
+  "tags": [
+    "unicopia:forage/dangerous"
+  ]
+}

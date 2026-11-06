@@ -2,7 +2,9 @@ package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 
 import java.util.Optional;
 import java.util.function.Predicate;
-
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
@@ -10,10 +12,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
 
 public record TraitIngredient (
         Optional<SpellTraits> min,
@@ -35,9 +33,9 @@ public record TraitIngredient (
             either -> either.left().or(either::right).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Invalid traits")),
             ingredient -> DataResult.success(ingredient.max.isEmpty() ? Either.left(ingredient) : Either.right(ingredient))
     );
-    public static final PacketCodec<PacketByteBuf, TraitIngredient> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.optional(SpellTraits.PACKET_CODEC), TraitIngredient::min,
-            PacketCodecs.optional(SpellTraits.PACKET_CODEC), TraitIngredient::max,
+    public static final StreamCodec<FriendlyByteBuf, TraitIngredient> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.optional(SpellTraits.PACKET_CODEC), TraitIngredient::min,
+            ByteBufCodecs.optional(SpellTraits.PACKET_CODEC), TraitIngredient::max,
             TraitIngredient::of
     );
 

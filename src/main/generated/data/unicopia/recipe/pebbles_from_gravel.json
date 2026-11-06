@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "pebbles",
+  "ingredients": [
+    "minecraft:gravel"
+  ],
+  "result": {
+    "count": 9,
+    "id": "unicopia:pebbles"
+  }
+}

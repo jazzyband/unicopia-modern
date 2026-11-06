@@ -1,7 +1,12 @@
 package com.minelittlepony.unicopia.entity.behaviour;
 
 import java.util.Optional;
-
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.FlightType;
@@ -12,13 +17,6 @@ import com.minelittlepony.unicopia.entity.duck.LivingEntityDuck;
 import com.minelittlepony.unicopia.entity.duck.RotatedView;
 import com.minelittlepony.unicopia.entity.player.PlayerDimensions;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.player.PlayerEntity;
 
 public interface Disguise extends FlightType.Provider, PlayerDimensions.Provider {
 
@@ -74,14 +72,14 @@ public interface Disguise extends FlightType.Provider, PlayerDimensions.Provider
                 ((Pony) source).setInvisible(false);
             }
 
-            owner.calculateDimensions();
+            owner.refreshDimensions();
             return false;
         }
 
-        entity.noClip = true;
+        entity.noPhysics = true;
 
-        if (entity instanceof MobEntity mob) {
-            mob.setAiDisabled(true);
+        if (entity instanceof Mob mob) {
+            mob.setNoAi(true);
         }
 
         entity.setInvisible(false);
@@ -92,18 +90,18 @@ public interface Disguise extends FlightType.Provider, PlayerDimensions.Provider
         behaviour.copyBaseAttributes(owner, entity);
 
         if (tick && !getAppearance().skipsUpdate()) {
-            ((RotatedView)entity.getWorld()).setMirrorEntityStatuses(entity.getWorld().isClient);
-            if (entity.getWorld().isClient) {
+            ((RotatedView)entity.level()).setMirrorEntityStatuses(entity.level().isClientSide());
+            if (entity.level().isClientSide()) {
                 entity.tick();
             } else {
                 entity.tick();
             }
 
-            ((RotatedView)entity.getWorld()).setMirrorEntityStatuses(false);
+            ((RotatedView)entity.level()).setMirrorEntityStatuses(false);
         }
 
-        if (!(owner instanceof PlayerEntity) && !((LivingEntityDuck)owner).isJumping()) {
-            owner.addVelocity(0, -0.09, 0);
+        if (!(owner instanceof Player) && !((LivingEntityDuck)owner).isJumping()) {
+            owner.push(0, -0.09, 0);
         }
 
         behaviour.update(source, entity, this);
@@ -116,18 +114,18 @@ public interface Disguise extends FlightType.Provider, PlayerDimensions.Provider
                 ((Owned.Mutable<LivingEntity>)entity).setMaster(player);
             }
 
-            if (entity instanceof PlayerEntity) {
-                entity.getDataTracker().set(PlayerAccess.getModelBitFlag(), owner.getDataTracker().get(PlayerAccess.getModelBitFlag()));
+            if (entity instanceof Player) {
+                entity.getEntityData().set(PlayerAccess.getModelBitFlag(), owner.getEntityData().get(PlayerAccess.getModelBitFlag()));
             }
         }
 
-        return !isDead() && !source.asEntity().isDead();
+        return !isDead() && !source.asEntity().isDeadOrDying();
     }
 
-    public static abstract class PlayerAccess extends PlayerEntity {
-        public PlayerAccess() { super(null, null, 0, null); }
-        public static TrackedData<Byte> getModelBitFlag() {
-            return PLAYER_MODEL_PARTS;
+    public static abstract class PlayerAccess extends Player {
+        public PlayerAccess() { super(null, null); }
+        public static EntityDataAccessor<Byte> getModelBitFlag() {
+            return DATA_PLAYER_MODE_CUSTOMISATION;
         }
     }
 }

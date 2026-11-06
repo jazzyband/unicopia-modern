@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "group": "stable_door",
+  "key": {
+    "#": "#minecraft:planks",
+    "*": "unicopia:rock_candy"
+  },
+  "pattern": [
+    "*#*",
+    "*#*",
+    "*#*"
+  ],
+  "result": {
+    "count": 3,
+    "id": "unicopia:stable_door"
+  }
+}

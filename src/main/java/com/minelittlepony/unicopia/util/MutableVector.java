@@ -1,6 +1,6 @@
 package com.minelittlepony.unicopia.util;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 public class MutableVector {
 
@@ -8,13 +8,13 @@ public class MutableVector {
     public double y;
     public double z;
 
-    public MutableVector(Vec3d vec) {
+    public MutableVector(Vec3 vec) {
         x = vec.x;
         y = vec.y;
         z = vec.z;
     }
 
-    public void fromImmutable(Vec3d vec) {
+    public void fromImmutable(Vec3 vec) {
         x = vec.x;
         y = vec.y;
         z = vec.z;
@@ -30,11 +30,11 @@ public class MutableVector {
         multiply(d, d, d);
     }
 
-    public void add(Vec3d vector) {
+    public void add(Vec3 vector) {
         add(vector.x, vector.y, vector.z);
     }
 
-    public void add(Vec3d vector, float scale) {
+    public void add(Vec3 vector, float scale) {
         add(vector.x, vector.y, vector.z, scale);
     }
 
@@ -60,7 +60,7 @@ public class MutableVector {
         return verticalLengthSquared() + horizontalLengthSquared();
     }
 
-    public Vec3d toImmutable() {
-        return new Vec3d(x, y, z);
+    public Vec3 toImmutable() {
+        return new Vec3(x, y, z);
     }
 }

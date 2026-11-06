@@ -1,0 +1,25 @@
+{
+  "default_multiplier": 1.0,
+  "effects": [
+    {
+      "ailment": {
+        "effects": {
+          "type": "unicopia:empty"
+        }
+      },
+      "tags": [
+        "unicopia:fish/cooked",
+        "unicopia:fish/raw",
+        "unicopia:fish/rotten",
+        "unicopia:meat/cooked",
+        "unicopia:meat/raw",
+        "unicopia:meat/rotten",
+        "unicopia:sea_vegetable/cooked",
+        "unicopia:sea_vegetable/raw",
+        "unicopia:pinecone"
+      ]
+    }
+  ],
+  "foraging_multiplier": 0.0,
+  "multipliers": []
+}

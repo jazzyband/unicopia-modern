@@ -1,0 +1,13 @@
+{
+  "wants": {
+    "id": "unicopia:gemstone",
+    "count": 5
+  },
+  "gives": {
+    "id": "unicopia:sour_apple",
+    "count": 2
+  },
+  "max_uses": 12,
+  "xp": 3,
+  "reputation_discount": 0.05
+}

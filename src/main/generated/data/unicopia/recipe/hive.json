@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "chitin",
+  "key": {
+    "#": "unicopia:chitin",
+    "o": "unicopia:mysterious_egg"
+  },
+  "pattern": [
+    " # ",
+    "#o#",
+    " # "
+  ],
+  "result": {
+    "id": "unicopia:hive"
+  }
+}

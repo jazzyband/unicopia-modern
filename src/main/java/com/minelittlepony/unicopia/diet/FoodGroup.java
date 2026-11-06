@@ -3,23 +3,22 @@ package com.minelittlepony.unicopia.diet;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-
-import com.mojang.serialization.Codec;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
 import net.minecraft.util.Util;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import com.mojang.serialization.Codec;
 
 public record FoodGroup(
         Identifier id,
         FoodGroupEffects attributes) implements Effect {
     public static final Codec<FoodGroupEffects> EFFECTS_CODEC = FoodGroupEffects.createCodec(FoodGroupKey.TAG_CODEC);
-    public static final PacketCodec<RegistryByteBuf, FoodGroup> PACKET_CODEC = PacketCodec.tuple(
-            Identifier.PACKET_CODEC, FoodGroup::id,
+    public static final StreamCodec<RegistryFriendlyByteBuf, FoodGroup> PACKET_CODEC = StreamCodec.composite(
+            Identifier.STREAM_CODEC, FoodGroup::id,
             FoodGroupEffects.createPacketCodec(FoodGroupKey.TAG_PACKET_CODEC), FoodGroup::attributes,
             FoodGroup::new
     );
@@ -39,8 +38,8 @@ public record FoodGroup(
         return attributes.ailment();
     }
     @Override
-    public void appendTooltip(ItemStack stack, Consumer<Text> tooltip, TooltipType context) {
-        tooltip.accept(Text.literal(" ").append(Text.translatable(Util.createTranslationKey("food_group", id()))).formatted(Formatting.GRAY));
+    public void appendTooltip(ItemStack stack, Consumer<Component> tooltip, TooltipFlag context) {
+        tooltip.accept(Component.literal(" ").append(Component.translatable(Util.makeDescriptionId("food_group", id()))).withStyle(ChatFormatting.GRAY));
         Effect.super.appendTooltip(stack, tooltip, context);
     }
 }

@@ -2,19 +2,18 @@ package com.minelittlepony.unicopia.client.render.bezier;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
-
-import net.minecraft.util.math.Vec3d;
 
 public class Trail {
 
     private final List<Segment> segments = new ArrayList<>();
 
-    public final Vec3d pos;
+    public final Vec3 pos;
 
     private final float height;
 
-    public Trail(Vec3d pos, float height) {
+    public Trail(Vec3 pos, float height) {
         this.pos = pos;
         this.height = height;
         segments.add(new Segment(pos));
@@ -24,11 +23,11 @@ public class Trail {
         return segments;
     }
 
-    public void update(Vec3d newPosition) {
+    public void update(Vec3 newPosition) {
         if (segments.isEmpty()) {
             segments.add(new Segment(newPosition));
         } else {
-            Vec3d last = segments.get(segments.size() - 1).position;
+            Vec3 last = segments.get(segments.size() - 1).position;
             if (newPosition.distanceTo(last) > 0.2) {
                 segments.add(new Segment(newPosition));
             }
@@ -43,13 +42,13 @@ public class Trail {
     }
 
     public final class Segment {
-        Vec3d position;
+        Vec3 position;
         Vector3f offset;
 
         int age;
         int maxAge;
 
-        Segment(Vec3d position) {
+        Segment(Vec3 position) {
             this.position = position;
             this.offset = position.subtract(pos).toVector3f();
             this.maxAge = 90;

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.entity.duck.EntityDuck;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public interface PehkUtil {

@@ -1,0 +1,6 @@
+{
+  "parent": "unicopia:item/template_eyewear",
+  "textures": {
+    "layer0": "unicopia:item/sunglasses"
+  }
+}

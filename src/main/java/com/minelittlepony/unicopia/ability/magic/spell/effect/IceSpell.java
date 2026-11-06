@@ -15,18 +15,21 @@ import com.minelittlepony.unicopia.block.state.StatePredicate;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.PosHelper;
 import com.minelittlepony.unicopia.util.VecHelper;
-import net.minecraft.block.*;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.TntEntity;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.entity.Entity.RemovalReason;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.state.property.Properties;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.Vec3;
 
 public class IceSpell extends AbstractSpell {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -43,25 +46,25 @@ public class IceSpell extends AbstractSpell {
 
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
-        boolean submerged = source.asEntity().isSubmergedInWater() || source.asEntity().isSubmergedIn(FluidTags.LAVA);
+        boolean submerged = source.asEntity().isUnderWater() || source.asEntity().isEyeInFluid(FluidTags.LAVA);
         float radius = RANGE.get(getTraits());
 
         long blocksAffected = AbstractAreaEffectSpell.randomBlockPositions(source, false, radius).filter(i -> {
             if (source.canModifyAt(i) && applyBlockSingle(source.asEntity(), source.asWorld(), i, situation)) {
 
-                if (submerged & source.getOrigin().isWithinDistance(i, RANGE.get(getTraits()) - 1)) {
+                if (submerged & source.getOrigin().closerThan(i, RANGE.get(getTraits()) - 1)) {
                     BlockState state = source.asWorld().getBlockState(i);
-                    if (state.isIn(BlockTags.ICE) || state.isOf(Blocks.OBSIDIAN)) {
-                        source.asWorld().setBlockState(i, Blocks.AIR.getDefaultState(), Block.NOTIFY_NEIGHBORS);
+                    if (state.is(BlockTags.ICE) || state.is(Blocks.OBSIDIAN)) {
+                        source.asWorld().setBlock(i, Blocks.AIR.defaultBlockState(), Block.UPDATE_NEIGHBORS);
                     } else if (!state.getFluidState().isEmpty()) {
-                        source.asWorld().setBlockState(i, state.with(Properties.WATERLOGGED, false), Block.NOTIFY_NEIGHBORS);
+                        source.asWorld().setBlock(i, state.setValue(BlockStateProperties.WATERLOGGED, false), Block.UPDATE_NEIGHBORS);
                     }
                 }
 
-                ParticleUtils.spawnParticle(source.asWorld(), ParticleTypes.SPLASH, new Vec3d(
-                        i.getX() + source.asWorld().random.nextFloat(),
+                ParticleUtils.spawnParticle(source.asWorld(), ParticleTypes.SPLASH, new Vec3(
+                        i.getX() + source.asWorld().getRandom().nextFloat(),
                         i.getY() + 1,
-                        i.getZ() + source.asWorld().random.nextFloat()), Vec3d.ZERO);
+                        i.getZ() + source.asWorld().getRandom().nextFloat()), Vec3.ZERO);
 
                 return true;
             }
@@ -76,7 +79,7 @@ public class IceSpell extends AbstractSpell {
         return applyEntities(source, source.getOriginVector()) && situation == Situation.PROJECTILE && !isDead();
     }
 
-    protected boolean applyEntities(Caster<?> source, Vec3d pos) {
+    protected boolean applyEntities(Caster<?> source, Vec3 pos) {
         List<Entity> entities = VecHelper.findInRange(source.asEntity(), source.asWorld(), pos, 3);
         entities.forEach(entity -> applyEntitySingle(source, entity));
         return !entities.isEmpty();
@@ -87,17 +90,17 @@ public class IceSpell extends AbstractSpell {
         if (source.asEntity() == e || source.isOwnedBy(e) || (e instanceof Owned<?> sibling && source.hasCommonOwner(sibling))) {
             return;
         }
-        if (e instanceof TntEntity) {
+        if (e instanceof PrimedTnt) {
             e.remove(RemovalReason.DISCARDED);
-            e.getEntityWorld().setBlockState(e.getBlockPos(), Blocks.TNT.getDefaultState());
+            e.level().setBlockAndUpdate(e.blockPosition(), Blocks.TNT.defaultBlockState());
         } else if (e.isOnFire()) {
-            e.extinguish();
+            e.clearFire();
         } else if (!source.isClient()) {
-            e.damage(source.asServerWorld(), source.damageOf(DamageTypes.FREEZE, source), 2);
+            e.hurtServer(source.asServerWorld(), source.damageOf(DamageTypes.FREEZE, source), 2);
         }
     }
 
-    private boolean applyBlockSingle(Entity owner, World world, BlockPos pos, Situation situation) {
+    private boolean applyBlockSingle(Entity owner, Level world, BlockPos pos, Situation situation) {
         BlockState state = world.getBlockState(pos);
 
         if ((situation == Situation.PROJECTILE && StateMaps.SNOW_PILED.convert(world, pos))
@@ -105,34 +108,34 @@ public class IceSpell extends AbstractSpell {
             return true;
         }
 
-        if (world.isTopSolid(pos, owner)
-                || (state.isOf(Blocks.SNOW) && state.get(SnowBlock.LAYERS) == SnowBlock.MAX_LAYERS)
-                || state.isIn(BlockTags.LEAVES)) {
-            addSnowLayer(world, pos.up());
+        if (world.loadedAndEntityCanStandOn(pos, owner)
+                || (state.is(Blocks.SNOW) && state.getValue(SnowLayerBlock.LAYERS) == SnowLayerBlock.MAX_HEIGHT)
+                || state.is(BlockTags.LEAVES)) {
+            addSnowLayer(world, pos.above());
             return true;
         }
 
-        if (state.isIn(BlockTags.ICE)
-                && world.random.nextInt(10) == 0
+        if (state.is(BlockTags.ICE)
+                && world.getRandom().nextInt(10) == 0
                 && isSurroundedByIce(world, pos)) {
-            world.setBlockState(pos, Blocks.PACKED_ICE.getDefaultState());
+            world.setBlockAndUpdate(pos, Blocks.PACKED_ICE.defaultBlockState());
             return true;
         }
 
         return false;
     }
 
-    private static boolean isSurroundedByIce(World w, BlockPos pos) {
+    private static boolean isSurroundedByIce(Level w, BlockPos pos) {
         return PosHelper.adjacentNeighbours(pos).allMatch(i ->
-            w.getBlockState(i).isIn(BlockTags.ICE)
+            w.getBlockState(i).is(BlockTags.ICE)
         );
     }
 
-    private static void addSnowLayer(World world, BlockPos pos) {
+    private static void addSnowLayer(Level world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
 
         if (state.isAir() || StatePredicate.Plants.INSTANCE.test(state)) {
-            world.setBlockState(pos, Blocks.SNOW.getDefaultState(), 3);
+            world.setBlock(pos, Blocks.SNOW.defaultBlockState(), 3);
         }
     }
 }

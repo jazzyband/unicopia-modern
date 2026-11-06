@@ -4,23 +4,21 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
-
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.GoalSelector;
+import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import org.jetbrains.annotations.Nullable;
-
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.GoalSelector;
-import net.minecraft.entity.ai.goal.PrioritizedGoal;
 
 public class PredicatedGoal extends Goal {
     private final Goal goal;
     private final BooleanSupplier predicate;
 
     public static void applyToAll(GoalSelector goals, BooleanSupplier predicate) {
-        Set<PrioritizedGoal> existingTasks = new HashSet<>(goals.getGoals());
-        goals.clear(g -> !(g instanceof PredicatedGoal));
+        Set<WrappedGoal> existingTasks = new HashSet<>(goals.getAvailableGoals());
+        goals.removeAllGoals(g -> !(g instanceof PredicatedGoal));
         existingTasks.forEach(goal -> {
             if (!(goal.getGoal() instanceof PredicatedGoal)) {
-                goals.add(goal.getPriority(), new PredicatedGoal(goal.getGoal(), predicate));
+                goals.addGoal(goal.getPriority(), new PredicatedGoal(goal.getGoal(), predicate));
             }
         });
     }
@@ -31,18 +29,18 @@ public class PredicatedGoal extends Goal {
     }
 
     @Override
-    public boolean canStart() {
-        return predicate.getAsBoolean() && goal.canStart();
+    public boolean canUse() {
+        return predicate.getAsBoolean() && goal.canUse();
     }
 
     @Override
-    public boolean shouldContinue() {
-        return predicate.getAsBoolean() && goal.shouldContinue();
+    public boolean canContinueToUse() {
+        return predicate.getAsBoolean() && goal.canContinueToUse();
     }
 
     @Override
-    public boolean canStop() {
-        return goal.canStop();
+    public boolean isInterruptable() {
+        return goal.isInterruptable();
     }
 
     @Override
@@ -58,8 +56,8 @@ public class PredicatedGoal extends Goal {
     }
 
     @Override
-    public boolean shouldRunEveryTick() {
-        return goal.shouldRunEveryTick();
+    public boolean requiresUpdateEveryTick() {
+        return goal.requiresUpdateEveryTick();
     }
 
     @Override
@@ -68,13 +66,13 @@ public class PredicatedGoal extends Goal {
     }
 
     @Override
-    public void setControls(EnumSet<Goal.Control> controls) {
-        goal.setControls(controls);
+    public void setFlags(EnumSet<Goal.Flag> controls) {
+        goal.setFlags(controls);
     }
 
     @Override
-    public EnumSet<Goal.Control> getControls() {
-        return goal.getControls();
+    public EnumSet<Goal.Flag> getFlags() {
+        return goal.getFlags();
     }
 
     @Override

@@ -1,6 +1,19 @@
 # ![Unicopia](https://github-production-user-asset-6210df.s3.amazonaws.com/6429283/244022981-71021d60-e698-4ca0-88ae-bfa71be39cc6.png)
 
-[![Build Status](https://github.com/Sollace/Unicopia/actions/workflows/gradle-build.yml/badge.svg)](https://github.com/Sollace/Unicopia/actions/workflows/gradle-build.yml)
+## Unicopia Modern
+
+This repository is an experimental modern port of [Sollace's Unicopia](https://github.com/Sollace/Unicopia) to
+**Minecraft 26.3**. It contains the ongoing compatibility work needed to bring Unicopia's gameplay, rendering,
+data generation, integrations, etc. forward to the modern Minecraft APIs.
+
+The port is based on upstream commit
+[`51ad557` — Reimplement schematic rendering in the spellbook](https://github.com/Sollace/Unicopia/commit/51ad557064c5e8aeaddc763437b269129a301525)
+from the original repository's `1.21.5` branch.
+
+This is an unofficial development port and can be incomplete or unstable in some areas. A lot of the heavy lifting was also accomplished by Codex. For the established, non-modern version,
+documentation, and official releases, visit the [original Unicopia repository](https://github.com/Sollace/Unicopia).
+
+[![Build Status](https://github.com/jazzyband/unicopia-modern/actions/workflows/gradle-build.yml/badge.svg)](https://github.com/jazzyband/unicopia-modern/actions/workflows/gradle-build.yml)
 [![Downloads](https://img.shields.io/github/downloads/Sollace/Unicopia/total.svg?color=yellowgreen)](https://github.com/Sollace/Unicopia/releases/latest)
 [![Crowdin](https://badges.crowdin.net/unicopia/localized.svg)](https://crowdin.com/project/unicopia)
 ![](https://img.shields.io/badge/api-fabric-orange.svg)
@@ -91,13 +104,13 @@ View the HOW_TO_PLAY.md file for more details.
 
 ### Dependencies
 - git
-- java 21
+- Java 25
 
 ### Building Unicopia
 
 ```bash
-git clone https://github.com/Sollace/Unicopia.git
-cd Unicopia
+git clone https://github.com/jazzyband/unicopia-modern.git
+cd unicopia-modern
 ./gradlew rundatagen
 ./gradlew build
 ```

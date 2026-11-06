@@ -1,15 +1,14 @@
 package com.minelittlepony.unicopia.entity.effect;
 
 import com.minelittlepony.unicopia.InteractionManager;
-
-import net.minecraft.component.type.AttributeModifiersComponent;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.StringHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.StringUtil;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 public interface EffectUtils {
     static boolean isPoisoned(LivingEntity entity) {
@@ -17,61 +16,61 @@ public interface EffectUtils {
     }
 
     static boolean hasABrokenWing(LivingEntity entity) {
-        return entity.hasStatusEffect(UEffects.BROKEN_WINGS);
+        return entity.hasEffect(UEffects.BROKEN_WINGS);
     }
 
     static boolean hasBothBrokenWing(LivingEntity entity) {
         return getAmplifier(entity, UEffects.BROKEN_WINGS) > 1;
     }
 
-    static int getAmplifier(LivingEntity entity, RegistryEntry<StatusEffect> effect) {
-        return entity.hasStatusEffect(effect) ? entity.getStatusEffect(effect).getAmplifier() + 1 : 0;
+    static int getAmplifier(LivingEntity entity, Holder<MobEffect> effect) {
+        return entity.hasEffect(effect) ? entity.getEffect(effect).getAmplifier() + 1 : 0;
     }
 
     static boolean isChangingRace(LivingEntity entity) {
-        return entity.getStatusEffects().stream().anyMatch(effect -> effect.getEffectType() instanceof RaceChangeStatusEffect);
+        return entity.getActiveEffects().stream().anyMatch(effect -> effect.getEffect().value() instanceof RaceChangeStatusEffect);
     }
 
     static boolean hasExtraDefenses(LivingEntity entity) {
-        return entity.hasStatusEffect(UEffects.FORTIFICATION);
+        return entity.hasEffect(UEffects.FORTIFICATION);
     }
 
-    static boolean applyStatusEffect(LivingEntity entity, RegistryEntry<StatusEffect> effect, boolean apply) {
-        if (entity.getWorld().isClient) {
+    static boolean applyStatusEffect(LivingEntity entity, Holder<MobEffect> effect, boolean apply) {
+        if (entity.level().isClientSide()) {
             return false;
         }
-        boolean has = entity.hasStatusEffect(effect);
+        boolean has = entity.hasEffect(effect);
         if (has != apply) {
             if (has) {
-                if (entity.getStatusEffect(effect).getDuration() == StatusEffectInstance.INFINITE) {
-                    entity.removeStatusEffect(effect);
+                if (entity.getEffect(effect).getDuration() == MobEffectInstance.INFINITE_DURATION) {
+                    entity.removeEffect(effect);
                 }
             } else {
-                entity.addStatusEffect(new StatusEffectInstance(effect, StatusEffectInstance.INFINITE, 0, false, false, true));
+                entity.addEffect(new MobEffectInstance(effect, MobEffectInstance.INFINITE_DURATION, 0, false, false, true));
             }
             return true;
         }
         return false;
     }
 
-    static Text formatModifierChange(String modifierName, int time, boolean isDetrimental) {
-        return Text.literal(" ").append(Text.translatable("attribute.modifier." + (time > 0 ? "plus" : "take") + ".0",
-                StringHelper.formatTicks(Math.abs(time), InteractionManager.getInstance().getTickRate()),
-                Text.translatable(modifierName)
-        ).formatted((isDetrimental ? time : -time) < 0 ? Formatting.DARK_GREEN : Formatting.RED));
+    static Component formatModifierChange(String modifierName, int time, boolean isDetrimental) {
+        return Component.literal(" ").append(Component.translatable("attribute.modifier." + (time > 0 ? "plus" : "take") + ".0",
+                StringUtil.formatTickDuration(Math.abs(time), InteractionManager.getInstance().getTickRate()),
+                Component.translatable(modifierName)
+        ).withStyle((isDetrimental ? time : -time) < 0 ? ChatFormatting.DARK_GREEN : ChatFormatting.RED));
     }
 
-    static Text formatModifierChange(String modifierName, float change, boolean isDetrimental) {
-        return Text.literal(" ").append(Text.translatable("attribute.modifier." + (change > 0 ? "plus" : "take") + ".0",
-                AttributeModifiersComponent.DECIMAL_FORMAT.format(Math.abs(change)),
-                Text.translatable(modifierName)
-        ).formatted((isDetrimental ? change : -change) < 0 ? Formatting.DARK_GREEN : Formatting.RED));
+    static Component formatModifierChange(String modifierName, float change, boolean isDetrimental) {
+        return Component.literal(" ").append(Component.translatable("attribute.modifier." + (change > 0 ? "plus" : "take") + ".0",
+                ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(change)),
+                Component.translatable(modifierName)
+        ).withStyle((isDetrimental ? change : -change) < 0 ? ChatFormatting.DARK_GREEN : ChatFormatting.RED));
     }
 
-    static Text formatModifierChange(Text modifierName, float change, boolean isDetrimental) {
-        return Text.literal(" ").append(Text.translatable("attribute.modifier." + (change > 0 ? "plus" : "take") + ".0",
-                AttributeModifiersComponent.DECIMAL_FORMAT.format(Math.abs(change)),
+    static Component formatModifierChange(Component modifierName, float change, boolean isDetrimental) {
+        return Component.literal(" ").append(Component.translatable("attribute.modifier." + (change > 0 ? "plus" : "take") + ".0",
+                ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(change)),
                modifierName
-        ).formatted((isDetrimental ? change : -change) < 0 ? Formatting.DARK_GREEN : Formatting.RED));
+        ).withStyle((isDetrimental ? change : -change) < 0 ? ChatFormatting.DARK_GREEN : ChatFormatting.RED));
     }
 }

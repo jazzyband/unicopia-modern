@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "condition": "minecraft:tool/can_silk_touch",
+              "name": "unicopia:etched_cloud"
+            },
+            {
+              "type": "minecraft:item",
+              "modifier": [
+                {
+                  "type": "minecraft:set_count",
+                  "count": 9
+                },
+                {
+                  "type": "minecraft:explosion_decay"
+                }
+              ],
+              "name": "unicopia:cloud_lump"
+            }
+          ]
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

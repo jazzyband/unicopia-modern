@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet_convert",
+  "key": {
+    "X": {
+      "fabric:type": "unicopia:exclusive",
+      "exclude": "unicopia:rainbow_bed_sheets",
+      "include": "#unicopia:wool_bed_sheets"
+    },
+    "b": "minecraft:blue_wool",
+    "g": "minecraft:purple_wool",
+    "l": "minecraft:yellow_wool",
+    "o": "minecraft:red_wool",
+    "p": "minecraft:green_wool",
+    "r": "minecraft:light_blue_wool",
+    "y": "minecraft:orange_wool"
+  },
+  "pattern": [
+    "roy",
+    "l b",
+    "Xpg"
+  ],
+  "result": {
+    "count": 2,
+    "id": "unicopia:rainbow_bed_sheets"
+  }
+}

@@ -11,43 +11,43 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.minelittlepony.unicopia.entity.mob.MimicEntity;
 
 import net.fabricmc.fabric.api.util.TriState;
-import net.minecraft.block.entity.LockableContainerBlockEntity;
-import net.minecraft.block.entity.LootableContainerBlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.LootableInventory;
-import net.minecraft.loot.LootTable;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.screen.ScreenHandler;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.RandomizableContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
+import net.minecraft.world.level.storage.loot.LootTable;
 
-@Mixin(LootableContainerBlockEntity.class)
-abstract class MixinLootableContainerBlockEntity extends LockableContainerBlockEntity implements LootableInventory, MimicEntity.MimicGeneratable {
+@Mixin(RandomizableContainerBlockEntity.class)
+abstract class MixinLootableContainerBlockEntity extends BaseContainerBlockEntity implements RandomizableContainer, MimicEntity.MimicGeneratable {
     @Nullable
-    private RegistryKey<LootTable> mimicLootTable;
+    private ResourceKey<LootTable> mimicLootTable;
     private boolean allowMimics = true;
     private TriState isMimic = TriState.DEFAULT;
 
     @Shadow
     @Nullable
-    protected RegistryKey<LootTable> lootTable;
+    protected ResourceKey<LootTable> lootTable;
 
     MixinLootableContainerBlockEntity() { super(null, null, null); }
 
     @Override
-    public void readMimicAttributes(NbtCompound nbt) {
-        isMimic = nbt.getBoolean("mimic").map(TriState::of).orElse(TriState.DEFAULT);
+    public void readMimicAttributes(net.minecraft.world.level.storage.ValueInput nbt) {
+        isMimic = nbt.read("mimic", com.mojang.serialization.Codec.BOOL).map(TriState::of).orElse(TriState.DEFAULT);
     }
 
     @Override
-    public void writeMimicAttributes(NbtCompound nbt) {
+    public void writeMimicAttributes(net.minecraft.world.level.storage.ValueOutput nbt) {
         if (isMimic != TriState.DEFAULT) {
             nbt.putBoolean("mimic", isMimic.get());
         }
     }
 
     @Override
-    public void configureMimic(@Nullable PlayerEntity player) {
+    public void configureMimic(@Nullable Player player) {
         if (player != null && allowMimics && lootTable != null) {
             mimicLootTable = lootTable;
         }
@@ -56,26 +56,26 @@ abstract class MixinLootableContainerBlockEntity extends LockableContainerBlockE
     @Override
     public void setAllowMimics(boolean allowMimics) {
         this.allowMimics = allowMimics;
-        markDirty();
+        setChanged();
     }
 
     @Override
     public void setMimic(boolean mimic) {
         isMimic = TriState.of(mimic);
-        markDirty();
+        setChanged();
     }
 
     @Nullable
     @Override
-    public MimicEntity triggerMimic(@Nullable PlayerEntity player) {
-        generateLoot(player);
+    public MimicEntity triggerMimic(@Nullable Player player) {
+        unpackLootTable(player);
         if (player != null && allowMimics) {
             if (isMimic == TriState.DEFAULT) {
-                isMimic = TriState.of(MimicEntity.shouldConvert(player.getWorld(), getPos(), player, mimicLootTable));
+                isMimic = TriState.of(MimicEntity.shouldConvert(player.level(), getBlockPos(), player, mimicLootTable));
             }
 
             if (isMimic.get()) {
-                var mimic = MimicEntity.spawnFromChest(player.getWorld(), getPos());
+                var mimic = MimicEntity.spawnFromChest(player.level(), getBlockPos());
                 if (mimic != null) {
                     mimicLootTable = null;
                 }
@@ -93,10 +93,10 @@ abstract class MixinLootableContainerBlockEntity extends LockableContainerBlockE
             method = "createMenu",
             at = @At(
                 value = "INVOKE",
-                target = "net/minecraft/block/entity/LootableContainerBlockEntity.generateLoot(Lnet/minecraft/entity/player/PlayerEntity;)V",
+                target = "Lnet/minecraft/world/level/block/entity/RandomizableContainerBlockEntity;unpackLootTable(Lnet/minecraft/world/entity/player/Player;)V",
                 shift = Shift.AFTER
     ), cancellable = true)
-    private void onCreateMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player, CallbackInfoReturnable<ScreenHandler> info) {
+    private void onCreateMenu(int syncId, Inventory playerInventory, Player player, CallbackInfoReturnable<AbstractContainerMenu> info) {
         @Nullable
         var mimic = triggerMimic(player);
         if (mimic != null) {
@@ -105,24 +105,24 @@ abstract class MixinLootableContainerBlockEntity extends LockableContainerBlockE
     }
 }
 
-@Mixin(LootableInventory.class)
+@Mixin(RandomizableContainer.class)
 interface MixinLootableInventory {
-    @Inject(method = "generateLoot", at = @At("HEAD"))
-    default void onGenerateLoot(@Nullable PlayerEntity player, CallbackInfo info) {
+    @Inject(method = "unpackLootTable", at = @At("HEAD"))
+    default void onGenerateLoot(@Nullable Player player, CallbackInfo info) {
         if (this instanceof MimicEntity.MimicGeneratable m) {
             m.configureMimic(player);
         }
     }
 
-    @Inject(method = "readLootTable", at = @At("HEAD"))
-    default void onReadLootTable(NbtCompound nbt, CallbackInfoReturnable<Boolean> info) {
+    @Inject(method = "tryLoadLootTable", at = @At("HEAD"))
+    default void onReadLootTable(net.minecraft.world.level.storage.ValueInput nbt, CallbackInfoReturnable<Boolean> info) {
         if (this instanceof MimicEntity.MimicGeneratable m) {
             m.readMimicAttributes(nbt);
         }
     }
 
-    @Inject(method = "writeLootTable", at = @At("HEAD"))
-    default void onWriteLootTable(NbtCompound nbt, CallbackInfoReturnable<Boolean> info) {
+    @Inject(method = "trySaveLootTable", at = @At("HEAD"))
+    default void onWriteLootTable(net.minecraft.world.level.storage.ValueOutput nbt, CallbackInfoReturnable<Boolean> info) {
         if (this instanceof MimicEntity.MimicGeneratable m) {
             m.writeMimicAttributes(nbt);
         }

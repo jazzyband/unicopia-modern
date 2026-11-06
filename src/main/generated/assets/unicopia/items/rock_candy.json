@@ -1,0 +1,117 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "entries": [
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_2"
+        },
+        "threshold": 0.11764706
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_3"
+        },
+        "threshold": 0.1764706
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_4"
+        },
+        "threshold": 0.23529412
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_5"
+        },
+        "threshold": 0.29411766
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_6"
+        },
+        "threshold": 0.3529412
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_7"
+        },
+        "threshold": 0.4117647
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_8"
+        },
+        "threshold": 0.47058824
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_9"
+        },
+        "threshold": 0.5294118
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_10"
+        },
+        "threshold": 0.5882353
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_11"
+        },
+        "threshold": 0.64705884
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_12"
+        },
+        "threshold": 0.7058824
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_13"
+        },
+        "threshold": 0.7647059
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_14"
+        },
+        "threshold": 0.8235294
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_15"
+        },
+        "threshold": 0.88235295
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/rock_candy_16"
+        },
+        "threshold": 0.9411765
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "unicopia:item/rock_candy"
+    },
+    "property": "minecraft:damage"
+  }
+}

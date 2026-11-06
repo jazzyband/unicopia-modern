@@ -2,55 +2,62 @@ package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 
 import java.util.List;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.NonNullList;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.PlacementInfo;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
+import net.minecraft.world.item.crafting.RecipeInput;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.recipe.URecipes;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.IngredientPlacement;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeFinder;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.book.RecipeBookCategories;
-import net.minecraft.recipe.book.RecipeBookCategory;
-import net.minecraft.recipe.input.RecipeInput;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.world.World;
-
-public record AltarRecipe(String group, List<Ingredient> ingredients, ItemStack result) implements Recipe<AltarRecipe.Input> {
+public record AltarRecipe(String group, List<Ingredient> ingredients, ItemStackTemplate resultTemplate) implements Recipe<AltarRecipe.Input> {
     public static final MapCodec<AltarRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.STRING.fieldOf("group").forGetter(AltarRecipe::group),
             Ingredient.CODEC.listOf().fieldOf("ingredients").forGetter(AltarRecipe::ingredients),
-            ItemStack.CODEC.fieldOf("result").forGetter(AltarRecipe::result)
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(AltarRecipe::resultTemplate)
     ).apply(instance, AltarRecipe::new));
-    public static final PacketCodec<RegistryByteBuf, AltarRecipe> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.STRING, AltarRecipe::group,
-            Ingredient.PACKET_CODEC.collect(PacketCodecs.toCollection(DefaultedList::ofSize)), AltarRecipe::ingredients,
-            ItemStack.PACKET_CODEC, AltarRecipe::result,
+    public static final StreamCodec<RegistryFriendlyByteBuf, AltarRecipe> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8, AltarRecipe::group,
+            Ingredient.CONTENTS_STREAM_CODEC.apply(ByteBufCodecs.collection(NonNullList::createWithCapacity)), AltarRecipe::ingredients,
+            ItemStackTemplate.STREAM_CODEC, AltarRecipe::resultTemplate,
             AltarRecipe::new
     );
 
-    @Override
-    public IngredientPlacement getIngredientPlacement() {
-        return IngredientPlacement.forShapeless(ingredients);
+    public AltarRecipe(String group, List<Ingredient> ingredients, ItemStack result) {
+        this(group, ingredients, ItemStackTemplate.fromNonEmptyStack(result));
+    }
+
+    public ItemStack result() {
+        return resultTemplate.create();
     }
 
     @Override
-    public RecipeBookCategory getRecipeBookCategory() {
+    public PlacementInfo placementInfo() {
+        return PlacementInfo.create(ingredients);
+    }
+
+    @Override
+    public RecipeBookCategory recipeBookCategory() {
         return RecipeBookCategories.CRAFTING_MISC;
     }
 
     @Override
-    public boolean isIgnoredInRecipeBook() {
+    public boolean isSpecial() {
         return true;
     }
 
@@ -65,44 +72,53 @@ public record AltarRecipe(String group, List<Ingredient> ingredients, ItemStack 
     }
 
     @Override
-    public String getGroup() {
+    public String group() {
         return group;
     }
 
     @Override
-    public boolean matches(Input input, World world) {
-        return input.matcher.isCraftable(this, null);
+    public boolean matches(Input input, Level world) {
+        return input.matcher.canCraft(this, null);
     }
 
-    @Override
-    public ItemStack craft(Input input, WrapperLookup lookup) {
+    public ItemStack craft(Input input, Provider lookup) {
         var match = toMatch(input, lookup);
         match.consumeInputs(match.getMinCrafts());
         return match.getResult();
     }
 
-    public AltarRecipeMatch toMatch(Input input, WrapperLookup lookup) {
-        return new AltarRecipeMatch(input.getFilteredInputs(this), result);
+    @Override
+    public ItemStack assemble(Input input) {
+        return craft(input, null);
+    }
+
+    @Override
+    public boolean showNotification() {
+        return false;
+    }
+
+    public AltarRecipeMatch toMatch(Input input, Provider lookup) {
+        return new AltarRecipeMatch(input.getFilteredInputs(this), result());
     }
 
     public static class Input implements RecipeInput {
         private final List<ItemEntity> stacks;
-        private final RecipeFinder matcher = new RecipeFinder();
+        private final StackedItemContents matcher = new StackedItemContents();
 
         public Input(List<ItemEntity> stacks) {
             this.stacks = stacks;
-            stacks.forEach(stack -> matcher.addInput(stack.getStack()));
+            stacks.forEach(stack -> matcher.accountStack(stack.getItem()));
         }
 
         public Stream<ItemEntity> getFilteredInputs(AltarRecipe recipe) {
             return stacks.stream().filter(stack -> {
-                return recipe.ingredients().stream().anyMatch(i -> i.test(stack.getStack()));
+                return recipe.ingredients().stream().anyMatch(i -> i.test(stack.getItem()));
             });
         }
 
         @Override
-        public ItemStack getStackInSlot(int slot) {
-            return stacks.get(slot).getStack();
+        public ItemStack getItem(int slot) {
+            return stacks.get(slot).getItem();
         }
 
         @Override

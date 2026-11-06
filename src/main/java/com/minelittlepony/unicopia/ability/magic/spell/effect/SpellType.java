@@ -1,8 +1,18 @@
 package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
-import java.util.Optional;
 import java.util.function.Supplier;
-
+import net.minecraft.util.Util;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.Registry;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import com.google.common.base.Suppliers;
@@ -31,30 +41,17 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.server.command.ServerCommandSource;
-
 public final class SpellType<T extends Spell> implements Affine, SpellPredicate<T> {
     public static final Identifier EMPTY_ID = Unicopia.id("none");
 
-    public static final Registry<SpellType<?>> REGISTRY = RegistryUtils.createSynced(Unicopia.key("spells"), EMPTY_ID);
-    public static final RegistryKey<? extends Registry<SpellType<?>>> REGISTRY_KEY = REGISTRY.getKey();
-    public static final Codec<SpellType<?>> CODEC = REGISTRY.getCodec();
-    public static final PacketCodec<RegistryByteBuf, SpellType<?>> PACKET_CODEC = PacketCodecs.registryValue(REGISTRY_KEY);
+    public static final Registry<SpellType<?>> REGISTRY = RegistryUtils.createSynced(Unicopia.id("spells"), EMPTY_ID.toString());
+    public static final ResourceKey<? extends Registry<SpellType<?>>> REGISTRY_KEY = REGISTRY.key();
+    public static final Codec<SpellType<?>> CODEC = REGISTRY.byNameCodec();
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpellType<?>> PACKET_CODEC = ByteBufCodecs.registry(REGISTRY_KEY);
 
     public static final SpellType<?> EMPTY_KEY = register(EMPTY_ID.getPath(), builder(t -> null).affinity(Affinity.NEUTRAL).color(0xFFFFFF).unobtainable());
 
-    private static final DynamicCommandExceptionType UNKNOWN_SPELL_TYPE_EXCEPTION = new DynamicCommandExceptionType(id -> Text.translatable("spell_type.unknown", id));
+    private static final DynamicCommandExceptionType UNKNOWN_SPELL_TYPE_EXCEPTION = new DynamicCommandExceptionType(id -> Component.translatable("spell_type.unknown", id));
 
     public static final SpellType<PlacementControlSpell> PLACE_CONTROL_SPELL = register("place_controller", SpellType.<PlacementControlSpell>builder(PlacementControlSpell::new).affinity(Affinity.NEUTRAL).unobtainable().stackable().shape(GemstoneItem.Shape.DONUT));
     public static final SpellType<ThrowableSpell> THROWN_SPELL = register("thrown", SpellType.<ThrowableSpell>builder(ThrowableSpell::new).affinity(Affinity.NEUTRAL).unobtainable().shape(GemstoneItem.Shape.DONUT));
@@ -123,7 +120,7 @@ public final class SpellType<T extends Spell> implements Affine, SpellPredicate<
         this.traits = traits;
         this.stackable = stackable;
         traited = new CustomisedSpellType<>(this, traits, SpellTraits::empty);
-        defaultStack = Suppliers.memoize(() -> EnchantableItem.enchant(UItems.GEMSTONE.getDefaultStack(), this));
+        defaultStack = Suppliers.memoize(() -> EnchantableItem.enchant(UItems.GEMSTONE.getDefaultInstance(), this));
     }
 
     public boolean isObtainable() {
@@ -164,13 +161,13 @@ public final class SpellType<T extends Spell> implements Affine, SpellPredicate<
 
     public String getTranslationKey() {
         if (translationKey == null) {
-            translationKey = Util.createTranslationKey("spell", getId());
+            translationKey = Util.makeDescriptionId("spell", getId());
         }
         return translationKey;
     }
 
-    public Text getName() {
-        return Text.translatable(getTranslationKey());
+    public Component getName() {
+        return Component.translatable(getTranslationKey());
     }
 
     public CustomisedSpellType<T> withTraits() {
@@ -194,12 +191,8 @@ public final class SpellType<T extends Spell> implements Affine, SpellPredicate<
         return spell != null && spell.getTypeAndTraits().type() == this;
     }
 
-    public void toNbt(NbtCompound tag) {
+    public void toNbt(CompoundTag tag) {
         tag.putString("effect_id", getId().toString());
-    }
-
-    public Optional<SpellType<?>> toOptional() {
-        return isEmpty() ? Optional.empty() : Optional.of(this);
     }
 
     public boolean isEmpty() {
@@ -227,17 +220,17 @@ public final class SpellType<T extends Spell> implements Affine, SpellPredicate<
         return Untyped.cast(CODEC);
     }
 
-    public static <T extends Spell> SpellType<T> getKey(NbtCompound tag) {
-        return Untyped.cast(tag.get("effect_id", CODEC).orElseGet(SpellType::empty));
+    public static <T extends Spell> SpellType<T> getKey(CompoundTag tag) {
+        return Untyped.cast(tag.read("effect_id", CODEC).orElseGet(SpellType::empty));
     }
 
     public static <T extends Spell> SpellType<T> getKey(@Nullable Identifier id) {
-        return Untyped.cast(REGISTRY.getOptionalValue(id).orElse(EMPTY_KEY));
+        return Untyped.cast(REGISTRY.getOptional(id).orElse(EMPTY_KEY));
     }
 
-    public static SpellType<?> fromArgument(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        Identifier id = context.getArgument(name, RegistryKey.class).getValue();
-        return REGISTRY.getOptionalValue(id).orElseThrow(() -> UNKNOWN_SPELL_TYPE_EXCEPTION.create(id));
+    public static SpellType<?> fromArgument(CommandContext<CommandSourceStack> context, String name) throws CommandSyntaxException {
+        Identifier id = context.getArgument(name, ResourceKey.class).identifier();
+        return REGISTRY.getOptional(id).orElseThrow(() -> UNKNOWN_SPELL_TYPE_EXCEPTION.create(id));
     }
 
     public interface Factory<T extends Spell> {

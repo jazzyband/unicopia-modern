@@ -1,0 +1,33 @@
+[
+  {
+    "processor_type": "minecraft:rule",
+    "rules": [
+      {
+        "location_predicate": {
+          "predicate_type": "always_true"
+        },
+        "input_predicate": {
+          "predicate_type": "random_block_match",
+          "block": "unicopia:cloud",
+          "probability": 0.2
+        },
+        "output_state": {
+          "id": "unicopia:unstable_cloud"
+        }
+      },
+      {
+        "location_predicate": {
+          "predicate_type": "always_true"
+        },
+        "input_predicate": {
+          "predicate_type": "random_block_match",
+          "block": "unicopia:cloud",
+          "probability": 0.2
+        },
+        "output_state": {
+          "id": "unicopia:dense_cloud"
+        }
+      }
+    ]
+  }
+]

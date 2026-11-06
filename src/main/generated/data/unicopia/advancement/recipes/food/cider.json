@@ -1,0 +1,54 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_apple": {
+      "conditions": {
+        "items": [
+          {
+            "items": "#unicopia:fresh_apples"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_burned_juice": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:burned_juice"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_mug": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:mug"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:cider"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_burned_juice",
+      "has_mug",
+      "has_apple"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cider"
+    ]
+  }
+}

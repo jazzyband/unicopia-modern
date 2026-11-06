@@ -1,0 +1,6 @@
+{
+  "parent": "unicopia:block/template_shell_4",
+  "textures": {
+    "shell": "unicopia:block/clam_shell"
+  }
+}

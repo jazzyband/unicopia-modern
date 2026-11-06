@@ -4,14 +4,13 @@ import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.UConventionalTags;
 import com.minelittlepony.unicopia.projectile.PhysicsBodyProjectileEntity;
-
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ConsumableComponent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Hand;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.component.Consumable;
 
 public class EatMuffinGoal extends BreakHeartGoal {
 
@@ -19,7 +18,7 @@ public class EatMuffinGoal extends BreakHeartGoal {
 
     private boolean eatingStarted;
 
-    public EatMuffinGoal(MobEntity mob, DynamicTargetGoal targetter) {
+    public EatMuffinGoal(Mob mob, DynamicTargetGoal targetter) {
         super(mob, targetter);
     }
 
@@ -30,7 +29,7 @@ public class EatMuffinGoal extends BreakHeartGoal {
     @Override
     public void start() {
         eatingStarted = false;
-        timer = getTickCount(10);
+        timer = adjustedTickDelay(10);
         mob.getNavigation().stop();
     }
 
@@ -42,17 +41,17 @@ public class EatMuffinGoal extends BreakHeartGoal {
     }
 
     @Override
-    public boolean shouldContinue() {
-        return timer > 0 && super.shouldContinue();
+    public boolean canContinueToUse() {
+        return timer > 0 && super.canContinueToUse();
     }
 
     @Override
     protected boolean canTarget(Entity e) {
         return !e.isRemoved()
                 && e instanceof PhysicsBodyProjectileEntity p
-                && p.getStack().isIn(UConventionalTags.Items.MUFFINS)
-                && p.getStack().get(DataComponentTypes.FOOD) != null
-                && mob.getVisibilityCache().canSee(e);
+                && p.getItem().is(UConventionalTags.Items.MUFFINS)
+                && p.getItem().get(DataComponents.FOOD) != null
+                && mob.getSensing().hasLineOfSight(e);
     }
 
     @Override
@@ -66,25 +65,25 @@ public class EatMuffinGoal extends BreakHeartGoal {
             speed += 0.1D;
         }
 
-        mob.getNavigation().startMovingTo(target, speed);
+        mob.getNavigation().moveTo(target, speed);
 
         if (distance <= reach + 0.5) {
             eatingStarted = true;
 
             if (target instanceof PhysicsBodyProjectileEntity projectile) {
                 @Nullable
-                ConsumableComponent food = projectile.getStack().get(DataComponentTypes.CONSUMABLE);
+                Consumable food = projectile.getItem().get(DataComponents.CONSUMABLE);
                 if (food != null) {
-                    food.consume(mob, projectile.getStack(), Hand.MAIN_HAND);
+                    food.startConsuming(mob, projectile.getItem(), InteractionHand.MAIN_HAND);
                 }
                 projectile.discard();
 
-                if (mob instanceof AnimalEntity animal) {
-                    if (mob.getWorld().random.nextInt(12) == 0) {
+                if (mob instanceof Animal animal) {
+                    if (mob.level().getRandom().nextInt(12) == 0) {
                         Entity player = ((PhysicsBodyProjectileEntity) target).getOwner();
 
-                        animal.lovePlayer(player instanceof PlayerEntity ? (PlayerEntity)player : null);
-                        animal.setLoveTicks(1000);
+                        animal.setInLove(player instanceof Player ? (Player)player : null);
+                        animal.setInLoveTime(1000);
                     }
                 }
             }

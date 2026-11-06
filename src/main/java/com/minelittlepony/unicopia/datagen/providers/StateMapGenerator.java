@@ -12,16 +12,17 @@ import com.minelittlepony.unicopia.block.state.StatePredicate;
 import com.minelittlepony.unicopia.block.state.StatePredicate.PropertyOp.Comparison;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBlockTags;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RedstoneWireBlock;
-import net.minecraft.block.SnowBlock;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.state.property.Property;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.block.RedstoneWireBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.Fluid;
 
 public class StateMapGenerator {
 
@@ -46,7 +47,7 @@ public class StateMapGenerator {
                 .apply(this::appendFireAffected));
         exporter.accept(StateMaps.BURNABLE, ReversableBlockStateConverter.builder()
                 .apply(this::appendFireAffected)
-                .add(tag(BlockTags.LOGS_THAT_BURN), chance(setState(Blocks.COAL_BLOCK), 0.15F))
+                .add(tag(BlockTags.LOGS), chance(setState(Blocks.COAL_BLOCK), 0.15F))
         );
         exporter.accept(StateMaps.HELLFIRE_AFFECTED, ReversableBlockStateConverter.builder()
                 .apply(this::appendCracking)
@@ -78,7 +79,7 @@ public class StateMapGenerator {
     }
 
     private ReversableBlockStateConverter.Builder appendSnowLayering(ReversableBlockStateConverter.Builder builder) {
-        return builder.add(state(Blocks.SNOW, property(SnowBlock.LAYERS, 7, Comparison.LESS)), cycleProperty(SnowBlock.LAYERS));
+        return builder.add(state(Blocks.SNOW, property(SnowLayerBlock.LAYERS, 7, Comparison.LESS)), cycleProperty(SnowLayerBlock.LAYERS));
     }
 
     private ReversableBlockStateConverter.Builder appendFireAffected(ReversableBlockStateConverter.Builder builder) {
@@ -87,7 +88,7 @@ public class StateMapGenerator {
             .add(anyOf(state(Blocks.MUD), state(Blocks.GRASS_BLOCK)), setState(Blocks.DIRT))
             .add(anyOf(state(Blocks.OBSIDIAN), state(Blocks.CRYING_OBSIDIAN), state(UBlocks.FROSTED_OBSIDIAN)), setState(Blocks.LAVA))
             .add(tag(BlockTags.ICE), setState(Blocks.WATER))
-            .add(state(Blocks.CLAY), setState(Blocks.BROWN_CONCRETE))
+            .add(state(Blocks.CLAY), setState(Blocks.CONCRETE.pick(DyeColor.BROWN)))
             .add(anyOf(state(Blocks.MOSSY_COBBLESTONE), state(Blocks.INFESTED_COBBLESTONE)), setState(Blocks.COBBLESTONE))
             .add(state(Blocks.MOSSY_COBBLESTONE_SLAB), setState(Blocks.COBBLESTONE_SLAB))
             .add(state(Blocks.MOSSY_COBBLESTONE_STAIRS), setState(Blocks.COBBLESTONE_STAIRS))
@@ -116,7 +117,7 @@ public class StateMapGenerator {
     private ReversableBlockStateConverter.Builder appendSmelting(ReversableBlockStateConverter.Builder builder) {
         return builder
             .add(state(Blocks.RAW_IRON_BLOCK), chance(setState(Blocks.IRON_BLOCK), 0.05F))
-            .add(state(Blocks.RAW_COPPER_BLOCK), chance(setState(Blocks.COPPER_BLOCK), 0.05F))
+            .add(state(Blocks.RAW_COPPER_BLOCK), chance(setState(Blocks.COPPER_BLOCK.weathering().unaffected()), 0.05F))
             .add(state(Blocks.RAW_GOLD_BLOCK), chance(setState(Blocks.GOLD_BLOCK), 0.15F));
     }
 
@@ -125,7 +126,7 @@ public class StateMapGenerator {
     }
 
     static <T extends Comparable<T>> ReversableStateChange setProperty(Property<T> property, T value) {
-        return new ReversableStateChange.SetProperty(property.getName(), property.name(value));
+        return new ReversableStateChange.SetProperty(property.getName(), property.getName(value));
     }
 
     static <T extends Comparable<T>> ReversableStateChange setState(Block block, StatePredicate.PropertyOp...properties) {
@@ -137,11 +138,11 @@ public class StateMapGenerator {
     }
 
     static <T extends Comparable<T>> StatePredicate.PropertyOp property(Property<T> property, T value, Comparison comparison) {
-        return new StatePredicate.PropertyOp(property.getName(), property.name(value), comparison);
+        return new StatePredicate.PropertyOp(property.getName(), property.getName(value), comparison);
     }
 
     static StatePredicate.State state(Block block, StatePredicate.PropertyOp...properties) {
-        return new StatePredicate.State(Registries.BLOCK.getId(block), List.of(properties));
+        return new StatePredicate.State(BuiltInRegistries.BLOCK.getKey(block), List.of(properties));
     }
 
     static StatePredicate.FluidTag fluid(TagKey<Fluid> tag) {

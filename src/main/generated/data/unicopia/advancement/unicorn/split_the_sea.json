@@ -1,0 +1,33 @@
+{
+  "parent": "unicopia:unicorn/books",
+  "criteria": {
+    "split_sea": {
+      "conditions": {
+        "event": "split_sea",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.split_the_sea.description"
+    },
+    "icon": {
+      "id": "minecraft:water_bucket"
+    },
+    "title": {
+      "translate": "advancements.unicopia.split_the_sea.title"
+    }
+  },
+  "requirements": [
+    [
+      "split_sea"
+    ]
+  ],
+  "rewards": {
+    "experience": 105
+  },
+  "sends_telemetry_event": true
+}

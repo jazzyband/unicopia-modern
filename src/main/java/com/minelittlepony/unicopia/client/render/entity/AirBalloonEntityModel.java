@@ -1,11 +1,16 @@
 package com.minelittlepony.unicopia.client.render.entity;
 
 import java.util.List;
-
-import net.minecraft.block.WoodType;
-import net.minecraft.client.model.*;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.state.properties.WoodType;
+import net.minecraft.client.model.EntityModel;
 
 public class AirBalloonEntityModel extends EntityModel<AirBalloonEntityRenderer.State> {
 
@@ -46,105 +51,104 @@ public class AirBalloonEntityModel extends EntityModel<AirBalloonEntityRenderer.
         ) : List.of();
     }
 
-    public static TexturedModelData getBasketModelData() {
-        ModelData modelData = new ModelData();
-        ModelPartData root = modelData.getRoot();
-        ModelPartData basket = root.addChild("basket", ModelPartBuilder.create().uv(0, 0).cuboid(-16, -1, -16, 32, 2, 30, Dilation.NONE), ModelTransform.origin(0, 24, 0));
-        basket.addChild("walls", ModelPartBuilder.create().uv(0, 66).cuboid(-17, -12, -16, 2, 11, 30, Dilation.NONE)
-                .uv(64, 68).cuboid(15, -12, -16, 2, 11, 30, Dilation.NONE)
-                .uv(80, 38).cuboid(-16, -12, -17, 32, 11, 2, Dilation.NONE)
-                .uv(0, 32).cuboid(8, -12, 13, 8, 11, 2, Dilation.NONE)
-                .uv(0, 6).cuboid(-16, -12, 13, 8, 11, 2, Dilation.NONE), ModelTransform.NONE);
-        basket.addChild("rim", ModelPartBuilder.create().uv(40, 34).cuboid(-18, -13, -17, 4, 2, 32, Dilation.NONE)
-                .uv(0, 32).cuboid(14, -13, -17, 4, 2, 32, Dilation.NONE)
-                .uv(80, 32).cuboid(-17, -13, -18, 34, 2, 4, Dilation.NONE)
-                .uv(0, 19).cuboid(7, -13, 12, 10, 2, 4, Dilation.NONE)
-                .uv(0, 0).cuboid(-17, -13, 12, 10, 2, 4, Dilation.NONE), ModelTransform.NONE);
-        return TexturedModelData.of(modelData, 256, 128);
+    public static LayerDefinition getBasketModelData() {
+        MeshDefinition modelData = new MeshDefinition();
+        PartDefinition root = modelData.getRoot();
+        PartDefinition basket = root.addOrReplaceChild("basket", CubeListBuilder.create().texOffs(0, 0).addBox(-16, -1, -16, 32, 2, 30, CubeDeformation.NONE), PartPose.offset(0, 24, 0));
+        basket.addOrReplaceChild("walls", CubeListBuilder.create().texOffs(0, 66).addBox(-17, -12, -16, 2, 11, 30, CubeDeformation.NONE)
+                .texOffs(64, 68).addBox(15, -12, -16, 2, 11, 30, CubeDeformation.NONE)
+                .texOffs(80, 38).addBox(-16, -12, -17, 32, 11, 2, CubeDeformation.NONE)
+                .texOffs(0, 32).addBox(8, -12, 13, 8, 11, 2, CubeDeformation.NONE)
+                .texOffs(0, 6).addBox(-16, -12, 13, 8, 11, 2, CubeDeformation.NONE), PartPose.ZERO);
+        basket.addOrReplaceChild("rim", CubeListBuilder.create().texOffs(40, 34).addBox(-18, -13, -17, 4, 2, 32, CubeDeformation.NONE)
+                .texOffs(0, 32).addBox(14, -13, -17, 4, 2, 32, CubeDeformation.NONE)
+                .texOffs(80, 32).addBox(-17, -13, -18, 34, 2, 4, CubeDeformation.NONE)
+                .texOffs(0, 19).addBox(7, -13, 12, 10, 2, 4, CubeDeformation.NONE)
+                .texOffs(0, 0).addBox(-17, -13, 12, 10, 2, 4, CubeDeformation.NONE), PartPose.ZERO);
+        return LayerDefinition.create(modelData, 256, 128);
     }
 
-    public static TexturedModelData getBurnerModelData() {
-        ModelData modelData = new ModelData();
-        ModelPartData root = modelData.getRoot();
-        root.addChild("burner", ModelPartBuilder.create().uv(8, 0).cuboid(-5.5F, -47, -5.5F, 11, 15, 11, Dilation.NONE), ModelTransform.origin(0, 24, 0));
+    public static LayerDefinition getBurnerModelData() {
+        MeshDefinition modelData = new MeshDefinition();
+        PartDefinition root = modelData.getRoot();
+        root.addOrReplaceChild("burner", CubeListBuilder.create().texOffs(8, 0).addBox(-5.5F, -47, -5.5F, 11, 15, 11, CubeDeformation.NONE), PartPose.offset(0, 24, 0));
         float angle = 0.37854F;
-        float half = MathHelper.HALF_PI;
-        root.addChild("rope_d", ModelPartBuilder.create().cuboid(0, -68, 0, 2, 66, 2, Dilation.NONE), ModelTransform.of(-0, -20, -0, angle, 0, -angle));
-        root.addChild("rope_c", ModelPartBuilder.create().cuboid(0, -68, 0, 2, 66, 2, Dilation.NONE), ModelTransform.of(-0, -20, -0, -angle, 0, -angle));
-        root.addChild("rope_b", ModelPartBuilder.create().cuboid(0, -68, 0, 2, 66, 2, Dilation.NONE), ModelTransform.of( 0, -20,  0, -angle, 0,  angle));
-        root.addChild("rope_a", ModelPartBuilder.create().cuboid(0, -68, 0, 2, 66, 2, Dilation.NONE), ModelTransform.of( 0, -20,  0,  angle, 0,  angle));
+        float half = Mth.HALF_PI;
+        root.addOrReplaceChild("rope_d", CubeListBuilder.create().addBox(0, -68, 0, 2, 66, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(-0, -20, -0, angle, 0, -angle));
+        root.addOrReplaceChild("rope_c", CubeListBuilder.create().addBox(0, -68, 0, 2, 66, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(-0, -20, -0, -angle, 0, -angle));
+        root.addOrReplaceChild("rope_b", CubeListBuilder.create().addBox(0, -68, 0, 2, 66, 2, CubeDeformation.NONE), PartPose.offsetAndRotation( 0, -20,  0, -angle, 0,  angle));
+        root.addOrReplaceChild("rope_a", CubeListBuilder.create().addBox(0, -68, 0, 2, 66, 2, CubeDeformation.NONE), PartPose.offsetAndRotation( 0, -20,  0,  angle, 0,  angle));
 
-        root.addChild("strut_a", ModelPartBuilder.create()
-                .cuboid(-27, -40, -30, 2, 40, 2, Dilation.NONE)
-                .cuboid(-27,  0, -30, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27, -40, -30, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27,  0, -30, 2, 40, 2, Dilation.NONE)
+        root.addOrReplaceChild("strut_a", CubeListBuilder.create()
+                .addBox(-27, -40, -30, 2, 40, 2, CubeDeformation.NONE)
+                .addBox(-27,  0, -30, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27, -40, -30, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27,  0, -30, 2, 40, 2, CubeDeformation.NONE)
 
-                .cuboid(-27, -40, 26, 2, 40, 2, Dilation.NONE)
-                .cuboid(-27,  0, 26, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27, -40, 26, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27,  0, 26, 2, 40, 2, Dilation.NONE), ModelTransform.of(0, -80, 0, half, 0,  0));
-        root.addChild("strut_b", ModelPartBuilder.create()
-                .cuboid(-27, -40, -20, 2, 40, 2, Dilation.NONE)
-                .cuboid(-27,  0, -20, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27, -40, -20, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27,  0, -20, 2, 40, 2, Dilation.NONE)
+                .addBox(-27, -40, 26, 2, 40, 2, CubeDeformation.NONE)
+                .addBox(-27,  0, 26, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27, -40, 26, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27,  0, 26, 2, 40, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(0, -80, 0, half, 0,  0));
+        root.addOrReplaceChild("strut_b", CubeListBuilder.create()
+                .addBox(-27, -40, -20, 2, 40, 2, CubeDeformation.NONE)
+                .addBox(-27,  0, -20, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27, -40, -20, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27,  0, -20, 2, 40, 2, CubeDeformation.NONE)
 
-                .cuboid(-27, -40, 30, 2, 40, 2, Dilation.NONE)
-                .cuboid(-27,  0, 30, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27, -40, 30, 2, 40, 2, Dilation.NONE)
-                .cuboid( 27,  0, 30, 2, 40, 2, Dilation.NONE), ModelTransform.of(0, -80, 0, half, half, 0));
-        return TexturedModelData.of(modelData, 64, 128);
+                .addBox(-27, -40, 30, 2, 40, 2, CubeDeformation.NONE)
+                .addBox(-27,  0, 30, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27, -40, 30, 2, 40, 2, CubeDeformation.NONE)
+                .addBox( 27,  0, 30, 2, 40, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(0, -80, 0, half, half, 0));
+        return LayerDefinition.create(modelData, 64, 128);
     }
 
-    public static TexturedModelData getCanopyModelData() {
-        ModelData modelData = new ModelData();
-        ModelPartData root = modelData.getRoot();
-        ModelPartData balloon = root.addChild("canopy", ModelPartBuilder.create().cuboid(-54, -178, -59, 112, 120, 112, Dilation.NONE), ModelTransform.origin(0, 24, 0));
-        balloon.addChild("rope_d", ModelPartBuilder.create().cuboid(-2, -68, 0, 2, 68, 2, Dilation.NONE), ModelTransform.of(-14, -11, -16, 0.4363F, 0, -0.4363F));
-        balloon.addChild("rope_c", ModelPartBuilder.create().cuboid(-2, -68, 0, 2, 68, 2, Dilation.NONE), ModelTransform.of(-14, -11, 11, -0.4363F, 0, -0.4363F));
-        balloon.addChild("rope_b", ModelPartBuilder.create().cuboid(-2, -68, 0, 2, 68, 2, Dilation.NONE), ModelTransform.of(17, -11, 11, -0.4363F, 0, 0.4363F));
-        balloon.addChild("rope_a", ModelPartBuilder.create().cuboid(-2, -68, 0, 2, 68, 2, Dilation.NONE), ModelTransform.of(17, -11, -16, 0.4363F, 0, 0.4363F));
-        return TexturedModelData.of(modelData, 512, 256);
+    public static LayerDefinition getCanopyModelData() {
+        MeshDefinition modelData = new MeshDefinition();
+        PartDefinition root = modelData.getRoot();
+        PartDefinition balloon = root.addOrReplaceChild("canopy", CubeListBuilder.create().addBox(-54, -178, -59, 112, 120, 112, CubeDeformation.NONE), PartPose.offset(0, 24, 0));
+        balloon.addOrReplaceChild("rope_d", CubeListBuilder.create().addBox(-2, -68, 0, 2, 68, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(-14, -11, -16, 0.4363F, 0, -0.4363F));
+        balloon.addOrReplaceChild("rope_c", CubeListBuilder.create().addBox(-2, -68, 0, 2, 68, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(-14, -11, 11, -0.4363F, 0, -0.4363F));
+        balloon.addOrReplaceChild("rope_b", CubeListBuilder.create().addBox(-2, -68, 0, 2, 68, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(17, -11, 11, -0.4363F, 0, 0.4363F));
+        balloon.addOrReplaceChild("rope_a", CubeListBuilder.create().addBox(-2, -68, 0, 2, 68, 2, CubeDeformation.NONE), PartPose.offsetAndRotation(17, -11, -16, 0.4363F, 0, 0.4363F));
+        return LayerDefinition.create(modelData, 512, 256);
     }
 
-    public static TexturedModelData getSandbagsModelData() {
-        ModelData modelData = new ModelData();
-        ModelPartData root = modelData.getRoot();
+    public static LayerDefinition getSandbagsModelData() {
+        MeshDefinition modelData = new MeshDefinition();
+        PartDefinition root = modelData.getRoot();
         float offset = 40;
         getHangingBagModelData("sandbag_ne", root, -offset, -offset);
         getHangingBagModelData("sandbag_nw", root, -offset,  offset);
         getHangingBagModelData("sandbag_se", root,  offset, -offset);
         getHangingBagModelData("sandbag_sw", root,  offset,  offset);
-        return TexturedModelData.of(modelData, 32, 32);
+        return LayerDefinition.create(modelData, 32, 32);
     }
 
-    public static void getHangingBagModelData(String name, ModelPartData root, float x, float z) {
-        ModelPartData bag = root.addChild(name, ModelPartBuilder.create()
-                .uv(16, 19).cuboid(-0.5F, 0, -0.5F, 1, 9, 1, Dilation.NONE), ModelTransform.origin(x, -35, z));
-        ModelPartData knot = bag.addChild("knot", ModelPartBuilder.create()
-                .uv(0, 0).cuboid(-3, 1, -3, 6, 7, 6, Dilation.NONE)
-                .uv(12, 14).cuboid(-2, 0, -2, 4, 1, 4, Dilation.NONE)
-                .uv(0, 13).cuboid(-2, 8, -2, 4, 1, 4, Dilation.NONE), ModelTransform.origin(0, 9, 0));
-        knot.addChild("cube_r1", ModelPartBuilder.create().uv(8, 14).cuboid(0, 8, -2, 0, 4, 4, Dilation.NONE), ModelTransform.of(0, 1, 0, 0, -0.7854F, 0));
-        knot.addChild("cube_r2", ModelPartBuilder.create().uv(8, 14).cuboid(0, 8, -2, 0, 4, 4, Dilation.NONE), ModelTransform.of(0, 1, 0, 0, 0.7854F, 0));
+    public static void getHangingBagModelData(String name, PartDefinition root, float x, float z) {
+        PartDefinition bag = root.addOrReplaceChild(name, CubeListBuilder.create()
+                .texOffs(16, 19).addBox(-0.5F, 0, -0.5F, 1, 9, 1, CubeDeformation.NONE), PartPose.offset(x, -35, z));
+        PartDefinition knot = bag.addOrReplaceChild("knot", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-3, 1, -3, 6, 7, 6, CubeDeformation.NONE)
+                .texOffs(12, 14).addBox(-2, 0, -2, 4, 1, 4, CubeDeformation.NONE)
+                .texOffs(0, 13).addBox(-2, 8, -2, 4, 1, 4, CubeDeformation.NONE), PartPose.offset(0, 9, 0));
+        knot.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(8, 14).addBox(0, 8, -2, 0, 4, 4, CubeDeformation.NONE), PartPose.offsetAndRotation(0, 1, 0, 0, -0.7854F, 0));
+        knot.addOrReplaceChild("cube_r2", CubeListBuilder.create().texOffs(8, 14).addBox(0, 8, -2, 0, 4, 4, CubeDeformation.NONE), PartPose.offsetAndRotation(0, 1, 0, 0, 0.7854F, 0));
     }
 
-    @Override
     public void setAngles(AirBalloonEntityRenderer.State state) {
-        super.setAngles(state);
-        root.yaw = MathHelper.PI;
+        super.setupAnim(state);
+        root.yRot = Mth.PI;
 
         if (isSandbags) {
-            root.yaw -= state.yaw * MathHelper.RADIANS_PER_DEGREE;
+            root.yRot -= state.yaw * Mth.DEG_TO_RAD;
         }
 
         if (isBurner || isBalloon || isSandbags) {
-            root.roll = state.basketRoll;
-            root.pitch = state.basketPitch;
+            root.zRot = state.basketRoll;
+            root.xRot = state.basketPitch;
         } else {
-            root.pitch = 0;
-            root.roll = 0;
+            root.xRot = 0;
+            root.zRot = 0;
         }
 
         if (isBurner) {
@@ -153,18 +157,18 @@ public class AirBalloonEntityModel extends EntityModel<AirBalloonEntityRenderer.
                 rope.visible = lifted;
             });
             struts.forEach(strut -> {
-                strut.visible  = lifted;
+                strut.visible = lifted;
             });
 
-            root.originX = state.accessoriesPivotX + state.burnerWiggleProgress * MathHelper.sin(state.age) * 2.5F;
-            root.originZ += state.burnerWiggleProgress * MathHelper.cos(state.age) * 2.5F;
-            root.originY = state.burnerPivoyY + state.burnerWiggleProgress * 7;
+            root.x = state.accessoriesPivotX + state.burnerWiggleProgress * Mth.sin(state.ageInTicks) * 2.5F;
+            root.z += state.burnerWiggleProgress * Mth.cos(state.ageInTicks) * 2.5F;
+            root.y = state.burnerPivoyY + state.burnerWiggleProgress * 7;
         }
         if (isBalloon || isSandbags) {
-            root.originY = state.burnerWiggleProgress * 3;
-            root.originX = state.accessoriesPivotX;
+            root.y = state.burnerWiggleProgress * 3;
+            root.x = state.accessoriesPivotX;
             if (state.basket.isOf(WoodType.BAMBOO)) {
-                ropes.forEach(rope -> rope.originY = 0);
+                ropes.forEach(rope -> rope.y = 0);
             }
         }
 
@@ -172,11 +176,11 @@ public class AirBalloonEntityModel extends EntityModel<AirBalloonEntityRenderer.
             for (int i = 0; i < sandbags.size(); i++) {
                 ModelPart bag = sandbags.get(i);
                 float pullProgress = state.sandbagPullAmounts[i];
-                bag.pitch -= root.pitch * 2.5F * (1 + pullProgress) + state.sandbagsPitch;
-                bag.roll -= root.roll * 2.5F * (1 + pullProgress) + state.sandbagsRoll;
-                if (state.leashData != null) {
-                    bag.roll *= -1;
-                    bag.pitch *= -1;
+                bag.xRot -= root.xRot * 2.5F * (1 + pullProgress) + state.sandbagsPitch;
+                bag.zRot -= root.zRot * 2.5F * (1 + pullProgress) + state.sandbagsRoll;
+                if (!state.leashStates.isEmpty()) {
+                    bag.zRot *= -1;
+                    bag.xRot *= -1;
                 }
                 float pullAmount = 2 + (2 * pullProgress);
                 bag.yScale = pullAmount;
@@ -184,31 +188,26 @@ public class AirBalloonEntityModel extends EntityModel<AirBalloonEntityRenderer.
             }
         }
 
-        if (isBalloon) {
-            root.originY += 24 * (1 - state.inflation);
-            root.yScale *= Math.max(0.0025F, state.inflation);
-        }
-
         for (int i = 0; i < ropes.size(); i++) {
             ModelPart rope = ropes.get(i);
-            float rollRatio = root.roll / rope.roll;
-            float pitchRatio = root.pitch / rope.pitch;
+            float rollRatio = root.zRot / rope.zRot;
+            float pitchRatio = root.xRot / rope.xRot;
 
-            rope.originY -= 5F * rollRatio;
-            rope.originY -= 5F * pitchRatio;
+            rope.y -= 5F * rollRatio;
+            rope.y -= 5F * pitchRatio;
 
             if (i == 0 || i == 3) {
-                rope.originZ -= 5 * pitchRatio;
+                rope.z -= 5 * pitchRatio;
             }
             if (i == 2 || i == 1) {
-                rope.originZ += 5 * pitchRatio;
+                rope.z += 5 * pitchRatio;
             }
 
             if (i == 2 || i == 3) {
-                rope.originX -= 5 * rollRatio;
+                rope.x -= 5 * rollRatio;
             }
             if (i == 0 || i == 1) {
-                rope.originX += 5 * rollRatio;
+                rope.x += 5 * rollRatio;
             }
 
             if (isBalloon) {

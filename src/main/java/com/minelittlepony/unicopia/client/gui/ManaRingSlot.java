@@ -6,11 +6,10 @@ import com.minelittlepony.unicopia.ability.AbilityDispatcher;
 import com.minelittlepony.unicopia.ability.AbilitySlot;
 import com.minelittlepony.unicopia.entity.player.MagicReserves;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import org.joml.Matrix3x2fStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import com.minelittlepony.unicopia.entity.player.MagicReserves.Bar;
-
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
 
 class ManaRingSlot extends Slot {
 
@@ -21,20 +20,20 @@ class ManaRingSlot extends Slot {
     }
 
     @Override
-    protected void renderContents(DrawContext context, AbilityDispatcher abilities, boolean bSwap, float tickDelta) {
-        MatrixStack matrices = context.getMatrices();
+    protected void renderContents(GuiGraphicsExtractor context, AbilityDispatcher abilities, boolean bSwap, float tickDelta) {
+        Matrix3x2fStack matrices = context.pose();
 
-        matrices.push();
-        matrices.translate(24.125, 24.75, 0);
+        matrices.pushMatrix();
+        matrices.translate(24.125F, 24.75F);
 
         Pony pony = Pony.of(uHud.client.player);
         MagicReserves mana = pony.getMagicalReserves();
 
-        boolean canUseSuper = Abilities.RAGE.value().canUse(pony.getCompositeRace()) || Abilities.RAINBOOM.value().canUse(pony.getCompositeRace());
+        boolean canUseSuper = Abilities.RAGE.canUse(pony.getCompositeRace()) || Abilities.RAINBOOM.canUse(pony.getCompositeRace());
 
         double maxManaBarSize = canUseSuper ? DrawableUtil.PI : DrawableUtil.TAU;
-        double arcBegin = renderRing(context, 17, 13, 0, maxManaBarSize, mana.getMana(), 0x99FF88FF, tickDelta);
-        renderRing(context, 17, 13, 0, maxManaBarSize, mana.getExhaustion(), 0x99FF0022, tickDelta);
+        double arcBegin = renderRing(context, 17, 13, 0, maxManaBarSize, mana.getMana(), 0xFF88FF99, tickDelta);
+        renderRing(context, 17, 13, 0, maxManaBarSize, mana.getExhaustion(), 0xFF002299, tickDelta);
 
         if (!uHud.client.player.isCreative()) {
 
@@ -43,21 +42,21 @@ class ManaRingSlot extends Slot {
             int minutes = (level / 16) % 16;
             int hours = level / 32;
 
-            DrawableUtil.drawNotchedArc(context, 10, 13, 0, hours * 0.2, 0.1, 0.1, 0xFF00AA88);
-            DrawableUtil.drawNotchedArc(context, 10, 13, hours * 0.2, minutes * 0.2, 0.1, 0.1, 0xAA008888);
-            DrawableUtil.drawNotchedArc(context, 10, 13, (hours + minutes) * 0.2, seconds * 0.2, 0.1, 0.1, 0x99888800);
+            DrawableUtil.drawNotchedArc(context, 10, 13, 0, hours * 0.2, 0.1, 0.1, 0x00AA88FF);
+            DrawableUtil.drawNotchedArc(context, 10, 13, hours * 0.2, minutes * 0.2, 0.1, 0.1, 0x008888AA);
+            DrawableUtil.drawNotchedArc(context, 10, 13, (hours + minutes) * 0.2, seconds * 0.2, 0.1, 0.1, 0x88880099);
 
             level = pony.getCorruption().get();
             seconds = level % 16;
             minutes = (level / 16) % 16;
             hours = level / 32;
 
-            DrawableUtil.drawNotchedArc(context, 7, 10,  DrawableUtil.PI, hours * 0.2, 0.1, 0.1, 0xFF000088);
-            DrawableUtil.drawNotchedArc(context, 7, 10, hours * 0.2 + DrawableUtil.PI, minutes * 0.2, 0.1, 0.1, 0xAA000088);
-            DrawableUtil.drawNotchedArc(context, 7, 10, (hours + minutes) * 0.2 + DrawableUtil.PI, seconds * 0.2, 0.1, 0.1, 0x99000088);
+            DrawableUtil.drawNotchedArc(context, 7, 10,  DrawableUtil.PI, hours * 0.2, 0.1, 0.1, 0x000088FF);
+            DrawableUtil.drawNotchedArc(context, 7, 10, hours * 0.2 + DrawableUtil.PI, minutes * 0.2, 0.1, 0.1, 0x000088AA);
+            DrawableUtil.drawNotchedArc(context, 7, 10, (hours + minutes) * 0.2 + DrawableUtil.PI, seconds * 0.2, 0.1, 0.1, 0x00008899);
 
             if (canUseSuper) {
-                renderRing(context, 17, 13, DrawableUtil.PI, DrawableUtil.PI, mana.getCharge(), 0x9988FF99, tickDelta);
+                renderRing(context, 17, 13, DrawableUtil.PI, DrawableUtil.PI, mana.getCharge(), 0x88FF9999, tickDelta);
             }
 
             double cost = abilities.getStats().stream()
@@ -72,7 +71,7 @@ class ManaRingSlot extends Slot {
                 cost *= 10;
                 cost /= 1 + pony.getLevel().getScaled(3);
 
-                int color = cost / max > percent ? 0x000099FF : 0xFF0099FF;
+                int color = cost / max > percent ? 0xFF000099 : 0xFFFF0099;
 
                 cost = Math.min(percent, Math.min(max, cost) / max);
 
@@ -82,16 +81,16 @@ class ManaRingSlot extends Slot {
             }
         }
 
-        matrices.pop();
+        matrices.popMatrix();
         super.renderContents(context, abilities, bSwap, tickDelta);
         if (canUseSuper) {
             renderForegroundLayer(context, size, 0);
         }
     }
 
-    private double renderRing(DrawContext context, double outerRadius, double innerRadius, double offsetAngle, double maxAngle, Bar bar, int color, float tickDelta) {
-        double fill = MathHelper.clamp(bar.getPercentFill(tickDelta), 0, 1) * maxAngle;
-        double shadow = MathHelper.clamp(bar.getShadowFill(tickDelta), 0, 1) * maxAngle;
+    private double renderRing(GuiGraphicsExtractor context, double outerRadius, double innerRadius, double offsetAngle, double maxAngle, Bar bar, int color, float tickDelta) {
+        double fill = Mth.clamp(bar.getPercentFill(tickDelta), 0, 1) * maxAngle;
+        double shadow = Mth.clamp(bar.getShadowFill(tickDelta), 0, 1) * maxAngle;
 
         DrawableUtil.drawArc(context, innerRadius, outerRadius, offsetAngle, fill, color);
 

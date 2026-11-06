@@ -1,6 +1,10 @@
 package com.minelittlepony.unicopia.mixin.server;
 
 import java.util.stream.LongStream;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.network.PlayerChunkSender;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -12,29 +16,25 @@ import com.minelittlepony.unicopia.ability.magic.spell.effect.PortalSpell;
 import com.minelittlepony.unicopia.server.world.Ether;
 
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.minecraft.server.network.ChunkDataSender;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.chunk.WorldChunk;
 
-@Mixin(ChunkDataSender.class)
+@Mixin(PlayerChunkSender.class)
 abstract class MixinChunkDataSender {
     @Shadow
-    private @Final LongSet chunks;
+    private @Final LongSet pendingChunks;
 
-    @Inject(method = "add", at = @At("RETURN"))
-    private void onAdd(WorldChunk chunk, CallbackInfo info) {
-        var etherChunk = Ether.get(chunk.getWorld()).getChunk(chunk.getPos());
+    @Inject(method = "markChunkPendingToSend", at = @At("RETURN"))
+    private void onAdd(LevelChunk chunk, CallbackInfo info) {
+        var etherChunk = Ether.get(chunk.getLevel()).getChunk(chunk.getPos());
         if (etherChunk != null) {
             etherChunk.getStates().stream().flatMapToLong(state -> {
                 if (state.getSpell() instanceof PortalSpell portal && portal.getDestinationReference().isSet()) {
                     return portal.getDestinationReference()
                         .getTarget()
                         .stream()
-                        .mapToLong(target -> ChunkPos.toLong(BlockPos.ofFloored(target.pos())));
+                        .mapToLong(target -> ChunkPos.pack(BlockPos.containing(target.pos())));
                 }
                 return LongStream.empty();
-            }).distinct().forEach(chunks::add);
+            }).distinct().forEach(pendingChunks::add);
         }
     }
 }

@@ -1,0 +1,6 @@
+{
+  "type": "unicopia:transform_crop",
+  "consume": "minecraft:netherrack",
+  "output": "unicopia:plunder_vine_bud",
+  "target": "minecraft:wither_rose"
+}

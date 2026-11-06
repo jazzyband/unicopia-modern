@@ -2,17 +2,15 @@ package com.minelittlepony.unicopia.ability.magic.spell;
 
 import java.util.*;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
 import com.google.common.base.MoreObjects;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
 import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.server.world.Ether;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Uuids;
 
 public abstract class AbstractDelegatingSpell implements Spell {
     private UUID uuid = UUID.randomUUID();
@@ -111,14 +109,14 @@ public abstract class AbstractDelegatingSpell implements Spell {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-        compound.put("uuid", Uuids.CODEC, uuid);
+    public void toNBT(CompoundTag compound, Provider lookup) {
+        compound.store("uuid", UUIDUtil.AUTHLIB_CODEC, uuid);
         compound.put("spell", delegate.toNBT(lookup));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-        uuid = compound.get("uuid", Uuids.CODEC).orElse(uuid);
+    public void fromNBT(CompoundTag compound, Provider lookup) {
+        uuid = compound.read("uuid", UUIDUtil.AUTHLIB_CODEC).orElse(uuid);
         delegate.fromNBT(compound.getCompoundOrEmpty("spell"), lookup);
     }
 

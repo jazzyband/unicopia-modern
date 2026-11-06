@@ -2,27 +2,26 @@ package com.minelittlepony.unicopia.container;
 
 import java.util.*;
 import java.util.function.Consumer;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.network.datasync.Synchronizable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
 
 public class SpellbookState extends Synchronizable<SpellbookState> {
     public static final Codec<SpellbookState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.optionalFieldOf("current_page").forGetter(i -> i.currentPageId),
             Codec.unboundedMap(Identifier.CODEC, PageState.CODEC).fieldOf("states").forGetter(i -> i.states)
     ).apply(instance, SpellbookState::new));
-    public static final PacketCodec<RegistryByteBuf, SpellbookState> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.optional(Identifier.PACKET_CODEC), SpellbookState::getCurrentPageId,
-            PacketCodecs.map(HashMap::new, Identifier.PACKET_CODEC, PageState.PACKET_CODEC), p -> p.states,
+    public static final StreamCodec<RegistryFriendlyByteBuf, SpellbookState> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.optional(Identifier.STREAM_CODEC), SpellbookState::getCurrentPageId,
+            ByteBufCodecs.map(HashMap::new, Identifier.STREAM_CODEC, PageState.PACKET_CODEC), p -> p.states,
             SpellbookState::new
     );
 
@@ -84,7 +83,7 @@ public class SpellbookState extends Synchronizable<SpellbookState> {
         public static final Codec<PageState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.INT.fieldOf("offset").forGetter(PageState::getOffset)
         ).apply(instance, PageState::new));
-        public static final PacketCodec<ByteBuf, PageState> PACKET_CODEC = PacketCodecs.INTEGER.xmap(PageState::new, PageState::getOffset);
+        public static final StreamCodec<ByteBuf, PageState> PACKET_CODEC = ByteBufCodecs.INT.map(PageState::new, PageState::getOffset);
 
         private int offset;
 
@@ -113,7 +112,7 @@ public class SpellbookState extends Synchronizable<SpellbookState> {
         }
 
         public void swap(int incr, int max) {
-            setOffset(MathHelper.clamp(getOffset() + incr, 0, max - 1));
+            setOffset(Mth.clamp(getOffset() + incr, 0, max - 1));
         }
     }
 }

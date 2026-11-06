@@ -1,22 +1,20 @@
 package com.minelittlepony.unicopia;
 
 import java.util.Locale;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.util.Util;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.StringRepresentable;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.Util;
+public enum Affinity implements StringRepresentable {
+    GOOD(ChatFormatting.BLUE, -1, 0),
+    NEUTRAL(ChatFormatting.LIGHT_PURPLE, 0, 0.5F),
+    BAD(ChatFormatting.RED, 1, 1);
 
-public enum Affinity implements StringIdentifiable {
-    GOOD(Formatting.BLUE, -1, 0),
-    NEUTRAL(Formatting.LIGHT_PURPLE, 0, 0.5F),
-    BAD(Formatting.RED, 1, 1);
+    public static final Codec<Affinity> CODEC = StringRepresentable.fromEnum(Affinity::values);
 
-    public static final Codec<Affinity> CODEC = StringIdentifiable.createCodec(Affinity::values);
-
-    private final Formatting color;
+    private final ChatFormatting color;
 
     private final int corruption;
     private final float alignment;
@@ -25,19 +23,19 @@ public enum Affinity implements StringIdentifiable {
 
     private final String translationKey;
 
-    Affinity(Formatting color, int corruption, float alignment) {
+    Affinity(ChatFormatting color, int corruption, float alignment) {
         this.color = color;
         this.corruption = corruption;
         this.alignment = alignment;
-        this.translationKey = Util.createTranslationKey("affinity", Unicopia.id(name().toLowerCase(Locale.ROOT)));
+        this.translationKey = Util.makeDescriptionId("affinity", Unicopia.id(name().toLowerCase(Locale.ROOT)));
     }
 
     @Override
-    public String asString() {
+    public String getSerializedName() {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    public Formatting getColor() {
+    public ChatFormatting getColor() {
         return color;
     }
 
@@ -45,8 +43,8 @@ public enum Affinity implements StringIdentifiable {
         return translationKey;
     }
 
-    public Text getDisplayName() {
-        return Text.translatable(getTranslationKey()).formatted(getColor());
+    public Component getDisplayName() {
+        return Component.translatable(getTranslationKey()).withStyle(getColor());
     }
 
     public int getCorruption() {

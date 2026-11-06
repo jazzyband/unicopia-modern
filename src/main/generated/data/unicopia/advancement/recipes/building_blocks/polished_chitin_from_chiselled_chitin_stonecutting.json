@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_chiselled_chitin": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:chiselled_chitin"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:polished_chitin_from_chiselled_chitin_stonecutting"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_chiselled_chitin"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:polished_chitin_from_chiselled_chitin_stonecutting"
+    ]
+  }
+}

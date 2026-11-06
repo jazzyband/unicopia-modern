@@ -1,31 +1,33 @@
 package com.minelittlepony.unicopia.client.minelittlepony;
 
 import java.util.UUID;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.LivingEntity;
 import com.minelittlepony.api.model.BodyPart;
 import com.minelittlepony.api.model.PonyModel;
 import com.minelittlepony.api.model.gear.Gear;
 import com.minelittlepony.unicopia.client.render.HeldEntityFeatureRenderer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.state.BipedEntityRenderState;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.texture.TextureManager;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Identifier;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import com.minelittlepony.unicopia.client.render.RenderGeometry;
+import com.minelittlepony.client.render.entity.state.PonyRenderState;
 
-class HeldEntityGear extends HeldEntityFeatureRenderer<BipedEntityRenderState, LivingEntity> implements Gear {
+class HeldEntityGear extends HeldEntityFeatureRenderer<HumanoidRenderState, LivingEntity> implements Gear<com.minelittlepony.client.render.entity.state.PonyRenderState> {
 
-    private BipedEntityRenderState entity;
+    private HumanoidRenderState entity;
 
     public HeldEntityGear() {
         super(null);
     }
 
     @Override
-    public boolean canRender(PonyModel<?> model, EntityRenderState entity) {
-        return entity instanceof BipedEntityRenderState;
+    public boolean canRender(PonyModel<?> model, PonyRenderState entity) {
+        return entity instanceof HumanoidRenderState;
     }
 
     @Override
@@ -34,27 +36,19 @@ class HeldEntityGear extends HeldEntityFeatureRenderer<BipedEntityRenderState, L
     }
 
     @Override
-    public <S extends EntityRenderState> Identifier getTexture(S entity, Context<S, ?> context) {
-        return TextureManager.MISSING_IDENTIFIER;
+    public Identifier getTexture(PonyRenderState entity, Context<PonyRenderState, ?> context) {
+        return net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation();
     }
 
     @Override
-    public <S extends EntityRenderState & PonyModel.AttributedHolder> void transform(S state, PonyModel<S> model, MatrixStack matrices) {
+    public void transform(PonyRenderState state, PonyModel<PonyRenderState> model, PoseStack matrices) {
         // noop
     }
 
     @Override
-    public <S extends BipedEntityRenderState & PonyModel.AttributedHolder> void pose(PonyModel<S> model, S state, boolean rainboom, UUID interpolatorId, float move, float swing, float bodySwing, float ticks) {
-        this.entity = state;
-    }
-
-    @Override
-    public void render(MatrixStack matrices, VertexConsumer buffer, int light, int overlay, int color, UUID interpolatorId) {
-        render(
-            matrices,
-            MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers(),
-            light, entity,
-            0, 0
-        );
+    public void render(PoseStack matrices, GearRenderState<PonyRenderState> state, SubmitNodeCollector frame,
+            RenderType renderType, int overlay, int light, int color) {
+        render(matrices, frame, light, state.entityState, state.limbAngle, state.limbDistance);
     }
 }
+

@@ -1,15 +1,15 @@
 package com.minelittlepony.unicopia.network;
 
 import java.util.Optional;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import com.minelittlepony.unicopia.ability.Abilities;
 import com.minelittlepony.unicopia.ability.Ability;
 import com.minelittlepony.unicopia.ability.ActivationType;
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.sollace.fabwork.api.packets.Handled;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.server.network.ServerPlayerEntity;
 
 /**
  * Sent to the server when a player activates an ability.
@@ -18,12 +18,12 @@ public record MsgPlayerAbility<T extends Hit> (
         Ability<T> power,
         Optional<T> data,
         ActivationType type
-    ) implements Handled<ServerPlayerEntity> {
+    ) implements Handled<ServerPlayer> {
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static final PacketCodec<RegistryByteBuf, MsgPlayerAbility<?>> PACKET_CODEC = PacketCodec.of(
+    public static final StreamCodec<RegistryFriendlyByteBuf, MsgPlayerAbility<?>> PACKET_CODEC = StreamCodec.ofMember(
             (packet, buffer) -> {
                 Abilities.PACKET_CODEC.encode(buffer, packet.power());
-                buffer.writeOptional(packet.data(), (b, d) -> ((PacketCodec)packet.power().getSerializer()).encode(buffer, d));
+                buffer.writeOptional(packet.data(), (b, d) -> ((StreamCodec)packet.power().getSerializer()).encode(buffer, d));
                 ActivationType.PACKET_CODEC.encode(buffer, packet.type());
             },
             buffer -> {
@@ -37,7 +37,7 @@ public record MsgPlayerAbility<T extends Hit> (
     );
 
     @Override
-    public void handle(ServerPlayerEntity sender) {
+    public void handle(ServerPlayer sender) {
         Pony player = Pony.of(sender);
 
         if (player == null) {

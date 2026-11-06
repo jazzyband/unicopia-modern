@@ -1,12 +1,10 @@
 package com.minelittlepony.unicopia.item;
 
 import java.util.List;
-
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.item.Item;
 import com.minelittlepony.unicopia.entity.IItemEntity;
-
-import net.minecraft.entity.decoration.ItemFrameEntity;
-import net.minecraft.item.Item;
-import net.minecraft.util.ActionResult;
 
 public interface TickableItem {
     static <T extends Item> T registerTickCallback(T item, GroundTickCallback callback) {
@@ -22,21 +20,21 @@ public interface TickableItem {
         getCallbacks().add(callback);
     }
 
-    default ActionResult onGroundTick(IItemEntity entity) {
+    default InteractionResult onGroundTick(IItemEntity entity) {
         for (var callback : getCallbacks()) {
-            ActionResult result = callback.onGroundTick(entity);
-            if (result.isAccepted()) {
+            InteractionResult result = callback.onGroundTick(entity);
+            if (result.consumesAction()) {
                 return result;
             }
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    default void inFrameTick(ItemFrameEntity entity) {
+    default void inFrameTick(ItemFrame entity) {
 
     }
 
     public interface GroundTickCallback {
-        ActionResult onGroundTick(IItemEntity entity);
+        InteractionResult onGroundTick(IItemEntity entity);
     }
 }

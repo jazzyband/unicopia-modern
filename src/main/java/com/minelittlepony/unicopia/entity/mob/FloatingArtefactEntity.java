@@ -1,30 +1,32 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.Optional;
 
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.server.world.Altar;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 public class FloatingArtefactEntity extends StationaryObjectEntity {
-    private static final TrackedData<ItemStack> ITEM = DataTracker.registerData(FloatingArtefactEntity.class, TrackedDataHandlerRegistry.ITEM_STACK);
-    private static final TrackedData<Byte> STATE = DataTracker.registerData(FloatingArtefactEntity.class, TrackedDataHandlerRegistry.BYTE);
-    private static final TrackedData<Float> TARGET_ROTATION_SPEED = DataTracker.registerData(FloatingArtefactEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    private static final EntityDataAccessor<ItemStack> ITEM = SynchedEntityData.defineId(FloatingArtefactEntity.class, EntityDataSerializers.ITEM_STACK);
+    private static final EntityDataAccessor<Byte> STATE = SynchedEntityData.defineId(FloatingArtefactEntity.class, EntityDataSerializers.BYTE);
+    private static final EntityDataAccessor<Float> TARGET_ROTATION_SPEED = SynchedEntityData.defineId(FloatingArtefactEntity.class, EntityDataSerializers.FLOAT);
 
     private static final int REGEN_GAP_TICKS = 5;
     private static final int REGEN_PAUSE_TICKS = 200;
@@ -45,23 +47,23 @@ public class FloatingArtefactEntity extends StationaryObjectEntity {
 
     private Optional<Altar> altar = Optional.empty();
 
-    public FloatingArtefactEntity(EntityType<?> entityType, World world) {
+    public FloatingArtefactEntity(EntityType<?> entityType, Level world) {
         super(entityType, world);
 
         positionSeed = (float)(Math.random() * Math.PI * 2);
     }
 
     @Override
-    protected Text getDefaultName() {
-        return getStack().getName();
+    protected Component getTypeName() {
+        return getStack().getHoverName();
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(ITEM, ItemStack.EMPTY);
-        builder.add(STATE, (byte)0);
-        builder.add(TARGET_ROTATION_SPEED, 1F);
+    protected void defineSynchedData(Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ITEM, ItemStack.EMPTY);
+        builder.define(STATE, (byte)0);
+        builder.define(TARGET_ROTATION_SPEED, 1F);
     }
 
     public void setAltar(Altar altar) {
@@ -69,32 +71,32 @@ public class FloatingArtefactEntity extends StationaryObjectEntity {
     }
 
     public ItemStack getStack() {
-        return dataTracker.get(ITEM);
+        return entityData.get(ITEM);
     }
 
     public void setStack(ItemStack stack) {
-        dataTracker.set(ITEM, stack);
+        entityData.set(ITEM, stack);
     }
 
     public State getState() {
-        return State.valueOf(dataTracker.get(STATE));
+        return State.valueOf(entityData.get(STATE));
     }
 
     public void setState(State state) {
-        dataTracker.set(STATE, (byte)state.ordinal());
+        entityData.set(STATE, (byte)state.ordinal());
     }
 
     public void setRotationSpeed(float spin, int duration) {
-        dataTracker.set(TARGET_ROTATION_SPEED, Math.max(spin, 0));
+        entityData.set(TARGET_ROTATION_SPEED, Math.max(spin, 0));
         boostDuration = duration;
     }
 
     public float getRotationSpeed() {
-        return dataTracker.get(TARGET_ROTATION_SPEED);
+        return entityData.get(TARGET_ROTATION_SPEED);
     }
 
     public float getRotationSpeed(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevRotationSpeed, rotationSpeed);
+        return Mth.lerp(tickDelta, prevRotationSpeed, rotationSpeed);
     }
 
     @Override
@@ -104,19 +106,19 @@ public class FloatingArtefactEntity extends StationaryObjectEntity {
 
     @Override
     public void tick() {
-        Vec3d pos = Vec3d.ofBottomCenter(getBlockPos());
+        Vec3 pos = Vec3.atBottomCenterOf(blockPosition());
 
-        setPos(pos.x, pos.y, pos.z);
+        setPosRaw(pos.x, pos.y, pos.z);
 
         super.tick();
 
         ItemStack stack = getStack();
 
         if (stack.isEmpty()) {
-            setStack(UItems.EMPTY_JAR.getDefaultStack());
+            setStack(UItems.EMPTY_JAR.getDefaultInstance());
         }
 
-        if (getWorld().isClient) {
+        if (level().isClientSide()) {
             bobAmount++;
         }
 
@@ -144,72 +146,72 @@ public class FloatingArtefactEntity extends StationaryObjectEntity {
             ticksUntilRegen = REGEN_GAP_TICKS;
         }
 
-        if (getWorld().getTime() % 80 == 0) {
+        if (level().getGameTime() % 80 == 0) {
             State state = getState();
             playSound(USounds.ENTITY_ARTEFACT_AMBIENT, state.getVolume(), state.getPitch());
         }
     }
 
     public float getVerticalOffset(float tickDelta) {
-        return MathHelper.sin((bobAmount + tickDelta) / 10F + positionSeed) * 0.025F + 0.05F;
+        return Mth.sin((bobAmount + tickDelta) / 10F + positionSeed) * 0.025F + 0.05F;
     }
 
     public float getRotation(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevRotation, rotation) % 360;
+        return Mth.lerp(tickDelta, prevRotation, rotation) % 360;
     }
 
     @Override
-    protected void readCustomDataFromNbt(NbtCompound compound) {
-        super.readCustomDataFromNbt(compound);
-        ItemStack.fromNbt(getRegistryManager(), compound.getCompoundOrEmpty("Item")).ifPresent(this::setStack);
-        setState(State.valueOf(compound.getInt("State", 0)));
-        setRotationSpeed(compound.getFloat("spin", 0), compound.getInt("spinDuration", 0));
-        ticksUntilRegen = compound.getInt("regen", 0);
-        altar = compound.get("altar", Altar.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE));
+    protected void readAdditionalSaveData(ValueInput compound) {
+        super.readAdditionalSaveData(compound);
+        compound.read("Item", ItemStack.CODEC).ifPresent(this::setStack);
+        setState(State.valueOf(compound.getIntOr("State", 0)));
+        setRotationSpeed(compound.getFloatOr("spin", 0), compound.getIntOr("spinDuration", 0));
+        ticksUntilRegen = compound.getIntOr("regen", 0);
+        altar = compound.read("altar", Altar.CODEC);
     }
 
     @Override
-    protected void writeCustomDataToNbt(NbtCompound compound) {
-        super.writeCustomDataToNbt(compound);
+    protected void addAdditionalSaveData(ValueOutput compound) {
+        super.addAdditionalSaveData(compound);
         ItemStack stack = getStack();
         if (!stack.isEmpty()) {
-            compound.put("Item", ItemStack.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), stack);
+            compound.store("Item", ItemStack.CODEC, stack);
         }
         compound.putInt("State", getState().ordinal());
         compound.putFloat("spin", getRotationSpeed());
         compound.putInt("spinDuration", boostDuration);
         compound.putInt("regen", ticksUntilRegen);
-        compound.putNullable("altar", Altar.CODEC, altar.orElse(null));
+        compound.storeNullable("altar", Altar.CODEC, altar.orElse(null));
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float damage) {
+    public boolean hurtServer(ServerLevel world, DamageSource source, float damage) {
 
-        if (getWorld().isClient || isInvulnerable()) {
+        if (level().isClientSide() || isInvulnerable()) {
             return false;
         }
 
-        if (isAlwaysInvulnerableTo(source) || !getStack().takesDamageFrom(source)) {
+        if (isInvulnerableToBase(source) || !getStack().canBeHurtBy(source)) {
             return false;
         }
 
         ticksUntilRegen = REGEN_PAUSE_TICKS;
 
-        if (source.isSourceCreativePlayer()) {
+        if (source.isCreativePlayer()) {
             damage = getHealth();
         }
 
-        return super.damage(world, source, damage);
+        return super.hurtServer(world, source, damage);
     }
 
     @Override
     protected void onKilled(DamageSource source) {
         ItemStack stack = getStack();
 
-        if (altar.isEmpty() && getWorld() instanceof ServerWorld sw) {
-            if (!(stack.getItem() instanceof Artifact) || ((Artifact)stack.getItem()).onArtifactDestroyed(this) != ActionResult.SUCCESS) {
-                if (!source.isSourceCreativePlayer()) {
-                    dropStack(sw, stack);
+        if (altar.isEmpty() && level() instanceof ServerLevel sw) {
+            if (!(stack.getItem() instanceof Artifact) || ((Artifact)stack.getItem()).onArtifactDestroyed(this) != InteractionResult.SUCCESS) {
+                if (!source.isCreativePlayer()) {
+                    spawnAtLocation(sw, stack);
                 }
             }
         }
@@ -223,7 +225,7 @@ public class FloatingArtefactEntity extends StationaryObjectEntity {
     @Override
     public void remove(RemovalReason reason) {
         super.remove(reason);
-        altar.ifPresent(altar -> altar.tearDown(this, getWorld()));
+        altar.ifPresent(altar -> altar.tearDown(this, level()));
     }
 
     public enum State {
@@ -250,6 +252,6 @@ public class FloatingArtefactEntity extends StationaryObjectEntity {
     public interface Artifact {
         void onArtifactTick(FloatingArtefactEntity entity);
 
-        ActionResult onArtifactDestroyed(FloatingArtefactEntity entity);
+        InteractionResult onArtifactDestroyed(FloatingArtefactEntity entity);
     }
 }

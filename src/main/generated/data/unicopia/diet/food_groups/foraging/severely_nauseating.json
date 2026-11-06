@@ -1,0 +1,43 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:many",
+      "afflictions": [
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 1,
+            "min": 1
+          },
+          "effect": "minecraft:weakness",
+          "seconds": {
+            "max": 200,
+            "min": 200
+          }
+        },
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 2
+          },
+          "chance": 7,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 100,
+            "min": 100
+          }
+        }
+      ]
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 3,
+      "saturation": 5.3999996
+    }
+  },
+  "tags": [
+    "unicopia:forage/severe/nauseating"
+  ]
+}

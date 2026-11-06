@@ -1,0 +1,243 @@
+{
+  "entries": [
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:air"
+      },
+      "match": [
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:snow"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:snow_block"
+        },
+        {
+          "type": "unicopia:is_plant"
+        }
+      ]
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:dirt"
+      },
+      "match": [
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:mud"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:grass_block"
+        }
+      ]
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:lava"
+      },
+      "match": [
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:obsidian"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:crying_obsidian"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "unicopia:frosted_obsidian"
+        }
+      ]
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:water"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:ice"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:brown_concrete"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:clay"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:cobblestone"
+      },
+      "match": [
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:mossy_cobblestone"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:infested_cobblestone"
+        }
+      ]
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:cobblestone_slab"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:mossy_cobblestone_slab"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:cobblestone_stairs"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:mossy_cobblestone_stairs"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:cobblestone_wall"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:mossy_cobblestone_wall"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stone_brick_slab"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:mossy_stone_brick_slab"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stone_brick_stairs"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:mossy_stone_brick_stairs"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stone_brick_wall"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:mossy_stone_brick_wall"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stone_bricks"
+      },
+      "match": [
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:mossy_stone_bricks"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:infested_mossy_stone_bricks"
+        },
+        {
+          "type": "unicopia:block_state",
+          "state": "minecraft:infested_stone_bricks"
+        }
+      ]
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:chiseled_stone_bricks"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:infested_chiseled_stone_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:cracked_stone_bricks"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:infested_cracked_stone_bricks"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:stone"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:infested_stone"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:coarse_dirt"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:podzol"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:coarse_dirt"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:dirt"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:chance",
+        "chance": 0.15,
+        "change": {
+          "type": "unicopia:set_state",
+          "state": "minecraft:coal_block"
+        }
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:logs"
+      }
+    }
+  ]
+}

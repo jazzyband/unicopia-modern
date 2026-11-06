@@ -6,7 +6,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Unicopia;
@@ -19,28 +27,19 @@ import com.minelittlepony.unicopia.server.world.chunk.PositionalDataMap;
 import com.minelittlepony.unicopia.util.Untyped;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-
-public class Ether extends PersistentState {
+public class Ether extends SavedData {
     private static final Identifier ID = Unicopia.id("ether");
-    private static final Codec<Map<UUID, Map<UUID, Entry>>> ENDPOINT_CODEC = Codec.unboundedMap(Uuids.CODEC, Codec.unboundedMap(Uuids.CODEC, Entry.CODEC));
+    private static final Codec<Map<UUID, Map<UUID, Entry>>> ENDPOINT_CODEC = Codec.unboundedMap(UUIDUtil.AUTHLIB_CODEC, Codec.unboundedMap(UUIDUtil.AUTHLIB_CODEC, Entry.CODEC));
     private static final RecordCodecBuilder<Ether, Map<Identifier, Map<UUID, Map<UUID, Entry>>>> DATA_MAP_CODEC = Codec.unboundedMap(Identifier.CODEC, ENDPOINT_CODEC).fieldOf("endpoints").<Ether>forGetter(o -> Untyped.cast(o.endpoints));
 
-    private static final PersistentStateKey<Ether> KEY = new PersistentStateKey<>(ID, context -> {
-        return RecordCodecBuilder.create(i -> i.group(DATA_MAP_CODEC).apply(i, endpoints -> new Ether(context.getWorldOrThrow(), endpoints)));
+    private static final PersistentStateKey<Ether> KEY = new PersistentStateKey<>(ID, world -> {
+        return RecordCodecBuilder.create(i -> i.group(DATA_MAP_CODEC).apply(i, endpoints -> new Ether(world, endpoints)));
     }, Ether::new);
 
-    public static Ether get(WorldView world) {
+    public static Ether get(LevelReader world) {
         return KEY.get(world);
     }
 
@@ -49,9 +48,9 @@ public class Ether extends PersistentState {
 
     private final Object locker = new Object();
 
-    private final World world;
+    private final Level world;
 
-    private Ether(World world, Map<Identifier, Map<UUID, Map<UUID, Entry>>> endpoints) {
+    private Ether(Level world, Map<Identifier, Map<UUID, Map<UUID, Entry>>> endpoints) {
         this.world = world;
         this.endpoints = endpoints.entrySet().stream().map(endpoint -> {
             Map<UUID, Map<UUID, MutableEntry<?>>> entities = endpoint.getValue().entrySet().stream().map(entry -> {
@@ -65,7 +64,7 @@ public class Ether extends PersistentState {
         }).filter(Objects::nonNull).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    Ether(World world) {
+    Ether(Level world) {
         this.world = world;
         this.endpoints = new HashMap<>();
     }
@@ -75,15 +74,15 @@ public class Ether extends PersistentState {
         synchronized (locker) {
             MutableEntry<T> entry = (MutableEntry<T>)endpoints
                     .computeIfAbsent(spell.getTypeAndTraits().type().getId(), typeId -> new HashMap<>())
-                    .computeIfAbsent(caster.asEntity().getUuid(), entityId -> new HashMap<>())
+                    .computeIfAbsent(caster.asEntity().getUUID(), entityId -> new HashMap<>())
                     .computeIfAbsent(spell.getUuid(), spellid -> {
-                        markDirty();
+                        setDirty();
                         return new MutableEntry<>(spell, caster);
                     });
 
             if (entry.spell.get() != spell) {
                 entry.spell = new WeakReference<>(spell);
-                markDirty();
+                setDirty();
             }
 
             ((EntityReference<Entity>)entry.entity).set(caster.asEntity());
@@ -91,13 +90,13 @@ public class Ether extends PersistentState {
             if (entry.removed) {
                 entry.removed = false;
                 positionData.update(entry);
-                markDirty();
+                setDirty();
             }
             return entry;
         }
     }
 
-    public void tick(World world) {
+    public void tick(Level world) {
         endpoints.values().forEach(byType -> {
             byType.values().forEach(entries -> {
                 entries.values().forEach(MutableEntry::update);
@@ -110,7 +109,7 @@ public class Ether extends PersistentState {
             endpoints.computeIfPresent(spellType.getId(), (typeId, entries) -> {
                 Map<UUID, MutableEntry<?>> data = entries.remove(entityId);
                 if (data != null) {
-                    markDirty();
+                    setDirty();
                     data.values().forEach(positionData::remove);
                 }
                 return entries.isEmpty() ? null : entries;
@@ -119,7 +118,7 @@ public class Ether extends PersistentState {
     }
 
     public void remove(SpellType<?> spellType, Caster<?> caster) {
-        remove(spellType, caster.asEntity().getUuid());
+        remove(spellType, caster.asEntity().getUUID());
     }
 
     public <T extends Spell> void remove(T spell, Caster<?> caster) {
@@ -131,7 +130,7 @@ public class Ether extends PersistentState {
 
     @SuppressWarnings("unchecked")
     public <T extends Spell> MutableEntry<T> get(T spell, Caster<?> caster) {
-        return get((SpellType<T>)spell.getTypeAndTraits().type(), caster.asEntity().getUuid(), spell.getUuid());
+        return get((SpellType<T>)spell.getTypeAndTraits().type(), caster.asEntity().getUUID(), spell.getUuid());
     }
 
     public <T extends Spell> MutableEntry<T> get(SpellType<T> spell, EntityReference.EntityValues<?> entityId, @Nullable UUID spellId) {
@@ -176,23 +175,24 @@ public class Ether extends PersistentState {
     }
 
     public Set<MutableEntry<?>> getAtPosition(BlockPos pos) {
-        return world.isClient() ? Set.of() : positionData.getState(pos);
+        return world.isClientSide() ? Set.of() : positionData.getState(pos);
     }
 
     public Chunk<MutableEntry<?>> getChunk(ChunkPos pos) {
-        return world.isClient() ? null : positionData.getChunk(pos);
+        return world.isClientSide() ? null : positionData.getChunk(pos);
     }
 
     public interface Entry {
         Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
-                EntityReference.CODEC.forGetter(Entry::entity),
+                MapCodec.assumeMapUnsafe(EntityReference.CODEC).forGetter(Entry::entity),
                 Codec.BOOL.fieldOf("removed").forGetter(Entry::removed),
                 Codec.FLOAT.fieldOf("pitch").forGetter(Entry::pitch),
                 Codec.FLOAT.fieldOf("yaw").forGetter(Entry::yaw),
                 Codec.FLOAT.fieldOf("radius").forGetter(Entry::radius),
-                Uuids.CODEC.optionalFieldOf("spellId", null).forGetter(Entry::spellId),
-                CodecUtils.setOf(Uuids.CODEC).fieldOf("claimants").forGetter(Entry::claimants)
-        ).apply(i, FrozenEntry::new));
+                UUIDUtil.AUTHLIB_CODEC.optionalFieldOf("spellId").forGetter(entry -> Optional.ofNullable(entry.spellId())),
+                CodecUtils.setOf(UUIDUtil.AUTHLIB_CODEC).fieldOf("claimants").forGetter(Entry::claimants)
+        ).apply(i, (entity, removed, pitch, yaw, radius, spellId, claimants) ->
+                new FrozenEntry<>(entity, removed, pitch, yaw, radius, spellId.orElse(null), claimants)));
 
         EntityReference<?> entity();
 
@@ -216,7 +216,7 @@ public class Ether extends PersistentState {
 
         @Nullable
         private UUID spellId;
-        private WeakReference<T> spell;
+        private WeakReference<T> spell = new WeakReference<>(null);
 
         private boolean removed;
 
@@ -250,7 +250,7 @@ public class Ether extends PersistentState {
 
         void update() {
             previousPos = currentPos;
-            currentPos = entity.getTarget().map(t -> BlockPos.ofFloored(t.pos()));
+            currentPos = entity.getTarget().map(t -> BlockPos.containing(t.pos()));
             if (!currentPos.equals(previousPos)) {
                 positionData.update(this);
             }
@@ -271,11 +271,11 @@ public class Ether extends PersistentState {
         }
 
         public void setPitch(float pitch) {
-            if (!MathHelper.approximatelyEquals(this.pitch, pitch)) {
+            if (!Mth.equal(this.pitch, pitch)) {
                 this.pitch = pitch;
                 changed.set(true);
             }
-            markDirty();
+            setDirty();
         }
 
         @Override
@@ -284,16 +284,16 @@ public class Ether extends PersistentState {
         }
 
         public void setYaw(float yaw) {
-            if (!MathHelper.approximatelyEquals(this.yaw, yaw)) {
+            if (!Mth.equal(this.yaw, yaw)) {
                 this.yaw = yaw;
                 changed.set(true);
             }
-            markDirty();
+            setDirty();
         }
 
         @Override
         public BlockPos getCenter() {
-            return currentPos.orElse(BlockPos.ORIGIN);
+            return currentPos.orElse(BlockPos.ZERO);
         }
 
         @Override
@@ -302,14 +302,14 @@ public class Ether extends PersistentState {
         }
 
         public void setRadius(float radius) {
-            if (!MathHelper.approximatelyEquals(this.radius, radius)) {
+            if (!Mth.equal(this.radius, radius)) {
                 this.radius = radius;
                 if ((int)radius != (int)this.radius) {
                     positionData.update(this);
                 }
                 changed.set(true);
             }
-            markDirty();
+            setDirty();
         }
 
         public boolean isAlive() {
@@ -335,7 +335,7 @@ public class Ether extends PersistentState {
             removed = true;
             positionData.remove(this);
             claimants.clear();
-            markDirty();
+            setDirty();
         }
 
         public boolean entityMatches(UUID uuid) {
@@ -344,12 +344,12 @@ public class Ether extends PersistentState {
 
         public void claim(UUID claimant) {
             claimants.add(claimant);
-            markDirty();
+            setDirty();
         }
 
         public void release(UUID claimant) {
             claimants.remove(claimant);
-            markDirty();
+            setDirty();
         }
 
         public boolean isClaimedBy(UUID claimant) {

@@ -1,0 +1,17 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:empty"
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "can_always_eat": true,
+      "nutrition": 8,
+      "saturation": 12.8
+    }
+  },
+  "tags": [
+    "c:foods/mango"
+  ]
+}

@@ -1,56 +1,45 @@
 package com.minelittlepony.unicopia.mixin.client;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.minelittlepony.unicopia.client.render.WorldRenderDelegate;
 import com.minelittlepony.unicopia.client.render.entity.HitboxController;
 import com.minelittlepony.unicopia.client.render.spell.SpellEffectsRenderDispatcher;
 import com.minelittlepony.unicopia.util.Untyped;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.state.EntityHitboxAndView;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.world.entity.Entity;
 
 @Mixin(EntityRenderDispatcher.class)
 abstract class MixinEntityRenderDispatcher implements SpellEffectsRenderDispatcher.RenderDispatcherAccessor {
-    @WrapMethod(method = "render(Lnet/minecraft/entity/Entity;DDDFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/client/render/entity/EntityRenderer;)V")
-    private <E extends Entity, S extends EntityRenderState> void wrapRender(
-            E entity,
-            double x,
-            double y,
-            double z,
-            float tickDelta,
-            MatrixStack matrices,
-            VertexConsumerProvider vertices,
-            int light,
-            EntityRenderer<? super E, S> renderer,
-            Operation<Void> operation) {
-        WorldRenderDelegate.INSTANCE.handleEntityRender((entity1, x1, y1, z1, vertices1, light1, renderer1) -> {
-            operation.call(entity1, x1, y1, z1, tickDelta, matrices, vertices1, light1, renderer1);
-        }, entity, x, y, z, tickDelta, matrices, vertices, light);
+    @Inject(method = "extractEntity", at = @At("RETURN"))
+    private <E extends Entity> void unicopia_trackEntity(E entity, float tickDelta,
+            CallbackInfoReturnable<EntityRenderState> info) {
+        WorldRenderDelegate.INSTANCE.track(entity, info.getReturnValue());
     }
 
-    @Accessor("renderShadows")
-    @Override
-    public abstract boolean shouldRenderShadows();
-}
+    @WrapMethod(method = "submit")
+    private <S extends EntityRenderState> void unicopia_wrapSubmit(S state, CameraRenderState camera,
+            double x, double y, double z, PoseStack matrices, SubmitNodeCollector vertices,
+            Operation<Void> operation) {
+        EntityRenderDispatcher dispatcher = (EntityRenderDispatcher)(Object)this;
+        WorldRenderDelegate.INSTANCE.handleEntitySubmit(state, camera, x, y, z, matrices, vertices,
+                () -> operation.call(state, camera, x, y, z, matrices, vertices),
+                (entity, rx, ry, rz) -> operation.call(dispatcher.extractEntity(entity, camera.cameraEntityPartialTicks),
+                        camera, rx, ry, rz, matrices, vertices));
+    }
 
-@Mixin(EntityRenderer.class)
-abstract class MixinEntityRenderer<T extends Entity, S extends EntityRenderState> {
-    @Inject(method = "createHitbox", at = @At("HEAD"), cancellable = true)
-    private void onCreateHitbox(T entity, float tickProgress, boolean green, CallbackInfoReturnable<EntityHitboxAndView> info) {
-        if (!HitboxController.of(Untyped.cast(this)).shouldRenderHitbox(entity)) {
-            info.setReturnValue(null);
-        }
+    @Override
+    public boolean shouldRenderShadows() {
+        return true;
     }
 }

@@ -1,6 +1,30 @@
 package com.minelittlepony.unicopia.container;
 
 import java.util.*;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.recipebook.ServerPlaceRecipe;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.RecipeBookMenu;
+import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.inventory.ResultContainer;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.equipment.Equippable;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.spell.crafting.SpellbookRecipe;
@@ -9,38 +33,13 @@ import com.minelittlepony.unicopia.container.inventory.*;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.recipe.URecipes;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.EnchantmentEffectComponentTypes;
-import net.minecraft.component.type.EquippableComponent;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.CraftingResultInventory;
-import net.minecraft.inventory.Inventory;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
-import net.minecraft.recipe.InputSlotFiller;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.recipe.RecipeFinder;
-import net.minecraft.recipe.book.RecipeBookType;
-import net.minecraft.screen.AbstractRecipeScreenHandler;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.screen.ScreenHandlerContext;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-
-public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
+public class SpellbookScreenHandler extends RecipeBookMenu {
     private static final Identifier[] EMPTY_ARMOR_SLOT_TEXTURES = new Identifier[]{
-            PlayerScreenHandler.EMPTY_BOOTS_SLOT_TEXTURE,
-            PlayerScreenHandler.EMPTY_LEGGINGS_SLOT_TEXTURE,
-            PlayerScreenHandler.EMPTY_CHESTPLATE_SLOT_TEXTURE,
-            PlayerScreenHandler.EMPTY_HELMET_SLOT_TEXTURE
+            InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS,
+            InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS,
+            InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE,
+            InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
     };
 
     private final int MAX_INGREDIENTS;
@@ -53,22 +52,22 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
 
     public InputSlot gemSlot;
     public OutputSlot outputSlot;
-    private final CraftingResultInventory result = new CraftingResultInventory();
+    private final ResultContainer result = new ResultContainer();
 
-    private final PlayerInventory inventory;
+    private final Inventory inventory;
 
-    private final ScreenHandlerContext context;
+    private final ContainerLevelAccess context;
 
     private final SpellbookState state;
 
     @Nullable
     public UUID entityId;
 
-    protected SpellbookScreenHandler(int syncId, PlayerInventory inv, SpellbookState state) {
-        this(syncId, inv, ScreenHandlerContext.EMPTY, state, null);
+    protected SpellbookScreenHandler(int syncId, Inventory inv, SpellbookState state) {
+        this(syncId, inv, ContainerLevelAccess.NULL, state, null);
     }
 
-    public SpellbookScreenHandler(int syncId, PlayerInventory inv, ScreenHandlerContext context, SpellbookState state, UUID entityId) {
+    public SpellbookScreenHandler(int syncId, Inventory inv, ContainerLevelAccess context, SpellbookState state, UUID entityId) {
         super(UScreenHandlers.SPELL_BOOK, syncId);
         this.entityId = entityId;
         this.state = state;
@@ -103,7 +102,7 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
         final int inventoryX = 225;
         final int inventoryY = 45;
 
-        for (int i = 0; i < PlayerInventory.MAIN_SIZE - 9; ++i) {
+        for (int i = 0; i < Inventory.INVENTORY_SIZE - 9; ++i) {
             int x = i % 4;
             int y = i / 4;
             addSlot(new InventorySlot(this, inventory, i + 9, inventoryX + x * slotSpacing, inventoryY + y * slotSpacing));
@@ -118,37 +117,37 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
 
         for (int i = 0; i < 4; i++) {
             final EquipmentSlot eq = EquipmentSlot.values()[5 - i];
-            addSlot(new InventorySlot(this, inventory, PlayerInventory.OFF_HAND_SLOT - i - 1, armorX, armorY + (i * slotSpacing)) {
+            addSlot(new InventorySlot(this, inventory, Inventory.SLOT_OFFHAND - i - 1, armorX, armorY + (i * slotSpacing)) {
                 @Override
-                public int getMaxItemCount() {
+                public int getMaxStackSize() {
                     return 1;
                 }
 
                 @Override
-                public boolean canInsert(ItemStack stack) {
-                    EquippableComponent equipment = stack.get(DataComponentTypes.EQUIPPABLE);
+                public boolean mayPlace(ItemStack stack) {
+                    Equippable equipment = stack.get(DataComponents.EQUIPPABLE);
                     return equipment != null && eq == equipment.slot();
                 }
 
                 @Override
-                public boolean canTakeItems(PlayerEntity playerEntity) {
-                    ItemStack stack = getStack();
-                    if (!stack.isEmpty() && !playerEntity.isCreative() && EnchantmentHelper.hasAnyEnchantmentsWith(stack, EnchantmentEffectComponentTypes.PREVENT_ARMOR_CHANGE)) {
+                public boolean mayPickup(Player playerEntity) {
+                    ItemStack stack = getItem();
+                    if (!stack.isEmpty() && !playerEntity.isCreative() && EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)) {
                         return false;
                     }
-                    return super.canTakeItems(playerEntity);
+                    return super.mayPickup(playerEntity);
                 }
 
                 @Override
-                public Identifier getBackgroundSprite() {
-                    return EMPTY_ARMOR_SLOT_TEXTURES[eq.getEntitySlotId()];
+                public Identifier getNoItemIcon() {
+                    return EMPTY_ARMOR_SLOT_TEXTURES[eq.getIndex()];
                 }
             });
         }
-        addSlot(new InventorySlot(this, inventory, PlayerInventory.OFF_HAND_SLOT, rightHandX, equipmentY + slotSpacing) {
+        addSlot(new InventorySlot(this, inventory, Inventory.SLOT_OFFHAND, rightHandX, equipmentY + slotSpacing) {
             @Override
-            public Identifier getBackgroundSprite() {
-                return PlayerScreenHandler.EMPTY_OFF_HAND_SLOT_TEXTURE;
+            public Identifier getNoItemIcon() {
+                return InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD;
             }
         });
 
@@ -159,10 +158,10 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
 
         addSlot(outputSlot = new OutputSlot(this, inventory.player, input, result, 0, gemPos.get(0)));
 
-        addSlot(new SpellSlot(this, Pony.of(inventory.player), Hand.MAIN_HAND, inventory, 0, leftHandX, equipmentY - slotSpacing));
-        addSlot(new SpellSlot(this, Pony.of(inventory.player), Hand.OFF_HAND, inventory, 0, rightHandX, equipmentY - slotSpacing));
+        addSlot(new SpellSlot(this, Pony.of(inventory.player), InteractionHand.MAIN_HAND, inventory, 0, leftHandX, equipmentY - slotSpacing));
+        addSlot(new SpellSlot(this, Pony.of(inventory.player), InteractionHand.OFF_HAND, inventory, 0, rightHandX, equipmentY - slotSpacing));
 
-        onContentChanged(input);
+        slotsChanged(input);
     }
 
     public SpellbookState getSpellbookState() {
@@ -179,74 +178,73 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
     }
 
     public int getOutputSlotId() {
-        return outputSlot.id;
+        return outputSlot.index;
     }
 
     @Override
-    public boolean canUse(PlayerEntity player) {
+    public boolean stillValid(Player player) {
         return player.isAlive();
     }
 
     @Override
-    public void onContentChanged(Inventory inventory) {
-        super.onContentChanged(inventory);
-        context.run((world, pos) -> {
-            if (!world.isClient && !gemSlot.getStack().isEmpty()) {
-                Comparator<RecipeEntry<SpellbookRecipe>> comparator = Comparator.comparing(e -> e.value().getPriority());
+    public void slotsChanged(Container inventory) {
+        super.slotsChanged(inventory);
+        context.execute((world, pos) -> {
+            if (!world.isClientSide() && !gemSlot.getItem().isEmpty()) {
+                Comparator<RecipeHolder<SpellbookRecipe>> comparator = Comparator.comparing(e -> e.value().getPriority());
                 SpellbookRecipe.Input input = this.input.createInput();
                 @SuppressWarnings("unchecked")
                 ItemStack resultStack = input.hasIngredients() ? world.getServer().getRecipeManager()
-                        .values()
-                        .stream()
-                        .filter(recipe -> recipe.value() instanceof SpellbookRecipe)
-                        .map(i -> (RecipeEntry<SpellbookRecipe>)i)
-                        .filter(recipe -> recipe.value().getType() == URecipes.SPELLBOOK && recipe.value().matches(input, world))
+                        .getRecipes().stream()
+                        .filter(recipe -> recipe.value().getType() == URecipes.SPELLBOOK)
+                        .map(recipe -> (RecipeHolder<SpellbookRecipe>)recipe)
+                        .filter(recipe -> recipe.value().matches(input, world))
                         .sorted(comparator)
                         .findFirst()
-                        .filter(recipe -> result.shouldCraftRecipe((ServerPlayerEntity)this.inventory.player, recipe))
-                        .map(recipe -> recipe.value().craft(input, world.getRegistryManager()))
+                        .filter(recipe -> result.setRecipeUsed((ServerPlayer)this.inventory.player, recipe))
+                        .map(recipe -> recipe.value().assemble(input))
                         .orElseGet(input::getFallbackStack) : ItemStack.EMPTY;
-                outputSlot.setStack(resultStack);
+                outputSlot.setByPlayer(resultStack);
 
-                setReceivedStack(outputSlot.id, resultStack);
-                ((ServerPlayerEntity)this.inventory.player).networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(syncId, nextRevision(), outputSlot.id, outputSlot.getStack()));
+                setRemoteSlot(outputSlot.index, resultStack);
+                ((ServerPlayer)this.inventory.player).connection.send(new ClientboundContainerSetSlotPacket(containerId, incrementStateId(), outputSlot.index, outputSlot.getItem()));
             }
         });
     }
 
     @Override
-    public boolean canInsertIntoSlot(ItemStack stack, Slot slot) {
-        return slot != null && slot.canInsert(stack) && slot.isEnabled();
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        return slot != null && slot.mayPlace(stack) && slot.isActive();
     }
 
     @Override
-    public ItemStack quickMove(PlayerEntity player, int index) {
+    public ItemStack quickMoveStack(Player player, int index) {
         Slot sourceSlot = slots.get(index);
 
-        if (sourceSlot == null || !sourceSlot.hasStack() || (sourceSlot instanceof SpellSlot)) {
+        if (sourceSlot == null || !sourceSlot.hasItem() || (sourceSlot instanceof SpellSlot)) {
             return ItemStack.EMPTY;
         }
 
-        ItemStack transferredStack = sourceSlot.getStack();
+        ItemStack transferredStack = sourceSlot.getItem();
         ItemStack stack = transferredStack.copy();
 
         if (sourceSlot instanceof OutputSlot result) {
-            result.onTakeItem(player, stack);
+            result.onTake(player, stack);
         }
 
         if (index >= HOTBAR_START && !(sourceSlot instanceof OutputSlot || sourceSlot instanceof InputSlot)) {
             // hotbar or inventory -> crafting grid
             if (canShowSlots(SlotType.CRAFTING)) {
-                if (!gemSlot.hasStack() && gemSlot.canInsert(stack)) {
-                    if (insertItem(transferredStack, GEM_SLOT_INDEX, GEM_SLOT_INDEX + 1, false)) {
-                        onContentChanged(input);
+                if (!gemSlot.hasItem() && gemSlot.mayPlace(stack)) {
+                    if (moveItemStackTo(transferredStack, GEM_SLOT_INDEX, GEM_SLOT_INDEX + 1, false)) {
+                        slotsChanged(input);
                         return ItemStack.EMPTY;
                     }
                 }
 
-                if (insertItem(transferredStack, 0, GEM_SLOT_INDEX, false)) {
-                    sourceSlot.onQuickTransfer(transferredStack, stack);
-                    onContentChanged(input);
+                if (moveItemStackTo(transferredStack, 0, GEM_SLOT_INDEX, false)) {
+                    sourceSlot.onQuickCraft(transferredStack, stack);
+                    slotsChanged(input);
                     return ItemStack.EMPTY;
                 }
             }
@@ -255,47 +253,47 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
                 if (canShowSlots(SlotType.INVENTORY)) {
                     // hotbar -> inventory
                     // insert into inventory - armor
-                    if (insertItem(transferredStack, HOTBAR_END + 27, HOTBAR_END + 27 + 4, false)) {
-                        sourceSlot.onQuickTransfer(transferredStack, stack);
-                        onContentChanged(input);
+                    if (moveItemStackTo(transferredStack, HOTBAR_END + 27, HOTBAR_END + 27 + 4, false)) {
+                        sourceSlot.onQuickCraft(transferredStack, stack);
+                        slotsChanged(input);
                         return ItemStack.EMPTY;
                     }
 
                     // insert into inventory - inventory
-                    if (insertItem(transferredStack, HOTBAR_END, HOTBAR_END + 27, false)) {
-                        sourceSlot.onQuickTransfer(transferredStack, stack);
-                        onContentChanged(input);
+                    if (moveItemStackTo(transferredStack, HOTBAR_END, HOTBAR_END + 27, false)) {
+                        sourceSlot.onQuickCraft(transferredStack, stack);
+                        slotsChanged(input);
                         return ItemStack.EMPTY;
                     }
                 }
             } else {
                 // inventory -> hotbar
-                if (insertItem(transferredStack, HOTBAR_START, HOTBAR_END, true)) {
-                    sourceSlot.onQuickTransfer(transferredStack, stack);
-                    onContentChanged(input);
+                if (moveItemStackTo(transferredStack, HOTBAR_START, HOTBAR_END, true)) {
+                    sourceSlot.onQuickCraft(transferredStack, stack);
+                    slotsChanged(input);
                     return ItemStack.EMPTY;
                 }
             }
         } else {
             // crafting grid -> hotbar
-            if (insertItem(transferredStack, HOTBAR_START, HOTBAR_END, true)) {
-                sourceSlot.onQuickTransfer(transferredStack, stack);
-                onContentChanged(input);
+            if (moveItemStackTo(transferredStack, HOTBAR_START, HOTBAR_END, true)) {
+                sourceSlot.onQuickCraft(transferredStack, stack);
+                slotsChanged(input);
                 return ItemStack.EMPTY;
             }
 
             if (canShowSlots(SlotType.INVENTORY)) {
                 // crafting grid -> armor
-                if (insertItem(transferredStack, HOTBAR_END + 27, HOTBAR_END + 27 + 4, false)) {
-                    sourceSlot.onQuickTransfer(transferredStack, stack);
-                    onContentChanged(input);
+                if (moveItemStackTo(transferredStack, HOTBAR_END + 27, HOTBAR_END + 27 + 4, false)) {
+                    sourceSlot.onQuickCraft(transferredStack, stack);
+                    slotsChanged(input);
                     return ItemStack.EMPTY;
                 }
 
                 // crafting grid -> inventory
-                if (insertItem(transferredStack, HOTBAR_END, HOTBAR_END + 27, false)) {
-                    sourceSlot.onQuickTransfer(transferredStack, stack);
-                    onContentChanged(input);
+                if (moveItemStackTo(transferredStack, HOTBAR_END, HOTBAR_END + 27, false)) {
+                    sourceSlot.onQuickCraft(transferredStack, stack);
+                    slotsChanged(input);
                     return ItemStack.EMPTY;
                 }
             }
@@ -305,25 +303,25 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
             return ItemStack.EMPTY;
         }
 
-        sourceSlot.onTakeItem(player, transferredStack);
+        sourceSlot.onTake(player, transferredStack);
 
         return stack;
     }
 
     @Override
-    public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
+    public void clicked(int slotIndex, int button, ContainerInput actionType, Player player) {
         if (slotIndex >= 0 && slotIndex < slots.size() && getSlot(slotIndex) instanceof SpellSlot slot) {
-            ItemStack cursorStack = getCursorStack();
-            if (actionType == SlotActionType.PICKUP && cursorStack.isOf(UItems.GEMSTONE) && cursorStack.getCount() == 1) {
+            ItemStack cursorStack = getCarried();
+            if (actionType == ContainerInput.PICKUP && cursorStack.is(UItems.GEMSTONE) && cursorStack.getCount() == 1) {
                 slot.swapSpells(cursorStack);
             }
         } else {
-            super.onSlotClick(slotIndex, button, actionType, player);
+            super.clicked(slotIndex, button, actionType, player);
         }
     }
 
     @Override
-    protected boolean insertItem(ItemStack stack, int startIndex, int endIndex, boolean fromLast) {
+    protected boolean moveItemStackTo(ItemStack stack, int startIndex, int endIndex, boolean fromLast) {
         boolean success = false;
 
         int i = fromLast ? endIndex - 1 : startIndex;
@@ -334,16 +332,16 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
             }
 
             Slot slot = getSlot(i);
-            ItemStack current = slot.getStack();
+            ItemStack current = slot.getItem();
 
-            if (!current.isEmpty() && ItemStack.areItemsAndComponentsEqual(stack, current)) {
+            if (!current.isEmpty() && ItemStack.isSameItemSameComponents(stack, current)) {
                 // abide by the slot's max item count when trying to insert stacks
-                int available = Math.min(Math.min(current.getMaxCount(), slot.getMaxItemCount(stack)) - current.getCount(), stack.getCount());
+                int available = Math.min(Math.min(current.getMaxStackSize(), slot.getMaxStackSize(stack)) - current.getCount(), stack.getCount());
 
                 if (available > 0) {
-                    current.increment(available);
-                    stack.decrement(available);
-                    slot.markDirty();
+                    current.grow(available);
+                    stack.shrink(available);
+                    slot.setChanged();
                     success = true;
                 }
             }
@@ -359,15 +357,15 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
             }
 
             Slot slot = getSlot(i);
-            ItemStack current = slot.getStack();
+            ItemStack current = slot.getItem();
 
-            if (current.isEmpty() && slot.canInsert(stack)) {
-                if (stack.getCount() > slot.getMaxItemCount(stack)) {
-                    slot.setStack(stack.split(slot.getMaxItemCount(stack)));
+            if (current.isEmpty() && slot.mayPlace(stack)) {
+                if (stack.getCount() > slot.getMaxStackSize(stack)) {
+                    slot.setByPlayer(stack.split(slot.getMaxStackSize(stack)));
                 } else {
-                    slot.setStack(stack.split(stack.getCount()));
+                    slot.setByPlayer(stack.split(stack.getCount()));
                 }
-                slot.markDirty();
+                slot.setChanged();
                 success = true;
                 break;
             }
@@ -379,45 +377,45 @@ public class SpellbookScreenHandler extends AbstractRecipeScreenHandler {
     }
 
     @Override
-    public void onClosed(PlayerEntity player) {
-        super.onClosed(player);
-        context.run((world, pos) -> {
-            dropInventory(player, input);
+    public void removed(Player player) {
+        super.removed(player);
+        context.execute((world, pos) -> {
+            clearContainer(player, input);
         });
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public PostFillAction fillInputSlots(boolean craftAll, boolean creative, RecipeEntry<?> recipe, ServerWorld world, PlayerInventory inventory) {
+    public PostPlaceAction handlePlacement(boolean craftAll, boolean creative, RecipeHolder<?> recipe, ServerLevel world, Inventory inventory) {
         List<Slot> inputSlots = slots.stream().filter(slot -> slot instanceof IngredientSlot).toList();
-        return InputSlotFiller.fill(new InputSlotFiller.Handler<SpellbookRecipe>() {
+        return ServerPlaceRecipe.placeRecipe(new ServerPlaceRecipe.CraftingMenuAccess<SpellbookRecipe>() {
             @Override
-            public void populateRecipeFinder(RecipeFinder finder) {
-                SpellbookScreenHandler.this.populateRecipeFinder(finder);
+            public void fillCraftSlotsStackedContents(StackedItemContents finder) {
+                SpellbookScreenHandler.this.fillCraftSlotsStackedContents(finder);
             }
 
             @Override
-            public void clear() {
-                input.clear();
+            public void clearCraftingContent() {
+                input.clearContent();
             }
 
             @Override
-            public boolean matches(RecipeEntry<SpellbookRecipe> entry) {
-                return entry.value().matches(SpellbookScreenHandler.this.input.createInput(), inventory.player.getWorld());
+            public boolean recipeMatches(RecipeHolder<SpellbookRecipe> entry) {
+                return entry.value().matches(SpellbookScreenHandler.this.input.createInput(), inventory.player.level());
             }
-        }, inputSlots.size(), 1, inputSlots, inputSlots, inventory, (RecipeEntry<SpellbookRecipe>)recipe, craftAll, creative);
+        }, inputSlots.size(), 1, inputSlots, inputSlots, inventory, (RecipeHolder<SpellbookRecipe>)recipe, craftAll, creative);
     }
 
     @Override
-    public void populateRecipeFinder(RecipeFinder finder) {
-        input.provideRecipeInputs(finder);
-        for (ItemStack stack : inventory.getMainStacks()) {
-            finder.addInput(stack);
+    public void fillCraftSlotsStackedContents(StackedItemContents finder) {
+        input.fillStackedContents(finder);
+        for (ItemStack stack : inventory.getNonEquipmentItems()) {
+            finder.accountStack(stack);
         }
     }
 
     @Override
-    public RecipeBookType getCategory() {
+    public RecipeBookType getRecipeBookType() {
         return RecipeBookType.CRAFTING;
     }
 }

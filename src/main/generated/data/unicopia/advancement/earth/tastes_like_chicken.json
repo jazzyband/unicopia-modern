@@ -1,0 +1,30 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "eaten_axolotl": {
+      "conditions": {
+        "item": {
+          "items": "unicopia:fried_axolotl"
+        }
+      },
+      "trigger": "minecraft:consume_item"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.tastes_like_chicken.description"
+    },
+    "icon": {
+      "id": "unicopia:fried_axolotl"
+    },
+    "title": {
+      "translate": "advancements.unicopia.tastes_like_chicken.title"
+    }
+  },
+  "requirements": [
+    [
+      "eaten_axolotl"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

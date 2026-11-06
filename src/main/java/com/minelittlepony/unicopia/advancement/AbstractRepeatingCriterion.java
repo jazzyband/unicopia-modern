@@ -1,80 +1,52 @@
 package com.minelittlepony.unicopia.advancement;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
-
+import net.minecraft.advancements.triggers.CriterionTrigger;
+import net.minecraft.advancements.predicates.entity.EntityPredicate;
+import net.minecraft.advancements.triggers.SimpleCriterionTrigger;
+import net.minecraft.server.PlayerAdvancements;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.loot.LootContext;
 import com.minelittlepony.unicopia.entity.player.Pony;
 
-import net.minecraft.advancement.PlayerAdvancementTracker;
-import net.minecraft.advancement.criterion.AbstractCriterion;
-import net.minecraft.advancement.criterion.Criterion;
-import net.minecraft.loot.context.LootContext;
-import net.minecraft.predicate.entity.EntityPredicate;
-import net.minecraft.server.network.ServerPlayerEntity;
-
-public abstract class AbstractRepeatingCriterion<T extends AbstractRepeatingCriterion.Conditions> implements Criterion<T> {
-    private final Map<PlayerAdvancementTracker, Set<Criterion.ConditionsContainer<T>>> progressions = new IdentityHashMap<>();
-
-    @Override
-    public final void beginTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<T> conditions) {
-        progressions.computeIfAbsent(manager, m -> new HashSet<>()).add(conditions);
-    }
-
-    @Override
-    public final void endTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<T> conditions) {
-        var set = progressions.get(manager);
-        if (set != null) {
-            set.remove(conditions);
-            if (set.isEmpty()) {
-                progressions.remove(manager);
-            }
-        }
-    }
-
-    @Override
-    public final void endTracking(PlayerAdvancementTracker tracker) {
-        progressions.remove(tracker);
-    }
-
-    protected void trigger(ServerPlayerEntity player, Predicate<T> shouldCount, BiPredicate<Integer, T> predicate) {
-        PlayerAdvancementTracker tracker = player.getAdvancementTracker();
+public abstract class AbstractRepeatingCriterion<T extends AbstractRepeatingCriterion.Conditions> implements CriterionTrigger<T> {
+    protected void trigger(ServerPlayer player, Predicate<T> shouldCount, BiPredicate<Integer, T> predicate) {
+        PlayerAdvancements tracker = player.getAdvancements();
         TriggerCountTracker counter = Pony.of(player).getAdvancementProgress();
         counter.removeGranted(player, tracker);
 
-        var advancements = progressions.get(tracker);
+        var advancements = tracker.getTriggerMapForType(this);
         if (advancements != null && !advancements.isEmpty()) {
-            LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, player);
-            List<Criterion.ConditionsContainer<T>> matches = null;
+            LootContext lootContext = EntityPredicate.createContext(player, player);
+            List<PlayerAdvancements.TriggerInstanceKey> matches = null;
 
-            for (var condition : advancements) {
-                T conditions = condition.conditions();
-                if (shouldCount.test(conditions) && predicate.test(counter.update(condition.advancement(), condition.id()), conditions)) {
+            for (var condition : advancements.entrySet()) {
+                T conditions = condition.getValue();
+                var key = condition.getKey();
+                if (shouldCount.test(conditions) && predicate.test(counter.update(key.advancement(), key.criterion()), conditions)) {
                     var playerPredicate = conditions.player();
-                    if (playerPredicate.isEmpty() || playerPredicate.get().test(lootContext)) {
+                    if (playerPredicate.isEmpty() || playerPredicate.get().value().test(lootContext)) {
                         if (matches == null) {
                             matches = new ArrayList<>();
                         }
 
-                        matches.add(condition);
+                        matches.add(key);
                     }
                 }
             }
 
             if (matches != null) {
                 for (var advancement : matches) {
-                    advancement.grant(tracker);
+                    tracker.award(advancement.advancement(), advancement.criterion());
                 }
                 counter.removeGranted(player, tracker);
             }
         }
     }
 
-    public interface Conditions extends AbstractCriterion.Conditions {
+    public interface Conditions extends SimpleCriterionTrigger.SimpleInstance {
     }
 }

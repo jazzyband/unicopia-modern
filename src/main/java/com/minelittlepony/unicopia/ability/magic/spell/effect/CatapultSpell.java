@@ -2,7 +2,23 @@ package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import java.util.List;
 import java.util.function.Consumer;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.UTags;
@@ -20,24 +36,6 @@ import com.minelittlepony.unicopia.projectile.MagicBeamEntity;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.enums.ChestType;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-
 /**
  * Picks up and throws an entity or block.
  */
@@ -52,9 +50,9 @@ public class CatapultSpell extends AbstractSpell implements ProjectileDelegate.B
     private static final float HORIZONTAL_VARIANCE = 0.25F;
     private static final float MAX_STRENGTH = 120;
 
-    private static final SpellAttribute<Float> LAUNCH_SPEED = SpellAttribute.create(SpellAttributeType.VERTICAL_VELOCITY, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.STRENGTH, strength -> 0.1F + (MathHelper.clamp(strength, -MAX_STRENGTH, MAX_STRENGTH) - 40) / 16F);
-    private static final SpellAttribute<Float> HANG_TIME = SpellAttribute.create(SpellAttributeType.HANG_TIME, AttributeFormat.TIME, AttributeFormat.PERCENTAGE, Trait.AIR, air -> 50 + (int)MathHelper.clamp(air, 0, 10) * 20F);
-    private static final SpellAttribute<Float> PUSHING_POWER = SpellAttribute.create(SpellAttributeType.PUSHING_POWER, AttributeFormat.REGULAR, Trait.POWER, power -> 1 + MathHelper.clamp(power, 0, 10) / 10F);
+    private static final SpellAttribute<Float> LAUNCH_SPEED = SpellAttribute.create(SpellAttributeType.VERTICAL_VELOCITY, AttributeFormat.REGULAR, AttributeFormat.PERCENTAGE, Trait.STRENGTH, strength -> 0.1F + (Mth.clamp(strength, -MAX_STRENGTH, MAX_STRENGTH) - 40) / 16F);
+    private static final SpellAttribute<Float> HANG_TIME = SpellAttribute.create(SpellAttributeType.HANG_TIME, AttributeFormat.TIME, AttributeFormat.PERCENTAGE, Trait.AIR, air -> 50 + (int)Mth.clamp(air, 0, 10) * 20F);
+    private static final SpellAttribute<Float> PUSHING_POWER = SpellAttribute.create(SpellAttributeType.PUSHING_POWER, AttributeFormat.REGULAR, Trait.POWER, power -> 1 + Mth.clamp(power, 0, 10) / 10F);
     private static final SpellAttribute<Boolean> CAUSES_LEVITATION = SpellAttribute.createConditional(SpellAttributeType.CAUSES_LEVITATION, Trait.FOCUS, focus -> focus > 50);
     private static final SpellAttribute<Affects> AFFECTS = SpellAttribute.createEnumerated(SpellAttributeType.AFFECTS, Trait.ORDER, order -> {
         if (order <= 0) {
@@ -66,7 +64,7 @@ public class CatapultSpell extends AbstractSpell implements ProjectileDelegate.B
     });
     static final TooltipFactory TOOLTIP = TooltipFactory.of(LAUNCH_SPEED, HANG_TIME, PUSHING_POWER, CAUSES_LEVITATION, AFFECTS);
 
-    static void appendTooltip(CustomisedSpellType<? extends CatapultSpell> type, List<Text> tooltip) {
+    static void appendTooltip(CustomisedSpellType<? extends CatapultSpell> type, List<Component> tooltip) {
         TOOLTIP.appendTooltip(type, tooltip);
     }
 
@@ -81,7 +79,7 @@ public class CatapultSpell extends AbstractSpell implements ProjectileDelegate.B
         }
 
         if (!projectile.isClient() && projectile instanceof MagicBeamEntity source && source.canModifyAt(hit.getBlockPos())) {
-            createBlockEntity(projectile.getWorld(), hit.getBlockPos(), e -> {
+            createBlockEntity(projectile.level(), hit.getBlockPos(), e -> {
                 e.setOnGround(true);
                 apply(source, e);
                 e.setOnGround(false);
@@ -116,29 +114,29 @@ public class CatapultSpell extends AbstractSpell implements ProjectileDelegate.B
 
         float power = 1 + getTraits().get(Trait.POWER, 0, 10) / 10F;
 
-        if (!e.isOnGround()) {
-            e.setVelocity(caster.asEntity().getVelocity().multiply(power));
+        if (!e.onGround()) {
+            e.setDeltaMovement(caster.asEntity().getDeltaMovement().scale(power));
         } else {
-            Random rng = caster.asWorld().random;
-            e.addVelocity(
-                rng.nextTriangular(0, HORIZONTAL_VARIANCE) * 0.1F,
+            RandomSource rng = caster.asWorld().getRandom();
+            e.push(
+                rng.triangle(0, HORIZONTAL_VARIANCE) * 0.1F,
                 LAUNCH_SPEED.get(getTraits()),
-                rng.nextTriangular(0, HORIZONTAL_VARIANCE) * 0.1F
+                rng.triangle(0, HORIZONTAL_VARIANCE) * 0.1F
             );
 
             int hoverDuration = HANG_TIME.get(getTraits()).intValue();
             boolean noGravity = CAUSES_LEVITATION.get(getTraits());
 
             if (e instanceof LivingEntity l) {
-                if (l.hasStatusEffect(StatusEffects.SLOW_FALLING)) {
-                    l.removeStatusEffect(StatusEffects.SLOW_FALLING);
+                if (l.hasEffect(MobEffects.SLOW_FALLING)) {
+                    l.removeEffect(MobEffects.SLOW_FALLING);
                 }
-                l.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, hoverDuration, 1));
+                l.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, hoverDuration, 1));
             }
 
-            if (noGravity || e instanceof FallingBlockEntity && hasRoof(e.getWorld(), e.getBlockPos().up())) {
+            if (noGravity || e instanceof FallingBlockEntity && hasRoof(e.level(), e.blockPosition().above())) {
                 if (e instanceof LivingEntity l) {
-                    l.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 200, 1));
+                    l.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 200, 1));
                 } else {
                     e.setNoGravity(true);
                     if (e instanceof Hoverable h) {
@@ -148,44 +146,42 @@ public class CatapultSpell extends AbstractSpell implements ProjectileDelegate.B
             }
         }
 
-        e.velocityDirty = true;
-        e.velocityModified = true;
     }
 
-    private boolean hasRoof(World world, BlockPos pos) {
+    private boolean hasRoof(Level world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
-        return !state.isReplaceable() && !state.getCollisionShape(world, pos).isEmpty();
+        return !state.canBeReplaced() && !state.getCollisionShape(world, pos).isEmpty();
     }
 
-    static void createBlockEntity(World world, BlockPos bpos, @Nullable Consumer<Entity> apply) {
+    static void createBlockEntity(Level world, BlockPos bpos, @Nullable Consumer<Entity> apply) {
 
-        if (world.isAir(bpos)) {
+        if (world.isEmptyBlock(bpos)) {
             return;
         }
 
         BlockState state = world.getBlockState(bpos);
-        if (state.isIn(UTags.Blocks.CATAPULT_IMMUNE)) {
+        if (state.is(UTags.Blocks.CATAPULT_IMMUNE)) {
             return;
         }
 
-        Vec3d pos = Vec3d.ofBottomCenter(bpos);
+        Vec3 pos = Vec3.atBottomCenterOf(bpos);
         FallingBlockEntity e = new FallingBlockEntity(world, pos.x, pos.y, pos.z, state
-                .withIfExists(Properties.WATERLOGGED, false)
-                .withIfExists(ChestBlock.CHEST_TYPE, ChestType.SINGLE));
+                .trySetValue(BlockStateProperties.WATERLOGGED, false)
+                .trySetValue(ChestBlock.TYPE, ChestType.SINGLE));
         if (state.hasBlockEntity()) {
-            e.blockEntityData = world.getChunk(bpos).getPackedBlockEntityNbt(bpos, world.getRegistryManager());
+            e.blockData = world.getChunk(bpos).getBlockEntityNbtForSaving(bpos, world.registryAccess());
         }
 
         world.removeBlockEntity(bpos);
         world.removeBlock(bpos, true);
 
         e.setOnGround(false);
-        e.timeFalling = Integer.MIN_VALUE;
-        e.setHurtEntities(1 + (world.random.nextFloat() * 10), 100);
+        e.time = Integer.MIN_VALUE;
+        e.setHurtsEntities(1 + (world.getRandom().nextFloat() * 10), 100);
 
         if (apply != null) {
             apply.accept(e);
         }
-        world.spawnEntity(e);
+        world.addFreshEntity(e);
     }
 }

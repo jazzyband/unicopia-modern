@@ -1,17 +1,10 @@
-#version 150
-
-#moj_import <minecraft:matrix.glsl>
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
 uniform sampler2D Sampler0;
-
-uniform vec4 ColorModulator;
-
-in vec4 texProj0;
-in vec4 vertexColor;
-
-out vec4 fragColor;
+layout(location = 0) in vec4 texProj0;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
-  vec4 scale = vec4(0.25, 0.25, 0.25, 0.25);
-  fragColor = textureProj(Sampler0, texProj0 * scale);
+    fragColor = textureProj(Sampler0, texProj0 * 0.25);
 }

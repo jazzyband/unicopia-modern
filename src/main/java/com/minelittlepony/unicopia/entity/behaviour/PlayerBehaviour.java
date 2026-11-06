@@ -3,26 +3,12 @@ package com.minelittlepony.unicopia.entity.behaviour;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.duck.*;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-
-public class PlayerBehaviour extends EntityBehaviour<PlayerEntity> {
+public class PlayerBehaviour extends EntityBehaviour<Player> {
     @Override
-    public void update(Living<?> source, PlayerEntity entity, Disguise spell) {
-        if (source instanceof Pony pony) {
-            PlayerEntity pFrom = pony.asEntity();
-
-            entity.capeX = pFrom.capeX;
-            entity.capeY = pFrom.capeY;
-            entity.capeZ = pFrom.capeZ;
-            entity.lastCapeX = pFrom.lastCapeX;
-            entity.lastCapeY = pFrom.lastCapeY;
-            entity.lastCapeZ = pFrom.lastCapeZ;
-        } else {
-            ((PlayerEntityDuck)entity).callUpdateCapeAngles();
-        }
-
+    public void update(Living<?> source, Player entity, Disguise spell) {
         if (source.asEntity().getPose() != entity.getPose()) {
             entity.setPose(source.asEntity().getPose());
         }
@@ -35,7 +21,7 @@ public class PlayerBehaviour extends EntityBehaviour<PlayerEntity> {
     }
 
     @Override
-    public boolean isEqual(PlayerEntity a, Entity b) {
-        return b instanceof PlayerEntity p && p.getUuid().equals(b.getUuid());
+    public boolean isEqual(Player a, Entity b) {
+        return b instanceof Player p && p.getUUID().equals(b.getUUID());
     }
 }

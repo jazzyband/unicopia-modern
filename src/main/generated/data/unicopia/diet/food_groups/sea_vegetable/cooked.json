@@ -1,0 +1,16 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:empty"
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 8,
+      "saturation": 12.8
+    }
+  },
+  "tags": [
+    "unicopia:food_types/high_quality_sea_vegetables"
+  ]
+}

@@ -1,42 +1,45 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.minelittlepony.unicopia.entity.MagicImmune;
 import com.minelittlepony.unicopia.entity.damage.UDamageSources;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.Level;
 
-import static net.minecraft.entity.data.DataTracker.Builder;;
+import static net.minecraft.network.syncher.SynchedEntityData.Builder;;
 
 public abstract class StationaryObjectEntity extends Entity implements UDamageSources, MagicImmune {
-    private static final TrackedData<Float> HEALTH = DataTracker.registerData(StationaryObjectEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    private static final EntityDataAccessor<Float> HEALTH = SynchedEntityData.defineId(StationaryObjectEntity.class, EntityDataSerializers.FLOAT);
 
-    public StationaryObjectEntity(EntityType<?> entityType, World world) {
+    public StationaryObjectEntity(EntityType<?> entityType, Level world) {
         super(entityType, world);
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        builder.add(HEALTH, getMaxHealth());
+    protected void defineSynchedData(Builder builder) {
+        builder.define(HEALTH, getMaxHealth());
     }
 
     public abstract float getMaxHealth();
 
     public final float setHealth(float health) {
-        health = MathHelper.clamp(health, 0, getMaxHealth());
-        dataTracker.set(HEALTH, health);
+        health = Mth.clamp(health, 0, getMaxHealth());
+        entityData.set(HEALTH, health);
         return health;
     }
 
     public final float getHealth() {
-        return dataTracker.get(HEALTH);
+        return entityData.get(HEALTH);
     }
 
     public final boolean isDead() {
@@ -44,7 +47,7 @@ public abstract class StationaryObjectEntity extends Entity implements UDamageSo
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float damage) {
+    public boolean hurtServer(ServerLevel world, DamageSource source, float damage) {
         if (!isDead()) {
             if (setHealth(getHealth() - damage) <= 0) {
                 kill(world);
@@ -64,22 +67,22 @@ public abstract class StationaryObjectEntity extends Entity implements UDamageSo
     }
 
     @Override
-    protected void readCustomDataFromNbt(NbtCompound compound) {
-        setHealth(compound.getFloat("health", getMaxHealth()));
+    protected void readAdditionalSaveData(ValueInput compound) {
+        setHealth(compound.getFloatOr("health", getMaxHealth()));
     }
 
     @Override
-    protected void writeCustomDataToNbt(NbtCompound compound) {
+    protected void addAdditionalSaveData(ValueOutput compound) {
         compound.putFloat("health", getHealth());
     }
 
     @Override
-    public final boolean canHit() {
+    public final boolean isPickable() {
         return true;
     }
 
     @Override
-    public final World asWorld() {
-        return getWorld();
+    public final Level asWorld() {
+        return level();
     }
 }

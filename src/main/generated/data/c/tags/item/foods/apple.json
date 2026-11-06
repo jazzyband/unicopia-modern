@@ -1,0 +1,13 @@
+{
+  "values": [
+    "minecraft:apple",
+    "minecraft:golden_apple",
+    "minecraft:enchanted_golden_apple",
+    "unicopia:rotten_apple",
+    "#unicopia:fresh_apples",
+    {
+      "id": "#c:pyrite_apples",
+      "required": false
+    }
+  ]
+}

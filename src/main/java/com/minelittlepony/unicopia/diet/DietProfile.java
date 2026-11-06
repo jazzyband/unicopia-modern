@@ -8,25 +8,23 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.Consumable;
 import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.component.TransientComponentMap;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ConsumableComponent;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 
 public record DietProfile(
         float defaultMultiplier,
@@ -43,12 +41,12 @@ public record DietProfile(
                 Codec.list(FoodGroupEffects.createCodec(FoodGroupKey.CODEC)).fieldOf("effects").forGetter(DietProfile::effects),
                 FoodGroupEffects.createCodec(FoodGroupKey.CODEC).optionalFieldOf("default_effect").forGetter(DietProfile::defaultEffect)
     ).apply(instance, DietProfile::new));
-    public static final PacketCodec<RegistryByteBuf, DietProfile> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.FLOAT, DietProfile::defaultMultiplier,
-            PacketCodecs.FLOAT, DietProfile::foragingMultiplier,
-            Multiplier.PACKET_CODEC.collect(PacketCodecs.toList()), DietProfile::multipliers,
-            FoodGroupEffects.createPacketCodec(FoodGroupKey.PACKET_CODEC).collect(PacketCodecs.toList()), DietProfile::effects,
-            PacketCodecs.optional(FoodGroupEffects.createPacketCodec(FoodGroupKey.PACKET_CODEC)), DietProfile::defaultEffect,
+    public static final StreamCodec<RegistryFriendlyByteBuf, DietProfile> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.FLOAT, DietProfile::defaultMultiplier,
+            ByteBufCodecs.FLOAT, DietProfile::foragingMultiplier,
+            Multiplier.PACKET_CODEC.apply(ByteBufCodecs.list()), DietProfile::multipliers,
+            FoodGroupEffects.createPacketCodec(FoodGroupKey.PACKET_CODEC).apply(ByteBufCodecs.list()), DietProfile::effects,
+            ByteBufCodecs.optional(FoodGroupEffects.createPacketCodec(FoodGroupKey.PACKET_CODEC)), DietProfile::defaultEffect,
             DietProfile::new
     );
 
@@ -79,7 +77,7 @@ public record DietProfile(
     }
 
     static boolean isForaged(ItemStack stack) {
-        return stack.getComponents().get(DataComponentTypes.FOOD) == null;
+        return stack.getComponents().get(DataComponents.FOOD) == null;
     }
 
     public boolean isEmpty() {
@@ -95,7 +93,7 @@ public record DietProfile(
     }
 
     @Nullable
-    public FoodComponent getAdjustedFoodComponent(ItemStack stack, TransientComponentMap components, @Nullable FoodComponent food) {
+    public FoodProperties getAdjustedFoodComponent(ItemStack stack, TransientComponentMap components, @Nullable FoodProperties food) {
         if (isEmpty()) {
             return food;
         }
@@ -108,14 +106,14 @@ public record DietProfile(
     }
 
     @Nullable
-    public ConsumableComponent getAdjustedConsumableComponent(ItemStack stack, TransientComponentMap components, @Nullable ConsumableComponent consumable) {
+    public Consumable getAdjustedConsumableComponent(ItemStack stack, TransientComponentMap components, @Nullable Consumable consumable) {
         return getFoodAttributeForNonEdibleFood(stack, components)
                 .map(attributes -> attributes.getConsumableComponent(consumable))
                 .orElse(consumable);
     }
 
     @Nullable
-    private FoodComponent applyFoodQualityRatio(ItemStack stack, FoodComponent food) {
+    private FoodProperties applyFoodQualityRatio(ItemStack stack, FoodProperties food) {
         var ratios = getRatios(stack);
         if (isInedible(ratios)) {
             return null;
@@ -124,7 +122,7 @@ public record DietProfile(
         float hunger = food.nutrition() * ratios.getFirst();
         int baseline = (int)hunger;
 
-        return new FoodComponent(
+        return new FoodProperties(
             Math.max(1, (hunger - baseline) >= 0.5F ? baseline + 1 : baseline),
             food.saturation() * ratios.getSecond(),
             food.canAlwaysEat()
@@ -148,36 +146,36 @@ public record DietProfile(
         return Pair.of(hungerMultiplier, saturationMultiplier);
     }
 
-    public void appendTooltip(ItemStack stack, @Nullable Pony pony, Consumer<Text> tooltip, TooltipType context) {
+    public void appendTooltip(ItemStack stack, @Nullable Pony pony, Consumer<Component> tooltip, TooltipFlag context) {
         if (isEmpty()) {
             return;
         }
 
-        var food = stack.get(DataComponentTypes.FOOD);
+        var food = stack.get(DataComponents.FOOD);
         var ratios = getRatios(stack);
 
         if (food == null || isInedible(ratios)) {
             return;
         }
 
-        tooltip.accept(Text.translatable("unicopia.diet.information").formatted(Formatting.DARK_PURPLE));
+        tooltip.accept(Component.translatable("unicopia.diet.information").withStyle(ChatFormatting.DARK_PURPLE));
         findEffect(stack).orElseGet(() -> PonyDiets.getInstance().getEffects(stack)).appendTooltip(stack, tooltip, context);
 
         float baseMultiplier = (isForaged(stack) ? foragingMultiplier() : defaultMultiplier());
 
         if (context.isAdvanced()) {
             var nonAdjustedFood = getNonAdjustedFoodComponent(stack, pony).orElse(food);
-            tooltip.accept(Text.literal(" ").append(Text.translatable("unicopia.diet.base_multiplier", baseMultiplier).formatted(Formatting.DARK_GRAY)));
-            tooltip.accept(Text.literal(" ").append(Text.translatable("unicopia.diet.hunger.detailed", food.nutrition(), nonAdjustedFood.nutrition(), (int)(ratios.getFirst() * 100))).formatted(Formatting.DARK_GRAY));
-            tooltip.accept(Text.literal(" ").append(Text.translatable("unicopia.diet.saturation.detailed", food.saturation(), nonAdjustedFood.saturation(), (int)(ratios.getSecond() * 100))).formatted(Formatting.DARK_GRAY));
+            tooltip.accept(Component.literal(" ").append(Component.translatable("unicopia.diet.base_multiplier", baseMultiplier).withStyle(ChatFormatting.DARK_GRAY)));
+            tooltip.accept(Component.literal(" ").append(Component.translatable("unicopia.diet.hunger.detailed", food.nutrition(), nonAdjustedFood.nutrition(), (int)(ratios.getFirst() * 100))).withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.accept(Component.literal(" ").append(Component.translatable("unicopia.diet.saturation.detailed", food.saturation(), nonAdjustedFood.saturation(), (int)(ratios.getSecond() * 100))).withStyle(ChatFormatting.DARK_GRAY));
         } else {
-            tooltip.accept(Text.literal(" ").append(Text.translatable("unicopia.diet.hunger", (int)(ratios.getFirst() * 100))).formatted(Formatting.DARK_GRAY));
-            tooltip.accept(Text.literal(" ").append(Text.translatable("unicopia.diet.saturation", (int)(ratios.getSecond() * 100))).formatted(Formatting.DARK_GRAY));
+            tooltip.accept(Component.literal(" ").append(Component.translatable("unicopia.diet.hunger", (int)(ratios.getFirst() * 100))).withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.accept(Component.literal(" ").append(Component.translatable("unicopia.diet.saturation", (int)(ratios.getSecond() * 100))).withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 
-    private Optional<FoodComponent> getNonAdjustedFoodComponent(ItemStack stack, @Nullable Pony pony) {
-        FoodComponent food = stack.getComponents().get(DataComponentTypes.FOOD);
+    private Optional<FoodProperties> getNonAdjustedFoodComponent(ItemStack stack, @Nullable Pony pony) {
+        FoodProperties food = stack.getComponents().get(DataComponents.FOOD);
 
         if (food != null) {
             return Optional.ofNullable(food);
@@ -223,10 +221,10 @@ public record DietProfile(
                 Codec.FLOAT.fieldOf("hunger").forGetter(Multiplier::hunger),
                 Codec.FLOAT.fieldOf("saturation").forGetter(Multiplier::saturation)
         ).apply(instance, Multiplier::new));
-        public static final PacketCodec<RegistryByteBuf, Multiplier> PACKET_CODEC = PacketCodec.tuple(
-                FoodGroupKey.PACKET_CODEC.collect(PacketCodecs.toCollection(HashSet::new)), Multiplier::tags,
-                PacketCodecs.FLOAT, Multiplier::hunger,
-                PacketCodecs.FLOAT, Multiplier::saturation,
+        public static final StreamCodec<RegistryFriendlyByteBuf, Multiplier> PACKET_CODEC = StreamCodec.composite(
+                FoodGroupKey.PACKET_CODEC.apply(ByteBufCodecs.collection(HashSet::new)), Multiplier::tags,
+                ByteBufCodecs.FLOAT, Multiplier::hunger,
+                ByteBufCodecs.FLOAT, Multiplier::saturation,
                 Multiplier::new
         );
 

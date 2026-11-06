@@ -1,13 +1,13 @@
 package com.minelittlepony.unicopia.client.sound;
 
-import net.minecraft.client.sound.EntityTrackingSoundInstance;
-import net.minecraft.entity.Entity;
-import net.minecraft.sound.SoundEvent;
+import net.minecraft.client.resources.sounds.EntityBoundSoundInstance;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.Entity;
 
-public class LoopedEntityTrackingSoundInstance extends EntityTrackingSoundInstance {
+public class LoopedEntityTrackingSoundInstance extends EntityBoundSoundInstance {
     public LoopedEntityTrackingSoundInstance(SoundEvent soundEvent, float volume, float pitch, Entity entity, long seed) {
-        super(soundEvent, entity.getSoundCategory(), volume, pitch, entity, seed);
-        this.repeat = true;
-        this.repeatDelay = 0;
+        super(soundEvent, entity.getSoundSource(), volume, pitch, entity, seed);
+        this.looping = true;
+        this.delay = 0;
     }
 }

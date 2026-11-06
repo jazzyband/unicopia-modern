@@ -7,7 +7,9 @@ import com.minelittlepony.unicopia.block.state.Schematic;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.recipe.TransformCropsRecipe;
 import com.minelittlepony.unicopia.recipe.URecipes;
-
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import io.github.mattidragon.tlaapi.api.gui.GuiBuilder;
 import io.github.mattidragon.tlaapi.api.gui.TextureConfig;
 import io.github.mattidragon.tlaapi.api.plugin.PluginContext;
@@ -15,18 +17,15 @@ import io.github.mattidragon.tlaapi.api.recipe.TlaIngredient;
 import io.github.mattidragon.tlaapi.api.recipe.TlaRecipe;
 import io.github.mattidragon.tlaapi.api.recipe.TlaStack;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.Items;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 
 public class StructureInteractionTlaRecipe implements TlaRecipe {
     private final RecipeCategory category;
@@ -46,12 +45,12 @@ public class StructureInteractionTlaRecipe implements TlaRecipe {
         context.addRecipeGenerator(URecipes.GROWING, recipe -> {
             return new StructureInteractionTlaRecipe(
                     category,
-                    recipe.id().getValue(),
-                    Schematic.Unbaked.builder()
+                    recipe.id().location(),
+                    new Schematic.Builder()
                         .fill(0, 0, 0, 6, 0, 6, recipe.value().getCatalystState())
-                        .set(3, 0, 3, Blocks.FARMLAND.getDefaultState())
+                        .set(3, 0, 3, Blocks.FARMLAND.defaultBlockState())
                         .set(3, 1, 3, recipe.value().getTargetState())
-                        .build().bake(),
+                        .build(),
                     List.of(
                             TlaStack.of(recipe.value().getTarget()).asIngredient(),
                             TlaStack.of(ItemVariant.of(recipe.value().getCatalyst()), TransformCropsRecipe.AREA).asIngredient()
@@ -63,11 +62,10 @@ public class StructureInteractionTlaRecipe implements TlaRecipe {
     }
 
     static void generateAltarRecipes(RecipeCategory category, PluginContext context) {
-        var altar = Schematic.ALTAR.bake();
         context.addGenerator(client -> List.of(new StructureInteractionTlaRecipe(
                 category,
                 Unicopia.id("altar/spectral_clock"),
-                altar,
+                Schematic.ALTAR,
                 List.of(
                     TlaStack.of(Items.CLOCK).asIngredient(),
                     TlaStack.of(UItems.SPELLBOOK).asIngredient(),
@@ -80,7 +78,7 @@ public class StructureInteractionTlaRecipe implements TlaRecipe {
         ), new StructureInteractionTlaRecipe(
                 category,
                 Unicopia.id("altar/totem_of_dying"),
-                altar,
+                Schematic.ALTAR,
                 List.of(
                     TlaStack.of(Items.TOTEM_OF_UNDYING).asIngredient(),
                     TlaStack.of(UItems.SPELLBOOK).asIngredient(),
@@ -159,35 +157,35 @@ public class StructureInteractionTlaRecipe implements TlaRecipe {
         }
         widgets.addArrow(73, y + 52, false);
         widgets.addSlot(output.get(0), 100, y + 47).makeLarge().markOutput();
-        widgets.addTexture(processIcon, 73, y + 45).addTooltip(List.of(Text.translatable(
-                Util.createTranslationKey("recipe", category.getId()) + "." + "instruction"
+        widgets.addTexture(processIcon, 73, y + 45).addTooltip(List.of(Component.translatable(
+                Util.makeDescriptionId("recipe", category.getId()) + "." + "instruction"
         )));
     }
 
-    private void renderSchematic(DrawContext context, int mouseX, int mouseY, float delta) {
+    private void renderSchematic(GuiGraphics context, int mouseX, int mouseY, float delta) {
         if (schematic.volume() == 0) {
             return;
         }
-        context.draw(immediate -> {
-            MatrixStack matrices = context.getMatrices();
-            MinecraftClient client = MinecraftClient.getInstance();
+        context.drawSpecial(immediate -> {
+            PoseStack matrices = context.pose();
+            Minecraft client = Minecraft.getInstance();
 
-            matrices.push();
+            matrices.pushPose();
             float minSize = (Math.max(schematic.dz(), Math.max(schematic.dx(), schematic.dy())) + 1) * 16;
             float scale = 60 / minSize;
             matrices.scale(scale, scale, 1);
             matrices.translate(95, 40, 100);
             matrices.scale(16, -16, 16);
 
-            matrices.peek().getNormalMatrix().scale(1, -1, 1);
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(20));
-            matrices.peek().getPositionMatrix().rotate(RotationAxis.POSITIVE_Y.rotationDegrees(40));
+            matrices.last().normal().scale(1, -1, 1);
+            matrices.rotate(Axis.XP.rotationDegrees(20));
+            matrices.last().pose().rotate(Axis.YP.rotationDegrees(40));
             matrices.translate(
                     (-schematic.dx() - 1) / 2F,
                     (-schematic.dy() - 1) / 2F,
                     (-schematic.dz() - 1) / 2F
             );
-            DiffuseLighting.disableGuiDepthLighting();
+            Lighting.setupForFlatItems();
 
             age++;
 
@@ -196,14 +194,14 @@ public class StructureInteractionTlaRecipe implements TlaRecipe {
                 int z = entry.z() - schematic.dz() / 2;
                 int distance = x * x + z * z;
                 if (age >= distance * 2) {
-                    matrices.push();
+                    matrices.pushPose();
                     matrices.translate(entry.x(), entry.y(), entry.z());
-                    client.getBlockRenderManager().renderBlockAsEntity(entry.state(), matrices, immediate, LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV);
-                    matrices.pop();
+                    client.getBlockRenderer().renderSingleBlock(entry.state(), matrices, immediate, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                    matrices.popPose();
                 }
             }
 
-            matrices.pop();
+            matrices.popPose();
         });
     }
 }

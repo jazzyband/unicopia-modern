@@ -2,17 +2,16 @@ package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
 
-import net.minecraft.entity.passive.MerchantEntity;
-
-public class TraderBehaviour extends EntityBehaviour<MerchantEntity> {
+public class TraderBehaviour extends EntityBehaviour<AbstractVillager> {
     @Override
-    public void update(Pony pony, MerchantEntity entity, Disguise spell) {
-        if (pony.sneakingChanged() && pony.asEntity().isSneaking()) {
-            entity.setHeadRollingTimeLeft(40);
+    public void update(Pony pony, AbstractVillager entity, Disguise spell) {
+        if (pony.sneakingChanged() && pony.asEntity().isShiftKeyDown()) {
+            entity.setUnhappyCounter(40);
 
-            if (!entity.getWorld().isClient()) {
-               entity.playSound(USounds.Vanilla.ENTITY_VILLAGER_NO, 1, 1);
+            if (!entity.level().isClientSide()) {
+               entity.playSound(USounds.Vanilla.VILLAGER_NO, 1, 1);
             }
         }
     }

@@ -8,17 +8,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.minelittlepony.unicopia.item.BaitedFishingRodItem;
-import net.minecraft.entity.projectile.FishingBobberEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.entity.projectile.FishingHook;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
-@Mixin(FishingBobberEntity.class)
-abstract class MixinFishingBobberEntity extends ProjectileEntity implements BaitedFishingRodItem.BaitedFishingBobber {
+@Mixin(FishingHook.class)
+abstract class MixinFishingBobberEntity extends Projectile implements BaitedFishingRodItem.BaitedFishingBobber {
     private MixinFishingBobberEntity() { super(null, null); }
 
     @Nullable
@@ -35,24 +35,24 @@ abstract class MixinFishingBobberEntity extends ProjectileEntity implements Bait
         this.rodType = rodType;
     }
 
-    @ModifyExpressionValue(method = "removeIfInvalid", at = {
-            @At(value = "INVOKE", target = "net/minecraft/entity/player/PlayerEntity.getMainHandStack()Lnet/minecraft/item/ItemStack;"),
-            @At(value = "INVOKE", target = "net/minecraft/entity/player/PlayerEntity.getOffHandStack()Lnet/minecraft/item/ItemStack;")
+    @ModifyExpressionValue(method = "shouldStopFishing", at = {
+            @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getMainHandItem()Lnet/minecraft/world/item/ItemStack;"),
+            @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getOffhandItem()Lnet/minecraft/world/item/ItemStack;")
     }, expect = 2)
     private ItemStack replaceFishingRodItem(ItemStack initialStack) {
         if (rodType != null) {
-            return initialStack.isOf(rodType) ? Items.FISHING_ROD.getDefaultStack() : ItemStack.EMPTY;
+            return initialStack.is(rodType) ? Items.FISHING_ROD.getDefaultInstance() : ItemStack.EMPTY;
         }
         return initialStack;
     }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("HEAD"))
-    private void onWriteCustomDataToNbt(NbtCompound nbt, CallbackInfo info) {
-        nbt.put("rodType", Registries.ITEM.getCodec(), rodType == null ? Items.FISHING_ROD : rodType);
+    @Inject(method = "addAdditionalSaveData", at = @At("HEAD"))
+    private void onWriteCustomDataToNbt(ValueOutput nbt, CallbackInfo info) {
+        nbt.store("rodType", BuiltInRegistries.ITEM.byNameCodec(), rodType == null ? Items.FISHING_ROD : rodType);
     }
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("HEAD"))
-    private void onReadCustomDataFromNbt(NbtCompound nbt, CallbackInfo info) {
-        rodType = nbt.get("rodType", Registries.ITEM.getCodec(), getRegistryManager().getOps(NbtOps.INSTANCE)).orElse(null);
+    @Inject(method = "readAdditionalSaveData", at = @At("HEAD"))
+    private void onReadCustomDataFromNbt(ValueInput nbt, CallbackInfo info) {
+        rodType = nbt.read("rodType", BuiltInRegistries.ITEM.byNameCodec()).orElse(null);
     }
 }

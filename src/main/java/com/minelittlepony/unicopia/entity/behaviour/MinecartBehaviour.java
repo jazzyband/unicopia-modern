@@ -2,34 +2,33 @@ package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.entity.Living;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-
-public class MinecartBehaviour extends EntityBehaviour<AbstractMinecartEntity> {
+public class MinecartBehaviour extends EntityBehaviour<AbstractMinecart> {
 
     @Override
-    public AbstractMinecartEntity onCreate(AbstractMinecartEntity entity, EntityAppearance context, boolean replaceOld) {
+    public AbstractMinecart onCreate(AbstractMinecart entity, EntityAppearance context, boolean replaceOld) {
         super.onCreate(entity, context, replaceOld);
-        if (replaceOld && entity.getWorld().isClient) {
+        if (replaceOld && entity.level().isClientSide()) {
             InteractionManager.getInstance().playLoopingSound(entity, InteractionManager.SOUND_MINECART, entity.getId());
         }
         return entity;
     }
 
     @Override
-    public void update(Living<?> source, AbstractMinecartEntity entity, Disguise spell) {
-        entity.setYaw(entity.getYaw() - 90);
-        entity.lastYaw -= 90;
+    public void update(Living<?> source, AbstractMinecart entity, Disguise spell) {
+        entity.setYRot(entity.getYRot() - 90);
+        entity.yRotO -= 90;
 
-        entity.setPitch(0);
-        entity.lastPitch = 0;
+        entity.setXRot(0);
+        entity.xRotO = 0;
 
         LivingEntity living = source.asEntity();
         if (living.hurtTime > 0) {
-            entity.setDamageWobbleTicks(living.hurtTime);
-            entity.setDamageWobbleStrength(1);
-            entity.setDamageWobbleSide(20 + (int)source.asEntity().fallDistance / 10);
+            entity.setHurtTime(living.hurtTime);
+            entity.setDamage(1);
+            entity.setHurtDir(20 + (int)source.asEntity().fallDistance / 10);
         }
     }
 }

@@ -3,23 +3,22 @@ package com.minelittlepony.unicopia.recipe;
 import com.minelittlepony.unicopia.item.EmptyJarItem;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.item.component.Appearance;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.NonNullList;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 
 public class JarInsertRecipe extends ItemCombinationRecipe {
 
-    public JarInsertRecipe(CraftingRecipeCategory category) {
+    public JarInsertRecipe(CraftingBookCategory category) {
         super(category);
     }
 
     @Override
-    public final ItemStack craft(CraftingRecipeInput inventory, WrapperLookup registries) {
-        return Appearance.set(UItems.FILLED_JAR.getDefaultStack(), runMatch(inventory).getRight());
+    public final ItemStack assemble(CraftingInput inventory) {
+        return Appearance.set(UItems.FILLED_JAR.getDefaultInstance(), runMatch(inventory).getB());
     }
 
     @Override
@@ -43,7 +42,7 @@ public class JarInsertRecipe extends ItemCombinationRecipe {
     }
 
     @Override
-    public DefaultedList<ItemStack> getRecipeRemainders(CraftingRecipeInput inventory) {
-        return DefaultedList.ofSize(inventory.size(), ItemStack.EMPTY);
+    public NonNullList<ItemStack> getRemainingItems(CraftingInput inventory) {
+        return NonNullList.withSize(inventory.size(), ItemStack.EMPTY);
     }
 }

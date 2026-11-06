@@ -1,19 +1,17 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.ability.data.Numeric;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.util.Trace;
-
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.util.Hand;
 
 /**
  * Unicorn telekinesis ability
@@ -49,17 +47,17 @@ public class UnicornTelekinesisAbility implements Ability<Numeric> {
 
         int maxDistance = (int)((player.asEntity().isCreative() ? 1000 : 100) + (player.getLevel().get() * 0.25F));
 
-        Trace trace = Trace.create(player.asEntity(), maxDistance, 1, hit -> (EquinePredicates.VALID_LIVING_AND_NOT_MAGIC_IMMUNE.test(hit) || hit instanceof ItemEntity) && !player.asEntity().isConnectedThroughVehicle(hit));
+        Trace trace = Trace.create(player.asEntity(), maxDistance, 1, hit -> (EquinePredicates.VALID_LIVING_AND_NOT_MAGIC_IMMUNE.test(hit) || hit instanceof ItemEntity) && !player.asEntity().isPassengerOfSameVehicle(hit));
 
-        return trace.getEntityResult().map(e -> e.getEntity().getBlockPos()).map(p -> Numeric.valueOf(1)).or(() -> {
-            ItemStack stack = player.asEntity().getStackInHand(Hand.MAIN_HAND);
+        return trace.getEntityResult().map(e -> e.getEntity().blockPosition()).map(p -> Numeric.valueOf(1)).or(() -> {
+            ItemStack stack = player.asEntity().getItemInHand(InteractionHand.MAIN_HAND);
 
             return stack.isEmpty() ? Optional.empty() : Numeric.of(0);
         });
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Numeric> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Numeric> getSerializer() {
         return Numeric.CODEC;
     }
 
@@ -82,9 +80,9 @@ public class UnicornTelekinesisAbility implements Ability<Numeric> {
     public boolean apply(Pony player, Numeric data) {
 
         if (data.type() == 0) {
-            ItemStack stack = player.asEntity().getStackInHand(Hand.MAIN_HAND);
+            ItemStack stack = player.asEntity().getItemInHand(InteractionHand.MAIN_HAND);
             if (!stack.isEmpty()) {
-                player.asEntity().setStackInHand(Hand.MAIN_HAND, ItemStack.EMPTY);
+                player.asEntity().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                 return player.getLevitatingItems().addStack(stack);
             }
             return true;
@@ -92,7 +90,7 @@ public class UnicornTelekinesisAbility implements Ability<Numeric> {
         if (data.type() == 1) {
             int maxDistance = (int)((player.asEntity().isCreative() ? 1000 : 100) + (player.getLevel().get() * 0.25F));
 
-            Trace trace = Trace.create(player.asEntity(), maxDistance, 1, hit -> (EquinePredicates.VALID_LIVING_AND_NOT_MAGIC_IMMUNE.test(hit) || hit instanceof ItemEntity) && !player.asEntity().isConnectedThroughVehicle(hit));
+            Trace trace = Trace.create(player.asEntity(), maxDistance, 1, hit -> (EquinePredicates.VALID_LIVING_AND_NOT_MAGIC_IMMUNE.test(hit) || hit instanceof ItemEntity) && !player.asEntity().isPassengerOfSameVehicle(hit));
 
             return trace.getEntity().filter(entity -> player.getLevitatingItems().addPassenger(entity)).isPresent();
         }

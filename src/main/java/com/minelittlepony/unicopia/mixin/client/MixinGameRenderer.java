@@ -6,55 +6,45 @@ import org.spongepowered.asm.mixin.injection.At.Shift;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.minelittlepony.unicopia.client.BatEyesApplicator;
-import com.minelittlepony.unicopia.client.UnicopiaClient;
 import com.minelittlepony.unicopia.client.render.shader.ViewportShader;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.util.Pool;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.resource.SynchronousResourceReloader;
+import com.minelittlepony.unicopia.client.render.spell.PortalFrameBuffer;
+import com.mojang.blaze3d.resource.CrossFrameResourcePool;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.minecraft.world.entity.LivingEntity;
 
 @Mixin(value = GameRenderer.class, priority = Integer.MAX_VALUE)
-abstract class MixinGameRenderer implements AutoCloseable, SynchronousResourceReloader {
+abstract class MixinGameRenderer implements AutoCloseable, ResourceManagerReloadListener {
+
 
     @Shadow
-    private @Final MinecraftClient client;
+    private @Final Minecraft minecraft;
 
     @Shadow
-    private @Final Pool pool;
+    private @Final CrossFrameResourcePool resourcePool;
 
-    @Inject(method = "renderWorld", at = @At("HEAD"))
-    private void beforeRenderWorld(RenderTickCounter counter, CallbackInfo info) {
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    private void beforeRenderWorld(CallbackInfo info) {
         BatEyesApplicator.INSTANCE.enable();
     }
 
-    @ModifyArg(method = "renderWorld", at = @At(value = "INVOKE",
-            target = "net/minecraft/client/render/GameRenderer.tiltViewWhenHurt(Lnet/minecraft/client/util/math/MatrixStack;F)V"), index = 0)
-    private MatrixStack tiltViewWhenHurt(MatrixStack matrices) {
-        float roll = UnicopiaClient.getCamera().calculateRoll(client.options.getPerspective().isFirstPerson(), client.options.getFov().getValue().floatValue());
-        if (roll != 0) {
-            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(roll));
-        }
-        return matrices;
-    }
-
-    @Inject(method = "renderWorld", at = @At("RETURN"))
-    private void afterRenderWorld(RenderTickCounter counter, CallbackInfo info) {
+    @Inject(method = "renderLevel", at = @At("RETURN"))
+    private void afterRenderWorld(CallbackInfo info) {
         BatEyesApplicator.INSTANCE.disable();
     }
 
-    @ModifyReturnValue(method = "getNightVisionStrength", at = @At("RETURN"))
+    @ModifyReturnValue(method = "nightVisionScale", at = @At("RETURN"))
     private static float modifyNightVisionStrength(float initial, LivingEntity entity, float tickDelta) {
         return BatEyesApplicator.getWorldBrightness(initial, entity, tickDelta);
     }
 
-    @Inject(method = "render(Lnet/minecraft/client/render/RenderTickCounter;Z)V",
-            at = @At(value = "INVOKE", target = "net/minecraft/client/render/WorldRenderer.drawEntityOutlinesFramebuffer()V", shift = Shift.AFTER))
-    private void onBeforeFrameEnd(RenderTickCounter tickCounter, boolean tick, CallbackInfo info) {
-        ViewportShader.INSTANCE.render(pool, tickCounter.getTickProgress(false));
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;applyPostEffects()V", shift = Shift.AFTER))
+    private void unicopia$applyCorruptionShader(CallbackInfo info) {
+        if (minecraft.level != null && minecraft.player != null) {
+            PortalFrameBuffer.capturePending();
+            ViewportShader.INSTANCE.render(resourcePool, minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false));
+        }
     }
+
 }

@@ -1,24 +1,22 @@
 package com.minelittlepony.unicopia.entity.behaviour;
 
 import java.util.function.BiFunction;
-
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.RangedAttackMob;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.SoundEmitter;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.RangedAttackMob;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-
 public class RangedAttackBehaviour<T extends Entity & RangedAttackMob> extends EntityBehaviour<T> {
 
-    private final BiFunction<World, T, ProjectileEntity> projectileSupplier;
+    private final BiFunction<Level, T, Projectile> projectileSupplier;
 
     private final SoundEvent sound;
 
-    public RangedAttackBehaviour(SoundEvent sound, BiFunction<World, T, ProjectileEntity> projectileSupplier) {
+    public RangedAttackBehaviour(SoundEvent sound, BiFunction<Level, T, Projectile> projectileSupplier) {
         this.sound = sound;
         this.projectileSupplier = projectileSupplier;
     }
@@ -28,18 +26,18 @@ public class RangedAttackBehaviour<T extends Entity & RangedAttackMob> extends E
 
         if (player.sneakingChanged() && isSneakingOnGround(player)) {
 
-            ProjectileEntity spit = projectileSupplier.apply(entity.getWorld(), entity);
+            Projectile spit = projectileSupplier.apply(entity.level(), entity);
 
-            Vec3d rot = player.asEntity().getRotationVec(1);
+            Vec3 rot = player.asEntity().getViewVector(1);
 
-            spit.setVelocity(rot.getX(), rot.getY(), rot.getZ(), 1.5F, 3);
+            spit.shoot(rot.x(), rot.y(), rot.z(), 1.5F, 3);
             spit.setOwner(player.asEntity());
 
             if (!entity.isSilent()) {
-                SoundEmitter.playSoundAt(entity, sound, 1, 1 + (entity.getWorld().random.nextFloat() - entity.getWorld().random.nextFloat()) * 0.2F);
+                SoundEmitter.playSoundAt(entity, sound, 1, 1 + (entity.level().getRandom().nextFloat() - entity.level().getRandom().nextFloat()) * 0.2F);
             }
 
-            entity.getWorld().spawnEntity(spit);
+            entity.level().addFreshEntity(spit);
         }
     }
 }

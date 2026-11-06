@@ -1,8 +1,7 @@
 package com.minelittlepony.unicopia.util;
 
 import com.minelittlepony.common.client.gui.IField;
-
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
 
 public class RegistryIndexer<T> {
 
@@ -21,11 +20,11 @@ public class RegistryIndexer<T> {
     }
 
     public int indexOf(T value) {
-        return values.getRawId(value);
+        return values.getId(value);
     }
 
     public T valueOf(int index) {
-        return values.get(wrapIndex(index));
+        return values.byId(wrapIndex(index));
     }
 
     public T valueOf(float index) {

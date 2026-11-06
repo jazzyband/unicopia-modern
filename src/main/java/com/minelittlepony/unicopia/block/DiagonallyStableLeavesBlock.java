@@ -3,66 +3,57 @@ package com.minelittlepony.unicopia.block;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.TintedParticleLeavesBlock;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.WorldAccess;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.TintedParticleLeavesBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
 
 /**
  * Leaves block that checks the diagonals for whether they can decay.
  */
 public class DiagonallyStableLeavesBlock extends TintedParticleLeavesBlock {
     private static final int MIN_DISTANCE = 1;
-    public static final MapCodec<DiagonallyStableLeavesBlock> CODEC = RecordCodecBuilder.<DiagonallyStableLeavesBlock>mapCodec(instance -> instance.group(
-            Codec.FLOAT.fieldOf("leafParticleChance").forGetter(b -> b.leafParticleChance),
-            createSettingsCodec()
-    ).apply(instance, DiagonallyStableLeavesBlock::new));
 
-    public DiagonallyStableLeavesBlock(float leafParticleChance, Settings settings) {
+    public DiagonallyStableLeavesBlock(float leafParticleChance, Properties settings) {
         super(leafParticleChance, settings);
     }
 
+
     @Override
-    public MapCodec<? extends DiagonallyStableLeavesBlock> getCodec() {
-        return CODEC;
+    protected void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        world.setBlock(pos, state.setValue(DISTANCE, getDistanceFromLogs(world, pos)), Block.UPDATE_ALL);
     }
 
     @Override
-    protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        world.setBlockState(pos, state.with(DISTANCE, getDistanceFromLogs(world, pos)), Block.NOTIFY_ALL);
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        return defaultBlockState()
+            .setValue(PERSISTENT, true)
+            .setValue(WATERLOGGED, ctx.getLevel().getFluidState(ctx.getClickedPos()).is(Fluids.WATER))
+            .setValue(DISTANCE, getDistanceFromLogs(ctx.getLevel(), ctx.getClickedPos()));
     }
 
-    @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return getDefaultState()
-            .with(PERSISTENT, true)
-            .with(WATERLOGGED, ctx.getWorld().getFluidState(ctx.getBlockPos()).isOf(Fluids.WATER))
-            .with(DISTANCE, getDistanceFromLogs(ctx.getWorld(), ctx.getBlockPos()));
-    }
+    private static int getDistanceFromLogs(LevelAccessor world, BlockPos pos) {
+        int distance = DECAY_DISTANCE;
 
-    private static int getDistanceFromLogs(WorldAccess world, BlockPos pos) {
-        int distance = MAX_DISTANCE;
-
-        distance = Math.min(distance, getOptionalDistanceFromLog(world.getBlockState(pos.up())).orElse(MAX_DISTANCE) + 1);
+        distance = Math.min(distance, getOptionalDistanceAt(world.getBlockState(pos.above())).orElse(DECAY_DISTANCE) + 1);
         if (distance == MIN_DISTANCE) {
             return distance;
         }
-        distance = Math.min(distance, getOptionalDistanceFromLog(world.getBlockState(pos.down())).orElse(MAX_DISTANCE) + 1);
+        distance = Math.min(distance, getOptionalDistanceAt(world.getBlockState(pos.below())).orElse(DECAY_DISTANCE) + 1);
         if (distance == MIN_DISTANCE) {
             return distance;
         }
-        for (BlockPos i : BlockPos.iterate(pos.add(-1, 0, -1), pos.add(1, 0, 1))) {
+        for (BlockPos i : BlockPos.betweenClosed(pos.offset(-1, 0, -1), pos.offset(1, 0, 1))) {
             if (i.equals(pos)) {
                 continue;
             }
             int increment = i.getX() == pos.getX() || i.getZ() == pos.getZ() ? 1 : 2;
-            distance = Math.min(distance, getOptionalDistanceFromLog(world.getBlockState(i)).orElse(MAX_DISTANCE) + increment);
+            distance = Math.min(distance, getOptionalDistanceAt(world.getBlockState(i)).orElse(DECAY_DISTANCE) + increment);
             if (distance == MIN_DISTANCE) {
                 return distance;
             }

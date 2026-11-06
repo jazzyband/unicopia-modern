@@ -1,0 +1,8 @@
+{
+  "comparator_output": 3,
+  "description": {
+    "translate": "jukebox_song.unicopia.popular"
+  },
+  "length_in_seconds": 112.0,
+  "sound_event": "unicopia:music_disc.popular"
+}

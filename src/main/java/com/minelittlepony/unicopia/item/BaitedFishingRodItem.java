@@ -1,49 +1,48 @@
 package com.minelittlepony.unicopia.item;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.FishingHook;
+import net.minecraft.world.item.FishingRodItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
-
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.FishingBobberEntity;
-import net.minecraft.item.FishingRodItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
 
 public class BaitedFishingRodItem extends FishingRodItem {
 
-    public BaitedFishingRodItem(Settings settings) {
+    public BaitedFishingRodItem(Properties settings) {
         super(settings);
     }
 
     @Override
-    public ActionResult use(World world, PlayerEntity user, Hand hand) {
+    public InteractionResult use(Level world, Player user, InteractionHand hand) {
         @Nullable
-        FishingBobberEntity oldFishHook = user.fishHook;
-        ActionResult result = super.use(world, user, hand);
-        if (!world.isClient) {
-            if (user.fishHook != null) {
-                user.fishHook.discard();
-                ItemStack stack = user.getStackInHand(hand);
-                int lure = (int)((EnchantmentHelper.getFishingTimeReduction((ServerWorld)world, stack, user) + 1) * 20F);
-                int luck = (EnchantmentHelper.getFishingLuckBonus((ServerWorld)world, stack, user) + 1) * 2;
-                FishingBobberEntity bobber = new FishingBobberEntity(user, world, luck, lure);
+        FishingHook oldFishHook = user.fishing;
+        InteractionResult result = super.use(world, user, hand);
+        if (!world.isClientSide()) {
+            if (user.fishing != null) {
+                user.fishing.discard();
+                ItemStack stack = user.getItemInHand(hand);
+                int lure = (int)((EnchantmentHelper.getFishingTimeReduction((ServerLevel)world, stack, user) + 1) * 20F);
+                int luck = (EnchantmentHelper.getFishingLuckBonus((ServerLevel)world, stack, user) + 1) * 2;
+                FishingHook bobber = new FishingHook(user, world, luck, lure);
                 ((BaitedFishingBobber)bobber).setRodType(this);
-                world.spawnEntity(bobber);
+                world.addFreshEntity(bobber);
             }
 
             if (!user.isCreative()) {
-                ItemStack stack = user.getStackInHand(hand);
+                ItemStack stack = user.getItemInHand(hand);
                 if (oldFishHook != null
-                        && oldFishHook.getHookedEntity() == null
-                        && oldFishHook.getDataTracker().get(FishingBobberEntity.CAUGHT_FISH)
-                        && stack.isOf(this)) {
-                    user.setStackInHand(hand, stack.withItem(Items.FISHING_ROD));
-                    return ActionResult.SUCCESS;
+                        && oldFishHook.getHookedIn() == null
+                        && oldFishHook.getEntityData().get(FishingHook.DATA_BITING)
+                        && stack.is(this)) {
+                    user.setItemInHand(hand, stack.transmuteCopy(Items.FISHING_ROD));
+                    return InteractionResult.SUCCESS;
                 }
             }
         }

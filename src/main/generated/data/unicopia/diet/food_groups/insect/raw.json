@@ -1,0 +1,44 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:many",
+      "afflictions": [
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 1
+          },
+          "chance": 30,
+          "effect": "minecraft:poison",
+          "seconds": {
+            "max": 50,
+            "min": 25
+          }
+        },
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 1
+          },
+          "chance": 25,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 100,
+            "min": 90
+          }
+        }
+      ]
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 3,
+      "saturation": 1.8000001
+    }
+  },
+  "tags": [
+    "c:foods/raw_insect"
+  ]
+}

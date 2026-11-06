@@ -1,45 +1,44 @@
 package com.minelittlepony.unicopia.block;
 
 import java.util.Optional;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.PillarBlock;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.context.LootContextParameters;
-import net.minecraft.loot.context.LootContextTypes;
-import net.minecraft.loot.context.LootWorldContext;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Vec3d;
+public class StrippablePillarBlock extends RotatedPillarBlock implements StrippingLootable {
+    private Optional<ResourceKey<LootTable>> strippingLootTableKey;
 
-public class StrippablePillarBlock extends PillarBlock implements StrippingLootable {
-    private Optional<RegistryKey<LootTable>> strippingLootTableKey;
-
-    public StrippablePillarBlock(Settings settings) {
+    public StrippablePillarBlock(Properties settings) {
         super(settings);
-        strippingLootTableKey = getLootTableKey().map(key ->RegistryKey.of(RegistryKeys.LOOT_TABLE, key.getValue().withSuffixedPath("_stripping")));
+        strippingLootTableKey = getLootTable().map(key ->ResourceKey.create(Registries.LOOT_TABLE, key.identifier().withSuffix("_stripping")));
     }
 
     @Override
-    public final Optional<RegistryKey<LootTable>> getStrippingLootTableKey() {
+    public final Optional<ResourceKey<LootTable>> getStrippingLootTableKey() {
         return strippingLootTableKey;
     }
 
     @Override
-    public boolean onStripped(ItemUsageContext context) {
-        context.getStack().damage(2, context.getPlayer(), LivingEntity.getSlotForHand(context.getHand()));
-        if (context.getWorld() instanceof ServerWorld sw) {
-            getStrippingLootTableKey().map(sw.getServer().getReloadableRegistries()::getLootTable).ifPresent(table -> {
-                table.generateLoot(new LootWorldContext.Builder(sw)
-                            .add(LootContextParameters.ORIGIN, Vec3d.ofCenter(context.getBlockPos()))
-                            .add(LootContextParameters.TOOL, context.getStack())
-                            .add(LootContextParameters.BLOCK_STATE, context.getWorld().getBlockState(context.getBlockPos()))
-                            .addOptional(LootContextParameters.BLOCK_ENTITY, context.getWorld().getBlockEntity(context.getBlockPos()))
-                        .build(LootContextTypes.BLOCK))
-                    .forEach(stack -> Block.dropStack(sw, context.getBlockPos(), stack));
+    public boolean onStripped(UseOnContext context) {
+        context.getItemInHand().hurtAndBreak(2, context.getPlayer(), context.getHand().asEquipmentSlot());
+        if (context.getLevel() instanceof ServerLevel sw) {
+            getStrippingLootTableKey().map(sw.getServer().reloadableRegistries()::getLootTable).ifPresent(table -> {
+                table.getRandomItems(new LootParams.Builder(sw)
+                            .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(context.getClickedPos()))
+                            .withParameter(LootContextParams.TOOL, context.getItemInHand())
+                            .withParameter(LootContextParams.BLOCK_STATE, context.getLevel().getBlockState(context.getClickedPos()))
+                            .withOptionalParameter(LootContextParams.BLOCK_ENTITY, context.getLevel().getBlockEntity(context.getClickedPos()))
+                        .create(LootContextParamSets.BLOCK))
+                    .forEach(stack -> Block.popResource(sw, context.getClickedPos(), stack));
             });
         }
 

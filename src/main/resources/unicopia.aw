@@ -1,29 +1,16 @@
-accessWidener       v1       named
-#accessible          class    net/minecraft/client/render/RenderLayer$MultiPhaseParameters
-#accessible          class    net/minecraft/client/render/RenderPhase$TextureBase
-#accessible          method   net/minecraft/client/render/RenderLayer     of                       (Ljava/lang/String;Lnet/minecraft/client/render/VertexFormat;Lnet/minecraft/client/render/VertexFormat$DrawMode;IZZLnet/minecraft/client/render/RenderLayer$MultiPhaseParameters;)Lnet/minecraft/client/render/RenderLayer$MultiPhase;
-accessible          class    net/minecraft/client/render/item/HeldItemRenderer$HandRenderType
-accessible          class    net/minecraft/client/render/VertexConsumers$Union
-accessible          class    net/minecraft/client/gui/hud/InGameHud$HeartType
-
-#accessible         method   net/minecraft/world/gen/foliage/FoliagePlacerType <init>             (Lcom/mojang/serialization/Codec;)V
-accessible          method   net/minecraft/entity/FallingBlockEntity           <init>             (Lnet/minecraft/world/World;DDDLnet/minecraft/block/BlockState;)V
-
-accessible          field    net/minecraft/entity/mob/CreeperEntity               CHARGED         Lnet/minecraft/entity/data/TrackedData;
-accessible          field    net/minecraft/entity/mob/CreeperEntity               IGNITED         Lnet/minecraft/entity/data/TrackedData;
-
-accessible          field    net/minecraft/loot/LootTable                          pools          Ljava/util/List;
-mutable             field    net/minecraft/loot/LootTable                          pools          Ljava/util/List;
-mutable             field    net/minecraft/loot/LootPool                           entries        Ljava/util/List;
-
-accessible          method   net/minecraft/entity/LightningEntity                  cleanOxidation (Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;)V
-
-accessible          method   net/minecraft/entity/player/PlayerEntity              shouldDismount ()Z
-
-accessible          class    net/minecraft/datafixer/fix/ItemStackComponentizationFix$StackData
-accessible          field    net/minecraft/datafixer/fix/AttributeIdFix            UUID_TO_ID     Ljava/util/Map;
-mutable             field    net/minecraft/datafixer/fix/AttributeIdFix            UUID_TO_ID     Ljava/util/Map;
-accessible          field    net/minecraft/datafixer/fix/AttributeIdFix            NAME_TO_ID     Ljava/util/Map;
-mutable             field    net/minecraft/datafixer/fix/AttributeIdFix            NAME_TO_ID     Ljava/util/Map;
-
-accessible          field    net/minecraft/entity/projectile/FishingBobberEntity   CAUGHT_FISH    Lnet/minecraft/entity/data/TrackedData;
+accessWidener	v1	official
+accessible	class	net/minecraft/client/gui/Hud$HeartType
+accessible	method	net/minecraft/world/entity/item/FallingBlockEntity	<init>	(Lnet/minecraft/world/level/Level;DDDLnet/minecraft/world/level/block/state/BlockState;)V
+accessible	field	net/minecraft/world/entity/monster/Creeper	DATA_IS_POWERED	Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible	field	net/minecraft/world/entity/monster/Creeper	DATA_IS_IGNITED	Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible	field	net/minecraft/world/level/storage/loot/LootTable	pools	Ljava/util/List;
+mutable	field	net/minecraft/world/level/storage/loot/LootTable	pools	Ljava/util/List;
+mutable	field	net/minecraft/world/level/storage/loot/LootPool	entries	Ljava/util/List;
+accessible	method	net/minecraft/world/entity/LightningBolt	clearCopperOnLightningStrike	(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V
+accessible	method	net/minecraft/world/entity/player/Player	wantsToStopRiding	()Z
+accessible	class	net/minecraft/util/datafix/fixes/ItemStackComponentizationFix$ItemStackData
+accessible	field	net/minecraft/util/datafix/fixes/AttributeModifierIdFix	ID_MAP	Ljava/util/Map;
+mutable	field	net/minecraft/util/datafix/fixes/AttributeModifierIdFix	ID_MAP	Ljava/util/Map;
+accessible	field	net/minecraft/util/datafix/fixes/AttributeModifierIdFix	NAME_MAP	Ljava/util/Map;
+mutable	field	net/minecraft/util/datafix/fixes/AttributeModifierIdFix	NAME_MAP	Ljava/util/Map;
+accessible	field	net/minecraft/world/entity/projectile/FishingHook	DATA_BITING	Lnet/minecraft/network/syncher/EntityDataAccessor;

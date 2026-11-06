@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:unicorn/save_the_day",
+  "criteria": {
+    "defeat_sombra_again": {
+      "conditions": {
+        "event": "defeat_sombra",
+        "flying": false,
+        "repeatCount": 2
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.doctor_sombrero.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:broken_alicorn_amulet"
+    },
+    "title": {
+      "translate": "advancements.unicopia.doctor_sombrero.title"
+    }
+  },
+  "requirements": [
+    [
+      "defeat_sombra_again"
+    ]
+  ],
+  "rewards": {
+    "experience": 2000
+  },
+  "sends_telemetry_event": true
+}

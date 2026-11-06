@@ -1,12 +1,11 @@
 package com.minelittlepony.unicopia.entity.behaviour;
 
 import com.minelittlepony.unicopia.entity.Living;
+import net.minecraft.world.entity.animal.axolotl.Axolotl;
 
-import net.minecraft.entity.passive.AxolotlEntity;
-
-public class AxolotlBehaviour extends EntityBehaviour<AxolotlEntity> {
+public class AxolotlBehaviour extends EntityBehaviour<Axolotl> {
     @Override
-    public void update(Living<?> source, AxolotlEntity entity, Disguise spell) {
+    public void update(Living<?> source, Axolotl entity, Disguise spell) {
         // TODO:
         /*
         if (entity.getModelAngles().isEmpty()) {

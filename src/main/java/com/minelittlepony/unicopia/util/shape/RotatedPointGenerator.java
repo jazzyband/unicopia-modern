@@ -1,7 +1,7 @@
 package com.minelittlepony.unicopia.util.shape;
 
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
 
 record RotatedPointGenerator (
         PointGenerator original,
@@ -14,27 +14,27 @@ record RotatedPointGenerator (
     }
 
     @Override
-    public Vec3d computePoint(Random rand) {
+    public Vec3 computePoint(RandomSource rand) {
         return rotate(original.computePoint(rand));
     }
 
     @Override
-    public Vec3d getLowerBound() {
+    public Vec3 getLowerBound() {
         return rotate(((Shape)original).getLowerBound());
     }
 
     @Override
-    public Vec3d getUpperBound() {
+    public Vec3 getUpperBound() {
         return rotate(((Shape)original).getUpperBound());
     }
 
     @Override
-    public boolean isPointInside(Vec3d point) {
-        return ((Shape)original).isPointInside(point.rotateY(-yaw).rotateX(-pitch));
+    public boolean isPointInside(Vec3 point) {
+        return ((Shape)original).isPointInside(point.yRot(-yaw).xRot(-pitch));
     }
 
-    private Vec3d rotate(Vec3d vec) {
-        return vec.rotateX(pitch).rotateY(yaw);
+    private Vec3 rotate(Vec3 vec) {
+        return vec.xRot(pitch).yRot(yaw);
     }
 
     @Override

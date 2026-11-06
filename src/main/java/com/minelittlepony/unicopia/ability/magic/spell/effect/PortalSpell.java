@@ -2,7 +2,21 @@ package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -25,23 +39,6 @@ import com.minelittlepony.unicopia.particle.*;
 import com.minelittlepony.unicopia.server.world.Ether;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.minelittlepony.unicopia.util.shape.*;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.packet.s2c.play.PositionFlag;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction.Axis;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.WorldEvents;
 
 public class PortalSpell extends AbstractSpell implements PlacementControlSpell.PlacementDelegate, OrientedSpell {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -86,7 +83,7 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
     }
 
     public float getYawDifference() {
-        return MathHelper.wrapDegrees(180 + getTargetYaw() - getYaw());
+        return Mth.wrapDegrees(180 + getTargetYaw() - getYaw());
     }
 
     @SuppressWarnings("unchecked")
@@ -120,7 +117,7 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
         if (situation == Situation.GROUND) {
             if (source.isClient()) {
                 source.spawnParticles(particleArea, 5, pos -> {
-                    source.addParticle(ParticleTypes.ELECTRIC_SPARK, pos, Vec3d.ZERO);
+                    source.addParticle(ParticleTypes.ELECTRIC_SPARK, pos, Vec3.ZERO);
                 });
             } else {
                 var ownEntry = Ether.get(source.asWorld()).get(this, source);
@@ -130,10 +127,10 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
                     if (targetEntry == null) {
                         if (teleportationTarget.isSet()) {
                             setDestination(null);
-                            source.asWorld().syncWorldEvent(WorldEvents.BLOCK_BROKEN, source.getOrigin(), Block.getRawIdFromState(Blocks.GLASS.getDefaultState()));
+                            source.asWorld().levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, source.getOrigin(), Block.getId(Blocks.GLASS.defaultBlockState()));
                         } else {
                             Ether.get(source.asWorld()).anyMatch(getType(), entry -> {
-                                if (entry.isAlive() && !entry.hasClaimant() && !entry.entityMatches(source.asEntity().getUuid())) {
+                                if (entry.isAlive() && !entry.hasClaimant() && !entry.entityMatches(source.asEntity().getUUID())) {
                                     entry.claim(getUuid());
                                     ownEntry.claim(entry.spellId());
                                     synchronized (entry) {
@@ -165,43 +162,43 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
     private void tickActive(Caster<?> source, Ether.MutableEntry<?> destination) {
         destination.entity.getTarget().ifPresent(target -> {
             Quaternionf rotationChange = getOrientationChange();
-            var matrix = getPositionMatrix(source, source.asEntity().getPos(), rotationChange, new Matrix4f());
+            var matrix = getPositionMatrix(source, source.asEntity().position(), rotationChange, new Matrix4f());
 
             float yawDifference = getYawDifference();
 
             source.findAllEntitiesInRange(1).forEach(entity -> {
-                if (!entity.hasPortalCooldown()) {
+                if (!entity.isOnPortalCooldown()) {
 
-                    float approachYaw = Math.abs(MathHelper.wrapDegrees(entity.getYaw() - this.yaw.get()));
+                    float approachYaw = Math.abs(Mth.wrapDegrees(entity.getYRot() - this.yaw.get()));
                     if (approachYaw > 80) {
                         return;
                     }
 
-                    var dest4f = matrix.transform(new Vector4f(entity.getPos().toVector3f(), 1));
-                    Vec3d dest = new Vec3d(dest4f.x, dest4f.y - 0.5, dest4f.z).add(new Vec3d(0, 0, -0.7F).rotateY(-getTargetYaw() * MathHelper.RADIANS_PER_DEGREE));
+                    var dest4f = matrix.transform(new Vector4f(entity.position().toVector3f(), 1));
+                    Vec3 dest = new Vec3(dest4f.x, dest4f.y - 0.5, dest4f.z).add(new Vec3(0, 0, -0.7F).yRot(-getTargetYaw() * Mth.DEG_TO_RAD));
 
                     for (int i = 0; i < 2; i++) {
-                        BlockPos destBlock = BlockPos.ofFloored(dest);
-                        BlockState state = entity.getWorld().getBlockState(destBlock);
-                        if (entity.getWorld().isTopSolid(destBlock, entity)) {
-                            double maxY = state.getCollisionShape(entity.getWorld(), destBlock).getMax(Axis.Y);
-                            dest = new Vec3d(dest.x, destBlock.getY() + maxY, dest.z);
+                        BlockPos destBlock = BlockPos.containing(dest);
+                        BlockState state = entity.level().getBlockState(destBlock);
+                        if (entity.level().loadedAndEntityCanStandOn(destBlock, entity)) {
+                            double maxY = state.getCollisionShape(entity.level(), destBlock).max(Axis.Y);
+                            dest = new Vec3(dest.x, destBlock.getY() + maxY, dest.z);
                         }
                     }
 
-                    entity.resetPortalCooldown();
+                    entity.setPortalCooldown();
 
-                    float yaw = MathHelper.wrapDegrees(entity.getYaw() + yawDifference);
+                    float yaw = Mth.wrapDegrees(entity.getYRot() + yawDifference);
 
-                    entity.setVelocity(entity.getVelocity().rotateY(yawDifference * MathHelper.RADIANS_PER_DEGREE));
+                    entity.setDeltaMovement(entity.getDeltaMovement().yRot(yawDifference * Mth.DEG_TO_RAD));
 
-                    entity.getWorld().playSoundFromEntity(null, entity, USounds.ENTITY_PLAYER_UNICORN_TELEPORT, entity.getSoundCategory(), 1, 1);
-                    entity.teleport((ServerWorld)entity.getWorld(), dest.x, dest.y, dest.z, PositionFlag.VALUES, yaw, entity.getPitch(), false);
-                    entity.getWorld().playSoundFromEntity(null, entity, USounds.ENTITY_PLAYER_UNICORN_TELEPORT, entity.getSoundCategory(), 1, 1);
+                    entity.level().playSound(null, entity, USounds.ENTITY_PLAYER_UNICORN_TELEPORT, entity.getSoundSource(), 1, 1);
+                    entity.teleportTo((ServerLevel)entity.level(), dest.x, dest.y, dest.z, Relative.DELTA, yaw, entity.getXRot(), false);
+                    entity.level().playSound(null, entity, USounds.ENTITY_PLAYER_UNICORN_TELEPORT, entity.getSoundSource(), 1, 1);
 
                     Living.updateVelocity(entity);
 
-                    if (!source.subtractEnergyCost(Math.sqrt(entity.getPos().subtract(dest).length()))) {
+                    if (!source.subtractEnergyCost(Math.sqrt(entity.position().subtract(dest).length()))) {
                         setDead();
                     }
                 }
@@ -211,7 +208,7 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
         });
     }
 
-    public Matrix4f getPositionMatrix(Caster<?> source, Vec3d pos, Quaternionf orientationChange, Matrix4f matrix) {
+    public Matrix4f getPositionMatrix(Caster<?> source, Vec3 pos, Quaternionf orientationChange, Matrix4f matrix) {
         getDestinationReference().getTarget().ifPresent(destEntity -> {
             Vector3f destPos = destEntity.pos().toVector3f();
             Vector3f sourcePos = pos.toVector3f();
@@ -224,8 +221,8 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
 
     public Quaternionf getOrientationChange() {
         return new Quaternionf().rotateTo(
-                Vec3d.fromPolar(getPitch(), getYaw()).toVector3f(),
-                Vec3d.fromPolar(getTargetPitch(), getTargetYaw()).toVector3f()
+                Vec3.directionFromRotation(getPitch(), getYaw()).toVector3f(),
+                Vec3.directionFromRotation(getTargetPitch(), getTargetYaw()).toVector3f()
         );
     }
 
@@ -234,19 +231,19 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
         this.pitch.set(90 - pitch);
         this.yaw.set(-yaw);
         particleArea = PARTICLE_AREA.rotate(
-            this.pitch.get() * MathHelper.RADIANS_PER_DEGREE,
-            (180 - this.yaw.get()) * MathHelper.RADIANS_PER_DEGREE
+            this.pitch.get() * Mth.DEG_TO_RAD,
+            (180 - this.yaw.get()) * Mth.DEG_TO_RAD
         );
     }
 
     @Override
     public void onPlaced(Caster<?> source, PlacementControlSpell parent) {
         Entity caster = source.asEntity();
-        Vec3d targetPos = caster.getRotationVector().multiply(3).add(caster.getEyePos());
-        parent.setOrientation(source, -90 - source.asEntity().getPitch(), -source.asEntity().getYaw());
-        parent.setPosition(new Vec3d(targetPos.x, caster.getPos().y, targetPos.z));
+        Vec3 targetPos = caster.getLookAngle().scale(3).add(caster.getEyePosition());
+        parent.setOrientation(source, -90 - source.asEntity().getXRot(), -source.asEntity().getYRot());
+        parent.setPosition(new Vec3(targetPos.x, caster.position().y, targetPos.z));
         if (source instanceof Pony pony) {
-            Channel.SERVER_REQUEST_PLAYER_LOOK.sendToPlayer(new MsgCasterLookRequest(parent.getUuid()), (ServerPlayerEntity)pony.asEntity());
+            Channel.SERVER_REQUEST_PLAYER_LOOK.sendToPlayer(new MsgCasterLookRequest(parent.getUuid()), (ServerPlayer)pony.asEntity());
         }
     }
 
@@ -262,9 +259,9 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
-        compound.put("targetPortalId", CodecUtils.OPTIONAL_UUID, targetPortalId.get());
+        compound.store("targetPortalId", CodecUtils.OPTIONAL_UUID, targetPortalId.get());
         compound.put("teleportationTarget", teleportationTarget.toNBT(lookup));
         compound.putFloat("pitch", getPitch());
         compound.putFloat("yaw", getYaw());
@@ -273,17 +270,17 @@ public class PortalSpell extends AbstractSpell implements PlacementControlSpell.
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        targetPortalId.set(compound.get("targetPortalId", Uuids.CODEC));
+        targetPortalId.set(compound.read("targetPortalId", CodecUtils.OPTIONAL_UUID).orElse(Optional.empty()));
         teleportationTarget.fromNBT(compound.getCompoundOrEmpty("teleportationTarget"), lookup);
-        pitch.set(compound.getFloat("pitch", 0));
-        yaw.set(compound.getFloat("yaw", 0));
-        targetPortalPitch.set(compound.getFloat("targetPortalPitch", 0));
-        targetPortalYaw.set(compound.getFloat("targetPortalYaw", 0));
+        pitch.set(compound.getFloatOr("pitch", 0));
+        yaw.set(compound.getFloatOr("yaw", 0));
+        targetPortalPitch.set(compound.getFloatOr("targetPortalPitch", 0));
+        targetPortalYaw.set(compound.getFloatOr("targetPortalYaw", 0));
         particleArea = PARTICLE_AREA.rotate(
-            pitch.get() * MathHelper.RADIANS_PER_DEGREE,
-            (180 - yaw.get()) * MathHelper.RADIANS_PER_DEGREE
+            pitch.get() * Mth.DEG_TO_RAD,
+            (180 - yaw.get()) * Mth.DEG_TO_RAD
         );
     }
 }

@@ -1,23 +1,23 @@
 package com.minelittlepony.unicopia.block;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SoulFireBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCollisionHandler;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.SoulFireBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class SpectralFireBlock extends SoulFireBlock {
 
-    public SpectralFireBlock(Settings settings) {
+    public SpectralFireBlock(Properties settings) {
         super(settings);
     }
 
     @Override
-    protected void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity, EntityCollisionHandler handler) {
+    protected void entityInside(BlockState state, Level world, BlockPos pos, Entity entity, InsideBlockEffectApplier handler, boolean isMoving) {
         if (!(entity instanceof ItemEntity)) {
-            super.onEntityCollision(state, world, pos, entity, handler);
+            super.entityInside(state, world, pos, entity, handler, isMoving);
         }
     }
 }

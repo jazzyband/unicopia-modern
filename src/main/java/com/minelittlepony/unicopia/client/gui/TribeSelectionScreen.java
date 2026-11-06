@@ -3,8 +3,20 @@ package com.minelittlepony.unicopia.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.layouts.LayoutElement;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import com.minelittlepony.common.client.gui.GameGui;
 import com.minelittlepony.common.client.gui.element.Label;
@@ -13,25 +25,14 @@ import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.network.Channel;
 import com.minelittlepony.unicopia.network.MsgRequestSpeciesChange;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.ScreenRect;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-
 public class TribeSelectionScreen extends GameGui implements HidesHud {
     static final Identifier TEXTURE = Unicopia.id("textures/gui/tribe_selection.png");
     static final int TEXTURE_SIZE = 256;
 
     final Set<Race> allowedRaces;
 
-    final Text journeyText;
-    final Text choiceText;
+    final Component journeyText;
+    final Component choiceText;
 
     private boolean finished;
 
@@ -43,10 +44,10 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
     private int targetScroll;
 
     public TribeSelectionScreen(Set<Race> allowedRaces, String baseString) {
-        super(Text.translatable(baseString));
+        super(Component.translatable(baseString));
         this.allowedRaces = allowedRaces;
-        this.journeyText = Text.translatable(baseString + ".journey");
-        this.choiceText = Text.translatable(baseString + ".choice");
+        this.journeyText = Component.translatable(baseString + ".journey");
+        this.choiceText = Component.translatable(baseString + ".choice");
     }
 
     @Override
@@ -56,15 +57,15 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
 
         int top = 0;
 
-        addDrawable(new Label(width / 2, top += 20).setCentered()).getStyle().setText(getTitle().copy().formatted(Formatting.YELLOW));
+        addRenderableOnly(new Label(width / 2, top += 20).setCentered()).getStyle().setText(getTitle().copy().withStyle(ChatFormatting.YELLOW));
 
         top += height / 8;
 
-        TextBlock block = addDrawable(new TextBlock(left, top += 10, pageWidth));
+        TextBlock block = addRenderableOnly(new TextBlock(left, top += 10, pageWidth));
         block.getStyle().setText(journeyText);
         top += block.getBounds().height;
 
-        block = addDrawable(new TextBlock(left, top += 7, pageWidth));
+        block = addRenderableOnly(new TextBlock(left, top += 7, pageWidth));
         block.getStyle().setText(choiceText);
         top += block.getBounds().height;
         top += 30;
@@ -75,7 +76,7 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
         for (Race race : options) {
             if (race.isHuman()) {
                 final Race r = race;
-                addButton(new Link(width / 2, height - getFont().fontHeight - 10).setCentered())
+                addButton(new Link(width / 2, height - getFont().lineHeight - 10).setCentered())
                     .onClick(s -> selectRace(r))
                     .getStyle().setText("[Or Play as None of these]");
             } else {
@@ -89,7 +90,7 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
     private void addOption(Race race, int y) {
         var option = new TribeButton(0, y, width, race);
         int index = options.size();
-        options.add(addDrawableChild(option));
+        options.add(addRenderableWidget(option));
         option.onClick(b -> {
             scroll(index, false);
             selectRace(race);
@@ -98,14 +99,14 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
 
     private void selectRace(Race race) {
         finished = true;
-        client.setScreen(new TribeConfirmationScreen(result -> {
+        minecraft.gui.setScreen(new TribeConfirmationScreen(result -> {
             finished = false;
 
             if (result) {
                 Channel.CLIENT_REQUEST_SPECIES_CHANGE.sendToServer(new MsgRequestSpeciesChange(true, race));
                 finish();
             } else {
-                client.setScreen(this);
+                minecraft.gui.setScreen(this);
             }
         }, race));
     }
@@ -124,7 +125,7 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
     private void updateScolling() {
         final int itemWidth = 70 + 10;
         int x = (width - itemWidth) / 2;
-        float diff = MathHelper.lerp(client.getRenderTickCounter().getTickProgress(false), prevScrollPosition, scrollPosition) / 4F;
+        float diff = Mth.lerpInt(minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false), prevScrollPosition, scrollPosition) / 4F;
 
         for (int i = 0; i < options.size(); i++) {
             var option = options.get(i);
@@ -134,22 +135,22 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         updateScolling();
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         if (!options.isEmpty()) {
             var element = options.get(0);
 
-            float diff = (targetScroll - MathHelper.lerp(client.getRenderTickCounter().getTickProgress(false), prevScrollPosition, scrollPosition)) * 7;
-            context.drawTexture(RenderLayer::getGuiTextured, TEXTURE, (width / 2) + 40 + (scrollPosition < targetScroll ? (int)diff : 0), element.getY() - 20, 10, 165, 153, 30, 85, 312, 312);
-            context.drawTexture(RenderLayer::getGuiTextured, TEXTURE, (width / 2) - 80 + (scrollPosition > targetScroll ? (int)diff : 0), element.getY() - 20, 10, 195, 153, 30, 85, 312, 312);
+            float diff = (targetScroll - Mth.lerpInt(minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false), prevScrollPosition, scrollPosition)) * 7;
+            context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, (width / 2) + 40 + (scrollPosition < targetScroll ? (int)diff : 0), element.getY() - 20, 10, 165, 153, 30, 85, 312, 312);
+            context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, (width / 2) - 80 + (scrollPosition > targetScroll ? (int)diff : 0), element.getY() - 20, 10, 195, 153, 30, 85, 312, 312);
             if (element.getBounds().left < 0) {
-                context.drawTexture(RenderLayer::getGuiTextured, TEXTURE, 20, element.getY() - 10, 10, 188, 235, 24, 60, 312, 312);
+                context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, 20, element.getY() - 10, 10, 188, 235, 24, 60, 312, 312);
             }
             element = options.get(options.size() - 1);
             if (element.getBounds().right() > width) {
-                context.drawTexture(RenderLayer::getGuiTextured, TEXTURE, width - 50, element.getY() - 10, 10, 164, 235, 24, 60, 312, 312);
+                context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, width - 50, element.getY() - 10, 10, 164, 235, 24, 60, 312, 312);
             }
         }
     }
@@ -157,23 +158,24 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
     @Override
     public void finish() {
         finished = true;
-        close();
+        onClose();
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
 
-        if (keyCode == GLFW.GLFW_KEY_LEFT) {
+        if (keyCode == InputConstants.KEY_LEFT) {
             scroll(Math.max(SELECTION - 1, 0), true);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT) {
+        if (keyCode == InputConstants.KEY_RIGHT) {
             scroll(Math.min(SELECTION + 1, options.size() - 1), true);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_ENTER) {
+        if (keyCode == InputConstants.KEY_RETURN) {
             if (options.get(SELECTION).active) {
-                options.get(SELECTION).onPress();
+                options.get(SELECTION).onPress(event);
             }
         }
 
@@ -202,23 +204,23 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
 
     @Override
     public void removed() {
-        if (!finished && client != null) {
-            client.execute(() -> {
+        if (!finished && minecraft != null) {
+            minecraft.execute(() -> {
                 finished = true;
-                client.setScreen(this);
+                minecraft.gui.setScreen(this);
                 finished = false;
             });
         }
     }
 
-    static class Link extends Label implements Widget {
+    static class Link extends Label implements LayoutElement {
         public Link(int x, int y) {
             super(x, y);
         }
 
         @Override
-        protected boolean isValidClickButton(int button) {
-            return button == 0;
+        protected boolean isValidClickButton(MouseButtonInfo button) {
+            return button.button() == 0;
         }
 
         @Override
@@ -227,15 +229,15 @@ public class TribeSelectionScreen extends GameGui implements HidesHud {
         }
 
         @Override
-        public ScreenRect getNavigationFocus() {
-            return new ScreenRect(getX(), getY(), getWidth(), getHeight());
+        public ScreenRectangle getRectangle() {
+            return new ScreenRectangle(getX(), getY(), getWidth(), getHeight());
         }
 
         @Override
-        public void renderWidget(DrawContext context, int mouseX, int mouseY, float partialTicks) {
-            this.hovered = isMouseOver(mouseX, mouseY);
-            getStyle().setColor(isSelected() ? Colors.ALTERNATE_WHITE : Colors.GRAY);
-            super.renderWidget(context, mouseX, mouseY, partialTicks);
+        public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+            this.isHovered = isMouseOver(mouseX, mouseY);
+            getStyle().setColor(isHoveredOrFocused() ? CommonColors.LIGHTER_GRAY : CommonColors.GRAY);
+            super.extractContents(context, mouseX, mouseY, partialTicks);
         }
     }
 }

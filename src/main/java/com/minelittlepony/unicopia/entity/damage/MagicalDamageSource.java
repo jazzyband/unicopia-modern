@@ -1,42 +1,40 @@
 package com.minelittlepony.unicopia.entity.damage;
 
 import java.util.*;
-
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.entity.player.Pony;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
-
 public class MagicalDamageSource extends DamageSource {
     @Nullable
     private final Caster<?> spell;
 
-    public MagicalDamageSource(RegistryEntry<DamageType> type, @Nullable Entity source, @Nullable Entity attacker, @Nullable Caster<?> caster) {
+    public MagicalDamageSource(Holder<DamageType> type, @Nullable Entity source, @Nullable Entity attacker, @Nullable Caster<?> caster) {
         super(type, source, attacker);
         spell = caster;
     }
 
-    public MagicalDamageSource(RegistryEntry<DamageType> type, Vec3d position, @Nullable Caster<?> caster) {
+    public MagicalDamageSource(Holder<DamageType> type, Vec3 position, @Nullable Caster<?> caster) {
         super(type, position);
         spell = caster;
     }
 
-    public MagicalDamageSource(RegistryEntry<DamageType> type, @Nullable Entity attacker, @Nullable Caster<?> caster) {
+    public MagicalDamageSource(Holder<DamageType> type, @Nullable Entity attacker, @Nullable Caster<?> caster) {
         super(type, attacker);
         spell = caster;
     }
 
-    public MagicalDamageSource(RegistryEntry<DamageType> type, @Nullable Caster<?> caster) {
+    public MagicalDamageSource(Holder<DamageType> type, @Nullable Caster<?> caster) {
         super(type);
         spell = caster;
     }
@@ -47,37 +45,37 @@ public class MagicalDamageSource extends DamageSource {
     }
 
     @Override
-    public Text getDeathMessage(LivingEntity target) {
+    public Component getLocalizedDeathMessage(LivingEntity target) {
 
-        String basic = "death.attack." + getName();
+        String basic = "death.attack." + getMsgId();
 
-        List<Text> params = new ArrayList<>();
+        List<Component> params = new ArrayList<>();
         params.add(target.getDisplayName());
 
         @Nullable
-        Entity attacker = getSource() != null ? getSource() : target.getPrimeAdversary();
-        ItemStack item = attacker instanceof LivingEntity ? ((LivingEntity)attacker).getMainHandStack() : ItemStack.EMPTY;
+        Entity attacker = getDirectEntity() != null ? getDirectEntity() : target.getKillCredit();
+        ItemStack item = attacker instanceof LivingEntity ? ((LivingEntity)attacker).getMainHandItem() : ItemStack.EMPTY;
 
         if (attacker == target) {
             basic += ".self";
 
-            if (!item.isEmpty() && item.contains(DataComponentTypes.CUSTOM_NAME)) {
+            if (!item.isEmpty() && item.has(DataComponents.CUSTOM_NAME)) {
                 basic += ".item";
-                params.add(item.toHoverableText());
+                params.add(item.getDisplayName());
             }
-        } else if (!item.isEmpty() && item.contains(DataComponentTypes.CUSTOM_NAME)) {
+        } else if (!item.isEmpty() && item.has(DataComponents.CUSTOM_NAME)) {
             basic += ".item";
             params.add(attacker.getDisplayName());
-            params.add(item.toHoverableText());
+            params.add(item.getDisplayName());
         } else if (attacker != null) {
             basic += ".player";
             params.add(attacker.getDisplayName());
         }
 
-        Text message = Text.translatable(basic, params.toArray());
+        Component message = Component.translatable(basic, params.toArray());
         return Pony.of(target).filter(e -> e.getCompositeRace().canFly()).map(pony -> {
             if (pony.getPhysics().isFlying()) {
-                return Text.translatable("death.attack.unicopia.generic.whilst_flying", message);
+                return Component.translatable("death.attack.unicopia.generic.whilst_flying", message);
             }
             return message;
         }).orElse(message);

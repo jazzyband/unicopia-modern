@@ -4,10 +4,10 @@ import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.Unicopia;
 import net.fabricmc.fabric.api.object.builder.v1.block.type.BlockSetTypeBuilder;
 import net.fabricmc.fabric.api.object.builder.v1.block.type.WoodTypeBuilder;
-import net.minecraft.block.BlockSetType;
-import net.minecraft.block.WoodType;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.properties.BlockSetType;
+import net.minecraft.world.level.block.state.properties.WoodType;
 
 public interface UWoodTypes {
     WoodType PALM = register("palm");
@@ -15,12 +15,12 @@ public interface UWoodTypes {
     WoodType GOLDEN_OAK = register("golden_oak");
 
     BlockSetType CLOUD = new BlockSetTypeBuilder()
-            .soundGroup(BlockSoundGroup.WOOL)
-            .doorCloseSound(USounds.Vanilla.BLOCK_WOOL_HIT)
-            .doorOpenSound(USounds.Vanilla.BLOCK_WOOL_BREAK)
+            .soundType(SoundType.WOOL)
+            .doorCloseSound(USounds.Vanilla.WOOL_HIT)
+            .doorOpenSound(USounds.Vanilla.WOOL_BREAK)
             .register(Unicopia.id("cloud"));
     BlockSetType CRYSTAL = BlockSetTypeBuilder.copyOf(BlockSetType.IRON)
-            .soundGroup(BlockSoundGroup.AMETHYST_BLOCK)
+            .soundType(SoundType.AMETHYST)
             .openableByHand(true)
             .register(Unicopia.id("crystal"));
 

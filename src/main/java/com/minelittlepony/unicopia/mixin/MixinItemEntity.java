@@ -7,10 +7,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.entity.*;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 
 @Mixin(ItemEntity.class)
 abstract class MixinItemEntity extends Entity implements IItemEntity {
@@ -44,19 +43,17 @@ abstract class MixinItemEntity extends Entity implements IItemEntity {
         get().tick();
     }
 
-    @Inject(method = "writeCustomDataToNbt(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("HEAD"))
-    private void onWriteCustomDataToTag(NbtCompound tag, CallbackInfo info) {
-        tag.put("unicopia_caster", get().toNBT(getWorld().getRegistryManager()));
+    @Inject(method = "addAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueOutput;)V", at = @At("HEAD"))
+    private void onWriteCustomDataToTag(net.minecraft.world.level.storage.ValueOutput tag, CallbackInfo info) {
+        tag.store("unicopia_caster", CompoundTag.CODEC, get().toNBT(level().registryAccess()));
     }
 
-    @Inject(method = "readCustomDataFromNbt(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("HEAD"))
-    private void onReadCustomDataFromTag(NbtCompound tag, CallbackInfo info) {
-        if (tag.contains("unicopia_caster")) {
-            get().fromNBT(tag.getCompoundOrEmpty("unicopia_caster"), getWorld().getRegistryManager());
-        }
+    @Inject(method = "readAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueInput;)V", at = @At("HEAD"))
+    private void onReadCustomDataFromTag(net.minecraft.world.level.storage.ValueInput tag, CallbackInfo info) {
+        tag.read("unicopia_caster", CompoundTag.CODEC).ifPresent(data -> get().fromNBT(data, level().registryAccess()));
     }
 
-    @Accessor("itemAge")
+    @Accessor("age")
     @Override
     public abstract int getAge();
 

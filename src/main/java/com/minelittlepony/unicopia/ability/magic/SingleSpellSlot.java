@@ -2,15 +2,13 @@ package com.minelittlepony.unicopia.ability.magic;
 
 import java.util.UUID;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.network.track.Trackable;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 /**
  * Container for a single spell
@@ -59,12 +57,22 @@ class SingleSpellSlot implements SpellSlots, NbtSerialisable {
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         compound.put("effect", entry.spell.toNBT(lookup));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toValue(net.minecraft.world.level.storage.ValueOutput output, Provider lookup) {
+        output.store("effect", CompoundTag.CODEC, entry.spell.toNBT(lookup));
+    }
+
+    @Override
+    public void fromValue(net.minecraft.world.level.storage.ValueInput input, Provider lookup) {
+        entry.spell.fromNBT(input.read("effect", CompoundTag.CODEC).orElseGet(CompoundTag::new), lookup);
+    }
+
+    @Override
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         entry.spell.fromNBT(compound.getCompoundOrEmpty("effect"), lookup);
     }
 

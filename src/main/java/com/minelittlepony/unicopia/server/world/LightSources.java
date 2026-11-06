@@ -3,10 +3,18 @@ package com.minelittlepony.unicopia.server.world;
 import java.util.Iterator;
 import java.util.UUID;
 import java.util.function.Function;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.saveddata.SavedData;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.entity.DynamicLightSource;
 import com.mojang.serialization.Codec;
+import com.mojang.datafixers.util.Unit;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -17,18 +25,11 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
-
-public class LightSources extends PersistentState {
+public class LightSources extends SavedData {
     private static final Identifier ID = Unicopia.id("light_sources");
-    private static final PersistentStateKey<LightSources> KEY = new PersistentStateKey<>(ID, context -> Codec.unit(() -> new LightSources(context.getWorldOrThrow())), LightSources::new);
+    private static final PersistentStateKey<LightSources> KEY = new PersistentStateKey<>(ID,
+            world -> Codec.EMPTY.codec().xmap(unit -> new LightSources(world), sources -> Unit.INSTANCE),
+            LightSources::new);
 
     private final Object2LongMap<UUID> lightSourceLocations = new Object2LongOpenHashMap<>();
     private final Long2ObjectMap<ObjectSet<UUID>> lightSources = new Long2ObjectOpenHashMap<>();
@@ -36,22 +37,22 @@ public class LightSources extends PersistentState {
 
     private volatile boolean empty = true;
 
-    private final World world;
+    private final Level world;
 
     private final Function<UUID, Entity> entitySupplier;
 
-    public static LightSources get(WorldView world) {
+    public static LightSources get(LevelReader world) {
         return KEY.get(world);
     }
 
-    LightSources(World world) {
+    LightSources(Level world) {
         this.world = world;
-        entitySupplier = world instanceof ServerWorld s ? s::getEntity : id -> world.getEntityById(lightSourceClientIds.getInt(id));
+        entitySupplier = world instanceof ServerLevel s ? s::getEntity : id -> world.getEntity(lightSourceClientIds.getInt(id));
     }
 
     public <T extends Entity & DynamicLightSource> void addLightSource(T entity) {
         synchronized (lightSources) {
-            lightSourceLocations.computeLong(entity.getUuid(), (id, lastPos) -> {
+            lightSourceLocations.computeLong(entity.getUUID(), (id, lastPos) -> {
                 lightSourceClientIds.put(id, entity.getId());
                 long pos = entity.getLightSourcePosition().asLong();
                 if (lastPos == null || lastPos != pos) {
@@ -70,7 +71,7 @@ public class LightSources extends PersistentState {
 
     private void checkBlock(long pos) {
         try {
-            world.getLightingProvider().checkBlock(BlockPos.fromLong(pos));
+            world.getLightEngine().checkBlock(BlockPos.of(pos));
         } catch (Exception ignored) { }
     }
 
@@ -165,9 +166,9 @@ public class LightSources extends PersistentState {
     }
 
     private boolean checkPos(ChunkPos chunkPos, long pos) {
-        return world.isOutOfHeightLimit(BlockPos.unpackLongY(pos))
-            && checkPos(BlockPos.unpackLongX(pos), chunkPos.getStartX(), chunkPos.getEndX())
-            && checkPos(BlockPos.unpackLongZ(pos), chunkPos.getStartZ(), chunkPos.getEndZ());
+        return world.isOutsideBuildHeight(BlockPos.getY(pos))
+            && checkPos(BlockPos.getX(pos), chunkPos.getMinBlockX(), chunkPos.getMaxBlockX())
+            && checkPos(BlockPos.getZ(pos), chunkPos.getMinBlockZ(), chunkPos.getMaxBlockZ());
     }
 
     private boolean checkPos(int p, int min, int max) {

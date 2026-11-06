@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet",
+  "key": {
+    "c": "minecraft:pink_wool",
+    "h": "minecraft:light_blue_wool",
+    "v": "minecraft:yellow_wool"
+  },
+  "pattern": [
+    "cvc",
+    "h h",
+    " vc"
+  ],
+  "result": {
+    "id": "unicopia:rainbow_bpy_bed_sheets"
+  }
+}

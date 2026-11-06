@@ -1,0 +1,52 @@
+{
+  "variants": {
+    "age=0,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage0"
+    },
+    "age=0,half=top": {
+      "model": "unicopia:block/pineapple_top_stage0"
+    },
+    "age=1,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage0"
+    },
+    "age=1,half=top": {
+      "model": "unicopia:block/pineapple_top_stage1"
+    },
+    "age=2,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage1"
+    },
+    "age=2,half=top": {
+      "model": "unicopia:block/pineapple_top_stage2"
+    },
+    "age=3,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage2"
+    },
+    "age=3,half=top": {
+      "model": "unicopia:block/pineapple_top_stage3"
+    },
+    "age=4,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage3"
+    },
+    "age=4,half=top": {
+      "model": "unicopia:block/pineapple_top_stage4"
+    },
+    "age=5,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage4"
+    },
+    "age=5,half=top": {
+      "model": "unicopia:block/pineapple_top_stage5"
+    },
+    "age=6,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage5"
+    },
+    "age=6,half=top": {
+      "model": "unicopia:block/pineapple_top_stage5"
+    },
+    "age=7,half=bottom": {
+      "model": "unicopia:block/pineapple_bottom_stage6"
+    },
+    "age=7,half=top": {
+      "model": "unicopia:block/pineapple_top_stage6"
+    }
+  }
+}

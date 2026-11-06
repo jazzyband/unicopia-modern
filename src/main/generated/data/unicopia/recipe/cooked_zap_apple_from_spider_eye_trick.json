@@ -1,0 +1,8 @@
+{
+  "type": "unicopia:crafting_zap_apple",
+  "appearance": "unicopia:cooked_zap_apple",
+  "ingredients": [
+    "unicopia:zap_apple",
+    "minecraft:spider_eye"
+  ]
+}

@@ -15,13 +15,13 @@ import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.server.world.UTreeGen;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalItemTags;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.resources.Identifier;
 
 public class UTraitsGenerator extends TraitsGenerator {
 
     @Override
-    public void generate(WrapperLookup registries, BiConsumer<Identifier, TraitStream> exporter) {
+    public void generate(Provider registries, BiConsumer<Identifier, TraitStream> exporter) {
         var sandwichTraits = SpellTraits.builder()
                 .with(Trait.LIFE, 2)
                 .with(Trait.EARTH, 1);
@@ -44,8 +44,7 @@ public class UTraitsGenerator extends TraitsGenerator {
                 .item(UItems.CARAPACE)
                 .build());
         exporter.accept(Unicopia.id("food"), TraitMap.builder()
-                .item(UItems.ZAP_APPLE, zapAppleTraits)
-                .item(UItems.COOKED_ZAP_APPLE, zapAppleTraits.multiply(2))
+                .item(UItems.ZAP_APPLE, zapAppleTraits).item(UItems.COOKED_ZAP_APPLE, zapAppleTraits.multiply(2))
                 .item(UItems.ROTTEN_APPLE, appleTraits.add(rottingTraits)) // Added LIFE x3 to rotten_apple
                 .item(UItems.DAFFODIL_DAISY_SANDWICH, sandwichTraits)
                 .item(UItems.HAY_BURGER, sandwichTraits)

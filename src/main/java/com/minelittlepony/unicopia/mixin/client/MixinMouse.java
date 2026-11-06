@@ -7,23 +7,22 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.entity.player.Pony;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.MouseHandler;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.Mouse;
-
-@Mixin(Mouse.class)
+@Mixin(MouseHandler.class)
 abstract class MixinMouse {
     @Shadow
-    private double cursorDeltaX;
+    private double accumulatedDX;
     @Shadow
-    private double cursorDeltaY;
+    private double accumulatedDY;
 
-    @Inject(method = "updateMouse(D)V", at = @At("HEAD"))
+    @Inject(method = "turnPlayer(D)V", at = @At("HEAD"))
     private void onUpdateMouse(double tickDelta, CallbackInfo info) {
-        Pony player = Pony.of(MinecraftClient.getInstance().player);
+        Pony player = Pony.of(Minecraft.getInstance().player);
         if (player != null && player.getPhysics().isGravityNegative()) {
-            cursorDeltaX = -cursorDeltaX;
-            cursorDeltaY = -cursorDeltaY;
+            accumulatedDX = -accumulatedDX;
+            accumulatedDY = -accumulatedDY;
         }
     }
 }

@@ -1,8 +1,39 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.EnumSet;
 import java.util.Optional;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
+import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.util.RandomPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -13,37 +44,8 @@ import com.minelittlepony.unicopia.entity.MagicImmune;
 import com.minelittlepony.unicopia.particle.LightningBoltParticleEffect;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MovementType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.FuzzyPositions;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.WanderAroundGoal;
-import net.minecraft.entity.ai.pathing.BirdNavigation;
-import net.minecraft.entity.ai.pathing.EntityNavigation;
-import net.minecraft.entity.ai.pathing.Path;
-import net.minecraft.entity.ai.pathing.PathNodeType;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.PathAwareEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 
-public class FairyEntity extends PathAwareEntity implements DynamicLightSource, WeaklyOwned.Mutable<LivingEntity>, MagicImmune {
+public class FairyEntity extends PathfinderMob implements DynamicLightSource, WeaklyOwned.Mutable<LivingEntity>, MagicImmune {
     private final EntityReference<LivingEntity> owner = new EntityReference<>();
 
     private final EntityReference<LivingEntity> assignment = new EntityReference<>();
@@ -52,31 +54,31 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
 
     private Optional<BlockPos> stayingPos = Optional.empty();
 
-    protected FairyEntity(EntityType<FairyEntity> type, World world) {
+    protected FairyEntity(EntityType<FairyEntity> type, Level world) {
         super(type, world);
     }
 
     @Override
-    protected EntityNavigation createNavigation(World world) {
-        BirdNavigation birdNavigation = new BirdNavigation(this, world);
-        birdNavigation.setCanPathThroughDoors(true);
-        birdNavigation.setCanSwim(true);
-        birdNavigation.setCanPathThroughDoors(true);
+    protected PathNavigation createNavigation(Level world) {
+        FlyingPathNavigation birdNavigation = new FlyingPathNavigation(this, world);
+        birdNavigation.setCanOpenDoors(true);
+        birdNavigation.setCanFloat(true);
+        birdNavigation.setCanOpenDoors(true);
         return birdNavigation;
     }
 
-    public static DefaultAttributeContainer.Builder createMobAttributes() {
-        return MobEntity.createMobAttributes()
-                .add(EntityAttributes.MAX_HEALTH, 3)
-                .add(EntityAttributes.FOLLOW_RANGE, 100)
-                .add(EntityAttributes.MOVEMENT_SPEED, 0.25);
+    public static AttributeSupplier.Builder createMobAttributes() {
+        return Mob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, 3)
+                .add(Attributes.FOLLOW_RANGE, 100)
+                .add(Attributes.MOVEMENT_SPEED, 0.25);
     }
 
     @Override
-    protected void initGoals() {
-        goalSelector.add(5, new StayGoal());
-        goalSelector.add(6, new FollowEntityGoal(2, 2, 30));
-        goalSelector.add(7, new WanderAroundGoal(this, 1));
+    protected void registerGoals() {
+        goalSelector.addGoal(5, new StayGoal());
+        goalSelector.addGoal(6, new FollowEntityGoal(2, 2, 30));
+        goalSelector.addGoal(7, new RandomStrollGoal(this, 1));
     }
 
     @Override
@@ -102,26 +104,26 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
     }
 
     @Override
-    public World asWorld() {
-        return getWorld();
+    public Level asWorld() {
+        return level();
     }
 
     @Override
-    public boolean handleFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource) {
+    public boolean causeFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource) {
         return false;
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void checkFallDamage(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
     }
 
     @Override
-    public boolean isClimbing() {
+    public boolean onClimbable() {
         return false;
     }
 
     @Override
-    public boolean isPushedByFluids() {
+    public boolean isPushedByFluid() {
         return false;
     }
 
@@ -139,46 +141,46 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
         super.tick();
         emitter.tick();
 
-        if (getWorld().random.nextInt(20) == 3) {
-            getWorld().addParticleClient(new MagicParticleEffect(0xFFFFFF), getParticleX(1), getY(), getParticleZ(1), 0, 0, 0);
+        if (level().getRandom().nextInt(20) == 3) {
+            level().addParticle(new MagicParticleEffect(0xFFFFFF), getRandomX(1), getY(), getRandomZ(1), 0, 0, 0);
         }
 
-        if (age % 60 == 0) {
+        if (tickCount % 60 == 0) {
             playSound(USounds.ITEM_MAGIC_AURA, 0.1F, 6);
         }
     }
 
     @Override
-    public void travel(Vec3d movementInput) {
-        if (isTouchingWater()) {
-            updateVelocity(0.02f, movementInput);
-            move(MovementType.SELF, getVelocity());
-            setVelocity(getVelocity().multiply(0.8f));
+    public void travel(Vec3 movementInput) {
+        if (isInWater()) {
+            moveRelative(0.02f, movementInput);
+            move(MoverType.SELF, getDeltaMovement());
+            setDeltaMovement(getDeltaMovement().scale(0.8f));
         } else if (isInLava()) {
-            updateVelocity(0.02f, movementInput);
-            move(MovementType.SELF, getVelocity());
-            setVelocity(getVelocity().multiply(0.5));
+            moveRelative(0.02f, movementInput);
+            move(MoverType.SELF, getDeltaMovement());
+            setDeltaMovement(getDeltaMovement().scale(0.5));
         } else {
             float f = 0.91f;
-            if (isOnGround()) {
-                f = getWorld().getBlockState(getBlockPos().down()).getBlock().getSlipperiness() * 0.91f;
+            if (onGround()) {
+                f = level().getBlockState(blockPosition().below()).getBlock().getFriction() * 0.91f;
             }
             float g = 0.16277137f / (f * f * f);
             f = 0.91f;
-            if (isOnGround()) {
-                f = getWorld().getBlockState(getBlockPos().down()).getBlock().getSlipperiness() * 0.91f;
+            if (onGround()) {
+                f = level().getBlockState(blockPosition().below()).getBlock().getFriction() * 0.91f;
             }
-            updateVelocity(isOnGround() ? 0.1f * g : 0.02f, movementInput);
-            move(MovementType.SELF, getVelocity());
-            setVelocity(getVelocity().multiply(f));
+            moveRelative(onGround() ? 0.1f * g : 0.02f, movementInput);
+            move(MoverType.SELF, getDeltaMovement());
+            setDeltaMovement(getDeltaMovement().scale(f));
         }
-        updateLimbs(false);
+        calculateEntityAnimation(false);
     }
 
     @Override
-    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
 
-        if (hand == Hand.MAIN_HAND) {
+        if (hand == InteractionHand.MAIN_HAND) {
 
             if (isStaying()) {
                 stayingPos = Optional.empty();
@@ -187,48 +189,48 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
                 }
             } else {
                 assignment.set(null);
-                setStaying(getBlockPos());
+                setStaying(blockPosition());
             }
 
-            playSound(USounds.ENTITY_TWITTERMITE_AMBIENT, getSoundVolume() / 3, getSoundPitch() * 3);
+            playSound(USounds.ENTITY_TWITTERMITE_AMBIENT, getSoundVolume() / 3, getVoicePitch() * 3);
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     @Override
-    public boolean handleAttack(Entity attacker) {
-        if (getWorld() instanceof ServerWorld serverWorld) {
-            LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(getWorld(), SpawnReason.MOB_SUMMONED);
-            lightning.refreshPositionAfterTeleport(getX(), getY(), getZ());
-            attacker.onStruckByLightning(serverWorld, lightning);
+    public boolean skipAttackInteraction(Entity attacker) {
+        if (level() instanceof ServerLevel serverWorld) {
+            LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(level(), EntitySpawnReason.MOB_SUMMONED);
+            lightning.snapTo(getX(), getY(), getZ());
+            attacker.thunderHit(serverWorld, lightning);
         }
-        emitGameEvent(GameEvent.LIGHTNING_STRIKE);
-        ParticleUtils.spawnParticle(getWorld(), LightningBoltParticleEffect.DEFAULT, getPos(), Vec3d.ZERO);
+        gameEvent(GameEvent.LIGHTNING_STRIKE);
+        ParticleUtils.spawnParticle(level(), LightningBoltParticleEffect.DEFAULT, position(), Vec3.ZERO);
 
         return false;
     }
 
     @Override
-    public void onRemoved() {
-        super.onRemoved();
+    public void onClientRemoval() {
+        super.onClientRemoval();
         emitter.remove();
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound tag) {
-        super.writeCustomDataToNbt(tag);
-        tag.put("owner", owner.toNBT(getRegistryManager()));
-        stayingPos.ifPresent(pos -> tag.put("stayingPos", BlockPos.CODEC, pos));
+    public void addAdditionalSaveData(ValueOutput tag) {
+        super.addAdditionalSaveData(tag);
+        tag.store("owner", net.minecraft.nbt.CompoundTag.CODEC, owner.toNBT(registryAccess()));
+        stayingPos.ifPresent(pos -> tag.store("stayingPos", BlockPos.CODEC, pos));
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound tag) {
-        super.readCustomDataFromNbt(tag);
-        owner.fromNBT(tag.getCompoundOrEmpty("owner"), getRegistryManager());
-        stayingPos = tag.get("stayingPos", BlockPos.CODEC);
+    public void readAdditionalSaveData(ValueInput tag) {
+        super.readAdditionalSaveData(tag);
+        owner.fromNBT(tag.read("owner", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new), registryAccess());
+        stayingPos = tag.read("stayingPos", BlockPos.CODEC);
     }
 
     class FollowEntityGoal extends Goal {
@@ -246,39 +248,39 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
             this.speed = speed;
             this.minDistance = minDistance;
             this.maxDistance = maxDistance;
-            setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
+            setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
         @Override
-        public boolean canStart() {
-            target = assignment.get(getWorld());
+        public boolean canUse() {
+            target = assignment.get(level());
 
             if (target == null) {
                 target = getMaster();
             }
             if (target == null) {
-                target = getWorld().getClosestPlayer(FairyEntity.this, maxDistance);
+                target = level().getNearestPlayer(FairyEntity.this, maxDistance);
             }
             return target != null;
         }
 
         @Override
-        public boolean shouldContinue() {
-            return target != null && !isStaying() && !getNavigation().isIdle() && squaredDistanceTo(target) > minDistance * minDistance;
+        public boolean canContinueToUse() {
+            return target != null && !isStaying() && !getNavigation().isDone() && distanceToSqr(target) > minDistance * minDistance;
         }
 
         @Override
         public void start() {
             updateCountdownTicks = 0;
-            oldWaterPathFindingPenalty = getPathfindingPenalty(PathNodeType.WATER);
-            setPathfindingPenalty(PathNodeType.WATER, 0.0f);
+            oldWaterPathFindingPenalty = getPathfindingMalus(PathType.WATER);
+            setPathfindingMalus(PathType.WATER, 0.0f);
         }
 
         @Override
         public void stop() {
             target = null;
             getNavigation().stop();
-            setPathfindingPenalty(PathNodeType.WATER, oldWaterPathFindingPenalty);
+            setPathfindingMalus(PathType.WATER, oldWaterPathFindingPenalty);
         }
 
         @Override
@@ -287,24 +289,24 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
                 return;
             }
 
-            getLookControl().lookAt(target, 10, getMaxLookPitchChange());
+            getLookControl().setLookAt(target, 10, getMaxHeadXRot());
 
-            Path currentPath = getNavigation().getCurrentPath();
-            if (currentPath != null && target.getEyeY() < getY() - 0.5 && getWorld().getBlockState(getBlockPos().down(3)).isAir()) {
-                addVelocity(0, -speed, 0);
+            Path currentPath = getNavigation().getPath();
+            if (currentPath != null && target.getEyeY() < getY() - 0.5 && level().getBlockState(blockPosition().below(3)).isAir()) {
+                push(0, -speed, 0);
             }
 
-            double distance = getPos().squaredDistanceTo(target.getPos());
+            double distance = position().distanceToSqr(target.position());
 
             double speed = this.speed;
 
             if (distance > 100) {
-                setPosition(
-                    target.getX() + getWorld().random.nextFloat() / 2F - 0.5F,
+                setPos(
+                    target.getX() + level().getRandom().nextFloat() / 2F - 0.5F,
                     target.getEyeY(),
-                    target.getZ() + getWorld().random.nextFloat() / 2F - 0.5F
+                    target.getZ() + level().getRandom().nextFloat() / 2F - 0.5F
                 );
-                setVelocity(target.getVelocity());
+                setDeltaMovement(target.getDeltaMovement());
                 return;
             } else if (distance > 40) {
                 speed *= 10;
@@ -314,24 +316,24 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
                 speed *= 2;
             }
 
-            getNavigation().setSpeed(speed);
+            getNavigation().setSpeedModifier(speed);
 
             if (--updateCountdownTicks > 0) {
                 return;
             }
 
-            updateCountdownTicks = getTickCount(10);
+            updateCountdownTicks = adjustedTickDelay(10);
 
             if (distance <= minDistance * minDistance) {
 
-                BlockPos pos = FuzzyPositions.localFuzz(getWorld().random, 5, 5);
+                BlockPos pos = RandomPos.generateRandomDirection(level().getRandom(), 5, 5);
                 if (pos != null) {
-                    getNavigation().startMovingTo(pos.getX(), pos.getY(), pos.getZ(), speed);
+                    getNavigation().moveTo(pos.getX(), pos.getY(), pos.getZ(), speed);
                 } else {
                     getNavigation().stop();
                 }
             } else {
-                getNavigation().startMovingTo(target, speed);
+                getNavigation().moveTo(target, speed);
             }
         }
     }
@@ -340,17 +342,17 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
         private int updateCountdownTicks;
 
         public StayGoal() {
-            setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
+            setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
         @Override
-        public boolean canStart() {
+        public boolean canUse() {
             return isStaying();
         }
 
         @Override
-        public boolean shouldContinue() {
-            return isStaying() && !getNavigation().isIdle();
+        public boolean canContinueToUse() {
+            return isStaying() && !getNavigation().isDone();
         }
 
         @Override
@@ -369,13 +371,13 @@ public class FairyEntity extends PathAwareEntity implements DynamicLightSource, 
                 return;
             }
 
-            updateCountdownTicks = getTickCount(10);
+            updateCountdownTicks = adjustedTickDelay(10);
 
             stayingPos.ifPresent(pos -> {
-                if (pos.getSquaredDistance(getBlockPos()) <= 1) {
+                if (pos.distSqr(blockPosition()) <= 1) {
                     getNavigation().stop();
                 } else {
-                    getNavigation().startMovingTo(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, speed);
+                    getNavigation().moveTo(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, flyDist);
                 }
             });
         }

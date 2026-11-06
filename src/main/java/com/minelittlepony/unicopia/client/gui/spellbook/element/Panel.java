@@ -1,14 +1,13 @@
 package com.minelittlepony.unicopia.client.gui.spellbook.element;
 
 import java.util.Optional;
-
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.minelittlepony.common.client.gui.IViewRoot;
 import com.minelittlepony.common.client.gui.ScrollContainer;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
 import com.minelittlepony.common.client.gui.dimension.Padding;
 import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookScreen;
 import com.minelittlepony.unicopia.client.gui.spellbook.element.DynamicContent.GuiPage;
-
-import net.minecraft.client.gui.DrawContext;
 
 class Panel extends ScrollContainer {
     private final DynamicContent content;
@@ -26,7 +25,7 @@ class Panel extends ScrollContainer {
 
         int width = screen.getBackgroundWidth() / 2;
         margin.top = screen.getY() + 35;
-        margin.bottom = screen.height - screen.getBackgroundHeight() - screen.getY() + 40;
+        margin.bottom = screen.height - screen.getBackgroundHeight() - screen.getY() + 20;
         margin.left = screen.getX() + 30;
 
         if (pageIndex % 2 == 1) {
@@ -36,12 +35,21 @@ class Panel extends ScrollContainer {
             margin.right = screen.width - width - margin.left + 30;
         }
         init(() -> {});
-        screen.addDrawable(this);
-        screen.getChildElements().add(this);
+        screen.addRenderableOnly(this);
+        ((IViewRoot)screen).getChildElements().add(this);
     }
 
     @Override
-    protected void renderContents(DrawContext context, int mouseX, int mouseY, float partialTicks) {
+    protected void renderContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+        var scissorBounds = getBounds();
+
+        context.disableScissor();
+        context.enableScissor(
+                scissorBounds.left,
+                scissorBounds.top,
+                scissorBounds.right(),
+                scissorBounds.bottom()
+        );
         page.ifPresent(p -> {
             int oldHeight = p.getBounds().height;
             p.draw(context, mouseX, mouseY, this);
@@ -63,23 +71,23 @@ class Panel extends ScrollContainer {
     }
 
     @Override
-    protected void drawBackground(DrawContext context, int mouseX, int mouseY, float partialTicks) {
+    protected void drawBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
 
     }
 
     @Override
-    protected void drawDecorations(DrawContext context, int mouseX, int mouseY, float partialTicks) {
+    protected void drawDecorations(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
 
     }
 
     @Override
-    protected void drawOverlays(DrawContext context, int mouseX, int mouseY, float partialTicks) {
-        context.getMatrices().push();
-        getBounds().translate(context.getMatrices());
+    protected void drawOverlays(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+        context.pose().pushMatrix();
+        this.getBounds().translate(context.pose());
         page.ifPresent(p -> {
             p.drawHeader(context, mouseX, mouseY);
         });
-        context.getMatrices().pop();
+        context.pose().popMatrix();
         super.drawOverlays(context, mouseX, mouseY, partialTicks);
     }
 }

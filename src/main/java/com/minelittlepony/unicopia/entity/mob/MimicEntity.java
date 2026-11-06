@@ -1,100 +1,84 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.UTags;
-import com.minelittlepony.unicopia.client.render.VirtualBlockRenderView;
+import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
 import com.minelittlepony.unicopia.mixin.MixinBlockEntity;
-import com.minelittlepony.unicopia.server.world.UnicopiaWorldProperties;
 import com.minelittlepony.unicopia.util.InventoryUtil;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.block.enums.ChestType;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.entity.mob.PathAwareEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.LootTables;
-import net.minecraft.nbt.NbtCompound;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityDataRegistry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ItemScatterer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializer;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.ContainerUser;
+import net.minecraft.world.Containers;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.World;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.level.storage.loot.BuiltInLootTables;
+import net.minecraft.world.level.storage.loot.LootTable;
 
-public class MimicEntity extends PathAwareEntity {
+public class MimicEntity extends PathfinderMob {
     static final byte OPEN_MOUTH = (byte)200;
     static final byte CLOSE_MOUTH = (byte)201;
-    static final float DIFFICULTY_WEIGHT = 0.6F;
-    static final float LUCK_EFFECT_WEIGHT = 0.8F;
-    static final TrackedData<NbtCompound> CHEST_DATA = DataTracker.registerData(MimicEntity.class, TrackedDataHandlerRegistry.NBT_COMPOUND);
-    static final TrackedData<Boolean> MOUTH_OPEN = DataTracker.registerData(MimicEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    static final EntityDataSerializer<CompoundTag> CHEST_DATA_SERIALIZER = EntityDataSerializer.forValueType(ByteBufCodecs.COMPOUND_TAG);
+    static final EntityDataAccessor<CompoundTag> CHEST_DATA = SynchedEntityData.defineId(MimicEntity.class, CHEST_DATA_SERIALIZER);
+    static final EntityDataAccessor<Boolean> MOUTH_OPEN = SynchedEntityData.defineId(MimicEntity.class, EntityDataSerializers.BOOLEAN);
+
+    static {
+        FabricEntityDataRegistry.register(Unicopia.id("mimic_chest_data"), CHEST_DATA_SERIALIZER);
+    }
 
     @Nullable
     private ChestBlockEntity chestData;
 
     private int openTicks;
-    private final Set<PlayerEntity> observingPlayers = new HashSet<>();
-
-    private final VirtualBlockRenderView renderView = new VirtualBlockRenderView() {
-        @Override
-        public BlockRenderView proxy() {
-            return getWorld();
-        }
-
-        @Override
-        public BlockEntity getBlockEntity(BlockPos pos) {
-            if (pos.equals(getBlockPos())) {
-                return chestData;
-            }
-            return VirtualBlockRenderView.super.getBlockEntity(pos);
-        }
-
-        @Override
-        public BlockState getBlockState(BlockPos pos) {
-            if (pos.equals(getBlockPos()) && chestData != null && chestData.getCachedState() != null) {
-                return chestData.getCachedState();
-            }
-            return VirtualBlockRenderView.super.getBlockState(pos);
-        }
-    };
+    private final Set<Player> observingPlayers = new HashSet<>();
 
     static void bootstrap() {
-        PlayerBlockBreakEvents.BEFORE.register((World world, PlayerEntity player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity) -> {
+        PlayerBlockBreakEvents.BEFORE.register((Level world, Player player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity) -> {
             if (blockEntity instanceof MimicEntity.MimicGeneratable generatable) {
                 var mimic = generatable.triggerMimic(player);
                 if (mimic != null) {
@@ -107,96 +91,97 @@ public class MimicEntity extends PathAwareEntity {
         });
     }
 
-    public static boolean shouldConvert(World world, BlockPos pos, PlayerEntity player, RegistryKey<LootTable> lootTable) {
+    public static boolean shouldConvert(Level world, BlockPos pos, Player player, ResourceKey<LootTable> lootTable) {
         if (!shouldGenerateMimic(lootTable)
-                || !world.getBlockState(pos).isIn(UTags.Blocks.MIMIC_CHESTS)
+                || !world.getBlockState(pos).is(UTags.Blocks.MIMIC_CHESTS)
                 || !(world.getBlockEntity(pos) instanceof ChestBlockEntity be)
-                || be.getCachedState().getOrEmpty(ChestBlock.CHEST_TYPE).orElse(ChestType.SINGLE) != ChestType.SINGLE) {
+                || be.getBlockState().getOptionalValue(ChestBlock.TYPE).orElse(ChestType.SINGLE) != ChestType.SINGLE) {
             return false;
         }
 
-        var localDifficulty = world.getLocalDifficulty(pos);
-        if (localDifficulty.getGlobalDifficulty() == Difficulty.PEACEFUL) {
+        if (!(world instanceof ServerLevel serverWorld)) {
             return false;
         }
-        if (world instanceof ServerWorld sw) {
-            float difficulty = MathHelper.clamp(localDifficulty.getLocalDifficulty() / 4F, 0F, 1F) * DIFFICULTY_WEIGHT;
-            float luck = (1 - EnchantmentUtil.getLuckPercentage(0, player)) * LUCK_EFFECT_WEIGHT;
-            UnicopiaWorldProperties properties = UnicopiaWorldProperties.forWorld(sw);
-            if (properties.rollMimicChance(player.getRandom().nextFloat() * 0.3F * difficulty * luck) >= 1) {
-                properties.resetMimicChance();
-                return true;
-            }
+        var localDifficulty = serverWorld.getCurrentDifficultyAt(pos);
+        if (localDifficulty.getDifficulty() == Difficulty.PEACEFUL) {
+            return false;
         }
-        return false;
+        float difficulty = Mth.clamp(localDifficulty.getEffectiveDifficulty(), 0F, 4F) / 4F;
+        float threshold = 0.8F * ((EnchantmentUtil.getLuck(0, player) / 20F) + 0.5F);
+        return threshold * world.getRandom().nextFloat() < difficulty;
     }
 
     @SuppressWarnings("deprecation")
     @Nullable
-    public static MimicEntity spawnFromChest(World world, BlockPos pos) {
+    public static MimicEntity spawnFromChest(Level world, BlockPos pos) {
         if (!(world.getBlockEntity(pos) instanceof ChestBlockEntity be)) {
             return null;
         }
         world.removeBlockEntity(pos);
-        world.addBlockEntity(be.getType().get(world, pos));
+        world.setBlockEntity(be.getType().getBlockEntity(world, pos));
         world.removeBlock(pos, true);
-        MimicEntity mimic = UEntities.MIMIC.create(world, SpawnReason.NATURAL);
-        BlockState state = be.getCachedState();
-        Direction facing = state.getOrEmpty(ChestBlock.FACING).orElse(null);
-        float yaw = facing.getPositiveHorizontalDegrees();
-        be.setCachedState(be.getCachedState().getBlock().getDefaultState());
-        mimic.updatePositionAndAngles(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0);
-        mimic.setHeadYaw(yaw);
-        mimic.setBodyYaw(yaw);
-        mimic.setYaw(yaw);
+        MimicEntity mimic = UEntities.MIMIC.create(world, EntitySpawnReason.NATURAL);
+        BlockState state = be.getBlockState();
+        Direction facing = state.getOptionalValue(ChestBlock.FACING).orElse(null);
+        float yaw = facing.toYRot();
+        be.setBlockState(be.getBlockState().getBlock().defaultBlockState());
+        mimic.absSnapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0);
+        mimic.setYHeadRot(yaw);
+        mimic.setYBodyRot(yaw);
+        mimic.setYRot(yaw);
         mimic.setChest(be);
-        world.spawnEntity(mimic);
+        world.addFreshEntity(mimic);
         return mimic;
     }
 
-    public static boolean shouldGenerateMimic(@Nullable RegistryKey<LootTable> lootTable) {
+    public static boolean shouldGenerateMimic(@Nullable ResourceKey<LootTable> lootTable) {
         return lootTable != null
-             && lootTable.getValue().getPath().indexOf("village") == -1
-             && lootTable.getValue().getPath().indexOf("bastion") == -1
-             && lootTable.getValue().getPath().indexOf("underwater") == -1
-             && lootTable.getValue().getPath().indexOf("shipwreck") == -1
-             && !LootTables.SPAWN_BONUS_CHEST.equals(lootTable);
+             && lootTable.identifier().getPath().indexOf("village") == -1
+             && lootTable.identifier().getPath().indexOf("bastion") == -1
+             && lootTable.identifier().getPath().indexOf("underwater") == -1
+             && lootTable.identifier().getPath().indexOf("shipwreck") == -1
+             && !BuiltInLootTables.SPAWN_BONUS_CHEST.equals(lootTable);
     }
 
-    MimicEntity(EntityType<? extends MimicEntity> type, World world) {
+    MimicEntity(EntityType<? extends MimicEntity> type, Level world) {
         super(type, world);
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(CHEST_DATA, new NbtCompound());
-        builder.add(MOUTH_OPEN, false);
+    protected void defineSynchedData(Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(CHEST_DATA, new CompoundTag());
+        builder.define(MOUTH_OPEN, false);
     }
 
     @Override
-    public boolean isCollidable() {
+    public boolean canBeCollidedWith(net.minecraft.world.entity.Entity other) {
+        return isAlive();
+    }
+
+    @Override
+    public boolean isPickable() {
         return isAlive();
     }
 
     @Nullable
     @Override
-    public ItemStack getPickBlockStack() {
-        Item item = chestData.getCachedState().getBlock().asItem();
-        return item == Items.AIR ? null : item.getDefaultStack();
+    public ItemStack getPickResult() {
+        Item item = chestData.getBlockState().getBlock().asItem();
+        return item == Items.AIR ? null : item.getDefaultInstance();
     }
 
     @Override
-    protected void initGoals() {
-        goalSelector.add(2, new AttackGoal(this, 0.6F, false));
+    protected void registerGoals() {
+        goalSelector.addGoal(2, new AttackGoal(this, 0.6F, false));
     }
 
     public void setChest(ChestBlock chest) {
-        if (chest.createBlockEntity(getBlockPos(), chest.getDefaultState()) instanceof ChestBlockEntity be) {
+        if (chest.newBlockEntity(blockPosition(), chest.defaultBlockState()) instanceof ChestBlockEntity be) {
             setChest(be);
-            be.setLootTable(LootTables.ABANDONED_MINESHAFT_CHEST, getWorld().getRandom().nextLong());
-            if (!getWorld().isClient) {
-                dataTracker.set(CHEST_DATA, writeChestData(chestData));
+            be.setLootTable(BuiltInLootTables.ABANDONED_MINESHAFT, level().getRandom().nextLong());
+            if (!level().isClientSide()) {
+                entityData.set(CHEST_DATA, writeChestData(chestData));
             }
         }
     }
@@ -205,15 +190,11 @@ public class MimicEntity extends PathAwareEntity {
         this.chestData = chestData;
         if (chestData != null) {
             ((MimicGeneratable)chestData).setAllowMimics(false);
-            chestData.setWorld(getWorld());
+            chestData.setLevel(level());
         }
-        if (!getWorld().isClient) {
-            dataTracker.set(CHEST_DATA, chestData == null ? new NbtCompound() : writeChestData(chestData));
+        if (!level().isClientSide()) {
+            entityData.set(CHEST_DATA, chestData == null ? new CompoundTag() : writeChestData(chestData));
         }
-    }
-
-    public BlockRenderView getBlockRenderView() {
-        return renderView;
     }
 
     @Nullable
@@ -222,7 +203,7 @@ public class MimicEntity extends PathAwareEntity {
     }
 
     public boolean isMouthOpen() {
-        return dataTracker.get(MOUTH_OPEN);
+        return entityData.get(MOUTH_OPEN);
     }
 
     public void setMouthOpen(boolean mouthOpen) {
@@ -230,10 +211,10 @@ public class MimicEntity extends PathAwareEntity {
             return;
         }
 
-        playSound(mouthOpen ? SoundEvents.BLOCK_CHEST_OPEN : SoundEvents.BLOCK_CHEST_CLOSE, 0.5F, 1F);
-        dataTracker.set(MOUTH_OPEN, mouthOpen);
+        playSound(mouthOpen ? SoundEvents.CHEST_OPEN : SoundEvents.CHEST_CLOSE, 0.5F, 1F);
+        entityData.set(MOUTH_OPEN, mouthOpen);
         if (chestData != null) {
-            chestData.onSyncedBlockEvent(1, mouthOpen ? 1 : 0);
+            chestData.triggerEvent(1, mouthOpen ? 1 : 0);
         }
     }
 
@@ -243,30 +224,30 @@ public class MimicEntity extends PathAwareEntity {
     }
 
     public float getPeekAmount() {
-        return MathHelper.clamp((float)getVelocity().lengthSquared() * 50F, 0, 1);
+        return Mth.clamp((float)getDeltaMovement().lengthSqr() * 50F, 0, 1);
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        if (!getWorld().isClient) {
-            if (age < 12 || (getTarget() == null && this.lastAttackedTicks < age - 30)) {
-                BlockPos pos = getBlockPos();
-                setPosition(
+        if (!level().isClientSide()) {
+            if (tickCount < 12 || (getTarget() == null && this.attackStrengthTicker < tickCount - 30)) {
+                BlockPos pos = blockPosition();
+                setPos(
                         pos.getX() + 0.5,
                         getY(),
                         pos.getZ() + 0.5
                 );
-                setBodyYaw(MathHelper.floor(getBodyYaw() / 90) * 90);
-                setYaw(MathHelper.floor(getYaw() / 90) * 90);
-                setHeadYaw(MathHelper.floor(getHeadYaw() / 90) * 90);
-                if (getHealth() < getMaxHealth() && getWorld().random.nextInt(20) == 0) {
+                setYBodyRot(Mth.floor(getVisualRotationYInDegrees() / 90) * 90);
+                setYRot(Mth.floor(getYRot() / 90) * 90);
+                setYHeadRot(Mth.floor(getYHeadRot() / 90) * 90);
+                if (getHealth() < getMaxHealth() && level().getRandom().nextInt(20) == 0) {
                     heal(1);
-                } else if (age % 150 == 0 && chestData != null && !isMouthOpen()) {
-                    if (getWorld().getClosestPlayer(this, 15) == null) {
-                        getWorld().setBlockState(getBlockPos(), chestData.getCachedState().withIfExists(ChestBlock.FACING, getHorizontalFacing()));
-                        if (getWorld().getBlockEntity(getBlockPos()) instanceof ChestBlockEntity be) {
+                } else if (tickCount % 150 == 0 && chestData != null && !isMouthOpen()) {
+                    if (level().getNearestPlayer(this, 15) == null) {
+                        level().setBlockAndUpdate(blockPosition(), chestData.getBlockState().trySetValue(ChestBlock.FACING, getDirection()));
+                        if (level().getBlockEntity(blockPosition()) instanceof ChestBlockEntity be) {
                             InventoryUtil.copyInto(chestData, be);
                             ((MimicGeneratable)be).setMimic(true);
                             discard();
@@ -284,9 +265,9 @@ public class MimicEntity extends PathAwareEntity {
             setChest((ChestBlock)Blocks.CHEST);
         }
 
-        if (getWorld().isClient) {
-            ((MixinBlockEntity)chestData).setPos(getBlockPos());
-            ChestBlockEntity.clientTick(getWorld(), getBlockPos(), chestData.getCachedState(), chestData);
+        if (level().isClientSide()) {
+            ((MixinBlockEntity)chestData).setPos(blockPosition());
+            ChestBlockEntity.lidAnimateTick(level(), blockPosition(), chestData.getBlockState(), chestData);
         }
 
         if (openTicks > 0 && --openTicks <= 0) {
@@ -294,39 +275,39 @@ public class MimicEntity extends PathAwareEntity {
         }
 
         if (getTarget() != null) {
-            if (openTicks <= 0 && age % 20 == 0) {
+            if (openTicks <= 0 && tickCount % 20 == 0) {
                 playChompAnimation();
             }
         }
     }
 
     @Override
-    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (getTarget() == null && chestData != null) {
-            player.openHandledScreen(new NamedScreenHandlerFactory() {
+            player.openMenu(new MenuProvider() {
                 @Override
-                public Text getDisplayName() {
+                public Component getDisplayName() {
                     return chestData.getDisplayName();
                 }
 
                 @Override
-                public ScreenHandler createMenu(int syncId, PlayerInventory inv, PlayerEntity player) {
+                public AbstractContainerMenu createMenu(int syncId, Inventory inv, Player player) {
                     return createScreenHandler(syncId, inv, player);
                 }
             });
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public ScreenHandler createScreenHandler(int syncId, PlayerInventory inv, PlayerEntity player) {
-        return GenericContainerScreenHandler.createGeneric9x3(syncId, inv, new MimicInventory(chestData, player));
+    public AbstractContainerMenu createScreenHandler(int syncId, Inventory inv, Player player) {
+        return ChestMenu.threeRows(syncId, inv, new MimicInventory(chestData, player));
     }
 
     @Override
-    public void setAttacking(boolean attacking) {
-        super.setAttacking(attacking);
+    public void setAggressive(boolean attacking) {
+        super.setAggressive(attacking);
         if (attacking) {
             playChompAnimation();
         }
@@ -335,34 +316,34 @@ public class MimicEntity extends PathAwareEntity {
     @Override
     protected void playHurtSound(DamageSource source) {
         playChompAnimation();
-        if (source.getAttacker()  instanceof LivingEntity l) {
+        if (source.getEntity()  instanceof LivingEntity l) {
             setTarget(l);
         }
     }
 
     @Override
-    public void onTrackedDataSet(TrackedData<?> data) {
-        super.onTrackedDataSet(data);
-        if (CHEST_DATA.equals(data) && getWorld().isClient) {
-            setChest(readChestData(dataTracker.get(CHEST_DATA)));
+    public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
+        super.onSyncedDataUpdated(data);
+        if (CHEST_DATA.equals(data) && level().isClientSide()) {
+            setChest(readChestData(entityData.get(CHEST_DATA)));
         } else if (MOUTH_OPEN.equals(data)) {
             if (chestData != null) {
-                chestData.onSyncedBlockEvent(1, isMouthOpen() ? 1 : 0);
+                chestData.triggerEvent(1, isMouthOpen() ? 1 : 0);
             }
         }
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound nbt) {
-        super.readCustomDataFromNbt(nbt);
-        setChest(nbt.getCompound("chest").map(this::readChestData).orElse(null));
+    public void readAdditionalSaveData(ValueInput nbt) {
+        super.readAdditionalSaveData(nbt);
+        setChest(nbt.read("chest", CompoundTag.CODEC).map(this::readChestData).orElse(null));
     }
 
     @Nullable
-    private ChestBlockEntity readChestData(NbtCompound nbt) {
-        @Nullable BlockState state = nbt.get("state", BlockState.CODEC).orElse(null);
-        if (state != null && BlockEntity.createFromNbt(getBlockPos(), state, nbt.getCompoundOrEmpty("data"), getRegistryManager()) instanceof ChestBlockEntity data) {
-            data.setWorld(getWorld());
+    private ChestBlockEntity readChestData(CompoundTag nbt) {
+        @Nullable BlockState state = nbt.read("state", BlockState.CODEC).orElse(null);
+        if (state != null && BlockEntity.loadStatic(blockPosition(), state, nbt.getCompoundOrEmpty("data"), registryAccess()) instanceof ChestBlockEntity data) {
+            data.setLevel(level());
             ((MimicGeneratable)data).setAllowMimics(false);
             return data;
         }
@@ -370,39 +351,37 @@ public class MimicEntity extends PathAwareEntity {
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound nbt) {
-        super.writeCustomDataToNbt(nbt);
+    public void addAdditionalSaveData(ValueOutput nbt) {
+        super.addAdditionalSaveData(nbt);
         if (chestData != null) {
-            nbt.put("chest", writeChestData(chestData));
+            nbt.store("chest", CompoundTag.CODEC, writeChestData(chestData));
         }
     }
 
     @Nullable
-    private NbtCompound writeChestData(ChestBlockEntity chestData) {
-        NbtCompound chest = new NbtCompound();
-        chest.put("data", chestData.createNbtWithId(getRegistryManager()));
-        chest.put("state", BlockState.CODEC.encode(chestData.getCachedState(), NbtOps.INSTANCE, new NbtCompound()).result().get());
+    private CompoundTag writeChestData(ChestBlockEntity chestData) {
+        CompoundTag chest = new CompoundTag();
+        var data = net.minecraft.world.level.storage.TagValueOutput.createWithContext(
+                net.minecraft.util.ProblemReporter.DISCARDING, registryAccess());
+        chestData.saveWithId(data);
+        chest.put("data", data.buildResult());
+        chest.put("state", BlockState.CODEC.encode(chestData.getBlockState(), NbtOps.INSTANCE, new CompoundTag()).result().get());
         return chest;
     }
 
     @Override
-    protected void dropLoot(ServerWorld world, DamageSource damageSource, boolean causedByPlayer) {
+    protected void dropFromLootTable(ServerLevel world, DamageSource damageSource, boolean causedByPlayer) {
         if (chestData != null) {
-            ItemScatterer.spawn(getWorld(), this, chestData);
-            ItemScatterer.spawn(getWorld(), getX(), getY(), getZ(), chestData.getCachedState().getBlock().asItem().getDefaultStack());
+            Containers.dropContents(level(), this, chestData);
+            Containers.dropItemStack(level(), getX(), getY(), getZ(), chestData.getBlockState().getBlock().asItem().getDefaultInstance());
         }
     }
 
     public class AttackGoal extends MeleeAttackGoal {
         private int ticks;
 
-        public AttackGoal(PathAwareEntity mob, double speed, boolean pauseWhenMobIdle) {
+        public AttackGoal(PathfinderMob mob, double speed, boolean pauseWhenMobIdle) {
             super(mob, speed, pauseWhenMobIdle);
-        }
-
-        @Override
-        public boolean canStart() {
-            return super.canStart() && mob.canTarget(mob.getTarget());
         }
 
         @Override
@@ -412,20 +391,15 @@ public class MimicEntity extends PathAwareEntity {
         }
 
         @Override
-        public boolean shouldContinue() {
-            return super.shouldContinue() && mob.canTarget(mob.getTarget());
-        }
-
-        @Override
         public void stop() {
             super.stop();
-            setAttacking(false);
+            setAggressive(false);
         }
 
         @Override
         public void tick() {
             super.tick();
-            setAttacking(++ticks >= 5 && getCooldown() < getMaxCooldown() / 2);
+            setAggressive(++ticks >= 5 && getTicksUntilNextAttack() < getAttackInterval() / 2);
         }
     }
 
@@ -434,45 +408,45 @@ public class MimicEntity extends PathAwareEntity {
 
         void setMimic(boolean mimic);
 
-        void readMimicAttributes(NbtCompound nbt);
+        void readMimicAttributes(net.minecraft.world.level.storage.ValueInput nbt);
 
-        void writeMimicAttributes(NbtCompound nbt);
+        void writeMimicAttributes(net.minecraft.world.level.storage.ValueOutput nbt);
 
-        void configureMimic(@Nullable PlayerEntity player);
+        void configureMimic(@Nullable Player player);
 
         @Nullable
-        MimicEntity triggerMimic(@Nullable PlayerEntity player);
+        MimicEntity triggerMimic(@Nullable Player player);
     }
 
-    private final class MimicInventory implements Inventory {
+    private final class MimicInventory implements Container {
         private final ChestBlockEntity chestData;
-        private final PlayerEntity player;
+        private final Player player;
 
-        public MimicInventory(ChestBlockEntity chestData, PlayerEntity player) {
+        public MimicInventory(ChestBlockEntity chestData, Player player) {
             this.chestData = chestData;
             this.player = player;
         }
 
         @Override
-        public void onOpen(PlayerEntity player) {
-            observingPlayers.add(player);
+        public void startOpen(ContainerUser user) {
+            if (user instanceof Player player) observingPlayers.add(player);
             setMouthOpen(true);
         }
 
         @Override
-        public void onClose(PlayerEntity player) {
-            observingPlayers.remove(player);
+        public void stopOpen(ContainerUser user) {
+            if (user instanceof Player player) observingPlayers.remove(player);
             setMouthOpen(!observingPlayers.isEmpty());
         }
 
         @Override
-        public void clear() {
-            chestData.clear();
+        public void clearContent() {
+            chestData.clearContent();
         }
 
         @Override
-        public int size() {
-            return chestData.size();
+        public int getContainerSize() {
+            return chestData.getContainerSize();
         }
 
         @Override
@@ -481,52 +455,52 @@ public class MimicEntity extends PathAwareEntity {
         }
 
         @Override
-        public ItemStack getStack(int slot) {
-            return chestData.getStack(slot);
+        public ItemStack getItem(int slot) {
+            return chestData.getItem(slot);
         }
 
         @Override
-        public ItemStack removeStack(int slot, int amount) {
-            ItemStack stack = chestData.removeStack(slot, amount);
+        public ItemStack removeItem(int slot, int amount) {
+            ItemStack stack = chestData.removeItem(slot, amount);
             if (!stack.isEmpty()) {
-                markDirty();
+                setChanged();
             }
             return stack;
         }
 
         @Override
-        public ItemStack removeStack(int slot) {
-            ItemStack stack = chestData.removeStack(slot);
+        public ItemStack removeItemNoUpdate(int slot) {
+            ItemStack stack = chestData.removeItemNoUpdate(slot);
             if (!stack.isEmpty()) {
-                markDirty();
+                setChanged();
             }
             return stack;
         }
 
         @Override
-        public void setStack(int slot, ItemStack stack) {
-            ItemStack oldStack = getStack(slot);
-            if (!ItemStack.areEqual(stack, oldStack)) {
-                chestData.setStack(slot, ItemStack.EMPTY);
-                if (chestData.getWorld() instanceof ServerWorld sw) {
-                    dropStack(sw, stack);
+        public void setItem(int slot, ItemStack stack) {
+            ItemStack oldStack = getItem(slot);
+            if (!ItemStack.matches(stack, oldStack)) {
+                chestData.setItem(slot, ItemStack.EMPTY);
+                if (chestData.getLevel() instanceof ServerLevel sw) {
+                    spawnAtLocation(sw, stack);
                 }
-                markDirty();
+                setChanged();
             }
         }
 
         @Override
-        public void markDirty() {
+        public void setChanged() {
             observingPlayers.clear();
             playChompAnimation();
             setTarget(player);
-            if (player instanceof ServerPlayerEntity spe) {
-                spe.closeHandledScreen();
+            if (player instanceof ServerPlayer spe) {
+                spe.closeContainer();
             }
         }
 
         @Override
-        public boolean canPlayerUse(PlayerEntity player) {
+        public boolean stillValid(Player player) {
             return true;//chestData.canPlayerUse(player);
         }
     }

@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia.block.jar;
 
+import net.minecraft.world.phys.Vec3;
+
 import java.util.function.Supplier;
 
 import org.jetbrains.annotations.Nullable;
@@ -10,27 +12,27 @@ import com.minelittlepony.unicopia.block.ItemJarBlock.JarContents;
 import com.minelittlepony.unicopia.block.ItemJarBlock.TileData;
 import com.minelittlepony.unicopia.util.TypedActionResult;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Bucketable;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Hand;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Bucketable;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 
 public record EntityJarContents (
         TileData tile,
         @Nullable EntityType<?> entityType,
         Supplier<@Nullable Entity> entity
 ) implements FluidJarContents {
-    public EntityJarContents(TileData tile, NbtCompound compound) {
-        this(tile, compound.get("entity", Registries.ENTITY_TYPE.getCodec()).orElse(null));
+    public EntityJarContents(TileData tile, CompoundTag compound) {
+        this(tile, compound.read("entity", BuiltInRegistries.ENTITY_TYPE.byNameCodec()).orElse(null));
     }
 
     public EntityJarContents(TileData tile) {
@@ -39,19 +41,19 @@ public record EntityJarContents (
 
     public EntityJarContents(TileData tile, EntityType<?> entityType) {
         this(tile, entityType, Suppliers.memoize(() -> {
-            return entityType == null ? null : entityType.create(tile.getWorld(), SpawnReason.LOAD);
+            return entityType == null ? null : entityType.create(tile.getLevel(), EntitySpawnReason.LOAD);
         }));
     }
 
     @Override
-    public TypedActionResult<JarContents> interact(PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
-        if (stack.isOf(Items.BUCKET)) {
+    public TypedActionResult<JarContents> interact(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (stack.is(Items.BUCKET)) {
             if (entity().get() instanceof Bucketable bucketable) {
-                consumeAndSwap(player, hand, bucketable.getBucketItem());
-                player.playSound(bucketable.getBucketFillSound(), 1, 1);
+                consumeAndSwap(player, hand, bucketable.getBucketItemStack());
+                player.playSound(bucketable.getPickupSound(), 1, 1);
             }
-            tile.markDirty();
+            tile.setChanged();
             return TypedActionResult.success(new ItemsJarContents(tile));
         }
         return TypedActionResult.pass(this);
@@ -59,17 +61,17 @@ public record EntityJarContents (
 
     @Override
     public void onDestroyed() {
-        tile.getWorld().setBlockState(tile.getPos(), Blocks.WATER.getDefaultState());
+        tile.getLevel().setBlockAndUpdate(tile.getBlockPos(), Blocks.WATER.defaultBlockState());
         Entity entity = entity().get();
         if (entity != null) {
-            entity.refreshPositionAfterTeleport(tile.getPos().toCenterPos());
-            tile.getWorld().spawnEntity(entity);
+            entity.snapTo(Vec3.atCenterOf(tile.getBlockPos()));
+            tile.getLevel().addFreshEntity(entity);
         }
     }
 
     @Override
-    public NbtCompound toNBT(NbtCompound compound, WrapperLookup lookup) {
-        compound.putString("entity", EntityType.getId(entityType).toString());
+    public CompoundTag toNBT(CompoundTag compound, Provider lookup) {
+        compound.putString("entity", EntityType.getKey(entityType).toString());
         return compound;
     }
 

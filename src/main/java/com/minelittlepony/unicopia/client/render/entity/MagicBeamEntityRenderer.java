@@ -2,30 +2,30 @@ package com.minelittlepony.unicopia.client.render.entity;
 
 import com.minelittlepony.unicopia.client.render.RenderLayers;
 import com.minelittlepony.unicopia.projectile.MagicBeamEntity;
-import net.minecraft.client.model.Dilation;
-import net.minecraft.client.model.ModelData;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.model.ModelPartBuilder;
-import net.minecraft.client.model.ModelPartData;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.model.TexturedModelData;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Colors;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
 
 public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity, MagicBeamEntityRenderer.State> {
     private final Model model;
 
-    public MagicBeamEntityRenderer(EntityRendererFactory.Context ctx) {
+    public MagicBeamEntityRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
-        this.model = new Model(Model.getData().createModel());
+        this.model = new Model(Model.getData().bakeRoot());
     }
 
     @Override
@@ -34,33 +34,37 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity, Mag
     }
 
     @Override
-    public void updateRenderState(MagicBeamEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+    public void extractRenderState(MagicBeamEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
         state.scale = 1 - tickDelta/30F;
-        state.yaw = entity.getYaw(tickDelta) * MathHelper.RADIANS_PER_DEGREE;
-        state.pitch = -entity.getPitch(tickDelta) * MathHelper.RADIANS_PER_DEGREE;
+        state.yaw = entity.getViewYRot(tickDelta) * Mth.DEG_TO_RAD;
+        state.pitch = -entity.getViewXRot(tickDelta) * Mth.DEG_TO_RAD;
         state.color = entity.getSpellSlot().get().map(spell -> (0x99 << 24) | spell.getTypeAndTraits().type().getColor()).orElse(0);
     }
 
     @Override
-    protected int getBlockLight(MagicBeamEntity entity, BlockPos pos) {
+    protected int getBlockLightLevel(MagicBeamEntity entity, BlockPos pos) {
         return 15;
     }
 
     @Override
-    public void render(State state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
-        if (state.age < 2 && dispatcher.camera.getFocusedEntity().squaredDistanceTo(state.x, state.y, state.z) < 8) {
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertexConsumers, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+        if (state.ageInTicks < 2 && net.minecraft.client.Minecraft.getInstance().getCameraEntity().distanceToSqr(state.x, state.y, state.z) < 8) {
             return;
         }
 
-        matrices.push();
+        matrices.pushPose();
         matrices.scale(state.scale, state.scale, state.scale);
 
-        model.setAngles(state);
-        model.render(matrices, vertexConsumers.getBuffer(state.color == 0 ? RenderLayers.getMagicColored() : RenderLayers.getMagicColored(state.color)), light, OverlayTexture.DEFAULT_UV, Colors.WHITE);
+        model.setupAnim(state);
+        vertexConsumers.submitCustomGeometry(matrices, state.color == 0 ? RenderLayers.getMagicColored() : RenderLayers.getMagicColored(state.color), (pose, buffer) -> {
+            PoseStack stack = new PoseStack();
+            stack.mulPose(pose.pose());
+            model.renderToBuffer(stack, buffer, state.lightCoords, OverlayTexture.NO_OVERLAY, CommonColors.WHITE);
+        });
 
-        matrices.pop();
-        super.render(state, matrices, vertexConsumers, light);
+        matrices.popPose();
+        super.submit(state, matrices, vertexConsumers, camera);
     }
 
     public static class State extends EntityRenderState {
@@ -77,23 +81,23 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity, Mag
             super(root, texture -> RenderLayers.getMagicColored());
         }
 
-        static TexturedModelData getData() {
-            ModelData data = new ModelData();
-            ModelPartData tree = data.getRoot();
+        static LayerDefinition getData() {
+            MeshDefinition data = new MeshDefinition();
+            PartDefinition tree = data.getRoot();
 
-            tree.addChild("beam", ModelPartBuilder.create()
-                    .cuboid(0, 0, 0, 1, 1, 17)
-                    .cuboid(0, 0, 0, 1, 1, 17, new Dilation(0.25F)), ModelTransform.NONE);
+            tree.addOrReplaceChild("beam", CubeListBuilder.create()
+                    .addBox(0, 0, 0, 1, 1, 17)
+                    .addBox(0, 0, 0, 1, 1, 17, new CubeDeformation(0.25F)), PartPose.ZERO);
 
-            return TexturedModelData.of(data, 64, 64);
+            return LayerDefinition.create(data, 64, 64);
         }
 
         @Override
-        public void setAngles(State state) {
-            super.setAngles(state);
-            ModelPart part = getRootPart();
-            part.pitch = state.pitch;
-            part.yaw = state.yaw;
+        public void setupAnim(State state) {
+            super.setupAnim(state);
+            ModelPart part = root();
+            part.xRot = state.pitch;
+            part.yRot = state.yaw;
         }
     }
 }

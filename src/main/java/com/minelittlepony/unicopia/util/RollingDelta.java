@@ -1,8 +1,7 @@
 package com.minelittlepony.unicopia.util;
 
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
-
-import net.minecraft.util.math.Vec3d;
 
 public class RollingDelta {
 
@@ -10,7 +9,7 @@ public class RollingDelta {
     private final Vector3d[] snapshots;
     private final Vector3d average = new Vector3d();
 
-    private Vec3d value = Vec3d.ZERO;
+    private Vec3 value = Vec3.ZERO;
     private double squaredLength;
     private double length;
     private double horLengthSquared;
@@ -19,7 +18,7 @@ public class RollingDelta {
         this.snapshots = new Vector3d[ticks];
     }
 
-    public void update(Vec3d snapshot) {
+    public void update(Vec3 snapshot) {
         if (snapshots[frame] == null) {
             snapshots[frame] = new Vector3d();
         }
@@ -34,13 +33,13 @@ public class RollingDelta {
             }
         }
         average.mul(1 / count);
-        value = new Vec3d(average.x, average.y, average.z);
-        squaredLength = value.lengthSquared();
-        horLengthSquared = value.horizontalLengthSquared();
+        value = new Vec3(average.x, average.y, average.z);
+        squaredLength = value.lengthSqr();
+        horLengthSquared = value.horizontalDistanceSqr();
         length = Math.sqrt(squaredLength);
     }
 
-    public Vec3d read() {
+    public Vec3 read() {
         return value;
     }
 

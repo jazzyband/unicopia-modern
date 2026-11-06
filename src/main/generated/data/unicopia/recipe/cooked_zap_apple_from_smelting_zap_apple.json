@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 430,
+  "experience": 1.2,
+  "group": "zap_apple",
+  "ingredient": "unicopia:zap_apple",
+  "result": {
+    "id": "unicopia:cooked_zap_apple"
+  }
+}

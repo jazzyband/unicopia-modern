@@ -1,6 +1,5 @@
 package com.minelittlepony.unicopia.ability.magic.spell;
 
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -18,11 +17,11 @@ import com.minelittlepony.unicopia.network.track.DataTracker;
 import com.minelittlepony.unicopia.server.world.Ether;
 import com.minelittlepony.unicopia.util.Untyped;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 import net.minecraft.util.Util;
-import net.minecraft.util.Uuids;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 
 /**
  * Interface for a magic spells
@@ -135,43 +134,32 @@ public interface Spell extends NbtSerialisable, Affine {
     }
 
     @Nullable
-    static <T extends Spell> Optional<T> readNbt(Optional<NbtCompound> compound, WrapperLookup lookup) {
+    static <T extends Spell> T readNbt(@Nullable CompoundTag compound, Provider lookup) {
         try {
-            if (compound.isPresent()) {
-                return compound
-                        .flatMap(c -> c.decode(CustomisedSpellType.CODEC, lookup.getOps(NbtOps.INSTANCE)))
-                        .map(i -> i.create(compound.get(), lookup))
-                        .map(Untyped::cast);
+            if (compound != null && !compound.isEmpty()) {
+                return Untyped.cast(CustomisedSpellType.CODEC.decode(lookup.createSerializationContext(NbtOps.INSTANCE), compound).getOrThrow().getFirst().create(compound, lookup));
             }
         } catch (Exception e) {
             Unicopia.LOGGER.fatal("Invalid spell nbt {}", e);
         }
 
-        return Optional.empty();
+        return null;
     }
 
-    static UUID getUuid(@Nullable NbtCompound compound) {
-        return compound.get("uuid", Uuids.CODEC).orElse(Util.NIL_UUID);
+    static UUID getUuid(@Nullable CompoundTag compound) {
+        return compound.read("uuid", UUIDUtil.AUTHLIB_CODEC).orElse(Util.NIL_UUID);
     }
 
-    static Optional<NbtCompound> writeNbt(@Nullable Spell effect, WrapperLookup lookup) {
-        if (effect != null && !effect.isDead()) {
-            NbtCompound compound = new NbtCompound();
-            writeNbt(compound, effect, lookup);
-            return Optional.of(compound);
-        }
-        return Optional.empty();
-    }
-
-    static void writeNbt(NbtCompound compound, @Nullable Spell effect, WrapperLookup lookup) {
+    static CompoundTag writeNbt(@Nullable Spell effect, Provider lookup) {
         if (effect == null) {
-            return;
+            return new CompoundTag();
         }
-        effect.toNBT(compound, lookup);
+        CompoundTag compound = effect.toNBT(lookup);
         effect.getTypeAndTraits().toNbt(compound);
+        return compound;
     }
 
-    static <T extends Spell> Spell copy(T spell, WrapperLookup lookup) {
-        return readNbt(writeNbt(spell, lookup), lookup).orElse(null);
+    static <T extends Spell> Spell copy(T spell, Provider lookup) {
+        return readNbt(writeNbt(spell, lookup), lookup);
     }
 }

@@ -9,8 +9,14 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.util.Copyable;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.core.HolderLookup.Provider;
 
 public interface SpellSlots extends NbtSerialisable, Copyable<SpellSlots> {
+    void toValue(ValueOutput output, Provider lookup);
+
+    void fromValue(ValueInput input, Provider lookup);
     static SpellInventory ofUnbounded(Caster<?> caster) {
         return new SpellInventory(caster, new MultiSpellSlot(caster));
     }

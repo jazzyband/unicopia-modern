@@ -1,35 +1,33 @@
 package com.minelittlepony.unicopia.diet;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.component.Consumables;
 import org.jetbrains.annotations.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.component.type.ConsumableComponent;
-import net.minecraft.component.type.ConsumableComponents;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-
-public record FoodAttributes(FoodComponent food, Optional<ConsumableComponent> consumable) {
+public record FoodAttributes(FoodProperties food, Optional<Consumable> consumable) {
     public static final float SNACK_SECONDS = 0.8F;
     public static final float NORMAL_SECONDS = 1.6F;
 
     public static final Codec<FoodAttributes> CODEC = RecordCodecBuilder.create(i -> i.group(
-            FoodComponent.CODEC.fieldOf("food").forGetter(FoodAttributes::food),
-            ConsumableComponent.CODEC.optionalFieldOf("consumable").forGetter(FoodAttributes::consumable)
+            FoodProperties.DIRECT_CODEC.fieldOf("food").forGetter(FoodAttributes::food),
+            Consumable.CODEC.optionalFieldOf("consumable").forGetter(FoodAttributes::consumable)
     ).apply(i, FoodAttributes::new));
-    public static final PacketCodec<RegistryByteBuf, FoodAttributes> PACKET_CODEC = PacketCodec.tuple(
-            FoodComponent.PACKET_CODEC, FoodAttributes::food,
-            PacketCodecs.optional(ConsumableComponent.PACKET_CODEC), FoodAttributes::consumable,
+    public static final StreamCodec<RegistryFriendlyByteBuf, FoodAttributes> PACKET_CODEC = StreamCodec.composite(
+            FoodProperties.DIRECT_STREAM_CODEC, FoodAttributes::food,
+            ByteBufCodecs.optional(Consumable.STREAM_CODEC), FoodAttributes::consumable,
             FoodAttributes::new
     );
 
-    public ConsumableComponent getConsumableComponent(@Nullable ConsumableComponent existing) {
-        return consumable.orElse(MoreObjects.firstNonNull(existing, ConsumableComponents.FOOD));
+    public Consumable getConsumableComponent(@Nullable Consumable existing) {
+        return consumable.orElse(MoreObjects.firstNonNull(existing, Consumables.DEFAULT_FOOD));
     }
 }

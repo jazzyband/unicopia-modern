@@ -1,0 +1,30 @@
+{
+  "parent": "unicopia:bat/bat_route",
+  "criteria": {
+    "look_into_sun": {
+      "conditions": {
+        "event": "look_into_sun",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.praise_the_sun.description"
+    },
+    "icon": {
+      "id": "minecraft:light"
+    },
+    "title": {
+      "translate": "advancements.unicopia.praise_the_sun.title"
+    }
+  },
+  "requirements": [
+    [
+      "look_into_sun"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

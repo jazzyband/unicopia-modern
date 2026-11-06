@@ -1,0 +1,14 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "unicopia:block/template_jar"
+      }
+    },
+    {
+      "apply": {
+        "model": "unicopia:block/lightning_jar_filling"
+      }
+    }
+  ]
+}

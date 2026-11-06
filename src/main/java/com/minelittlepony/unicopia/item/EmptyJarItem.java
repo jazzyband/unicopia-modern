@@ -1,51 +1,52 @@
 package com.minelittlepony.unicopia.item;
 
-import net.minecraft.block.Block;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.Entity.RemovalReason;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 public class EmptyJarItem extends BlockItem {
-    public EmptyJarItem(Block block, Settings settings) {
+    public EmptyJarItem(Block block, Properties settings) {
         super(block, settings);
         TickableItem.registerTickCallback(this, item -> {
             ItemEntity entity = item.get().asEntity();
 
-            entity.setInvulnerable(true);
+            entity.setPermanentlyInvulnerable(true);
 
-            if (!entity.getWorld().isClient
+            if (!entity.level().isClientSide()
                     && !entity.isRemoved()
-                    && entity.getItemAge() > 100
-                    && entity.getWorld().isThundering()
-                    && entity.getWorld().isSkyVisible(entity.getBlockPos())
-                    && entity.getWorld().random.nextInt(130) == 0) {
-                LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(entity.getWorld(), SpawnReason.EVENT);
-                lightning.refreshPositionAfterTeleport(entity.getX(), entity.getY(), entity.getZ());
+                    && entity.getAge() > 100
+                    && entity.level().isThundering()
+                    && entity.level().canSeeSky(entity.blockPosition())
+                    && entity.level().getRandom().nextInt(130) == 0) {
+                LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(entity.level(), EntitySpawnReason.EVENT);
+                lightning.snapTo(entity.getX(), entity.getY(), entity.getZ());
 
                 entity.remove(RemovalReason.DISCARDED);
-                entity.getWorld().spawnEntity(lightning);
+                entity.level().addFreshEntity(lightning);
 
-                ItemEntity neu = EntityType.ITEM.create(entity.getWorld(), SpawnReason.TRIGGERED);
-                neu.copyPositionAndRotation(entity);
-                neu.setStack(new ItemStack(this == UItems.RAIN_CLOUD_JAR ? UItems.STORM_CLOUD_JAR : UItems.LIGHTNING_JAR));
-                neu.setInvulnerable(true);
+                ItemEntity neu = EntityTypes.ITEM.create(entity.level(), EntitySpawnReason.TRIGGERED);
+                neu.copyPosition(entity);
+                neu.setItem(new ItemStack(this == UItems.RAIN_CLOUD_JAR ? UItems.STORM_CLOUD_JAR : UItems.LIGHTNING_JAR));
+                neu.setPermanentlyInvulnerable(true);
 
-                entity.getWorld().spawnEntity(neu);
+                entity.level().addFreshEntity(neu);
 
-                ItemEntity copy = EntityType.ITEM.create(entity.getWorld(), SpawnReason.TRIGGERED);
-                copy.copyPositionAndRotation(entity);
-                copy.setInvulnerable(true);
-                copy.setStack(entity.getStack());
-                copy.getStack().decrement(1);
+                ItemEntity copy = EntityTypes.ITEM.create(entity.level(), EntitySpawnReason.TRIGGERED);
+                copy.copyPosition(entity);
+                copy.setPermanentlyInvulnerable(true);
+                copy.setItem(entity.getItem());
+                copy.getItem().shrink(1);
 
-                entity.getWorld().spawnEntity(copy);
+                entity.level().addFreshEntity(copy);
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
     }
 }

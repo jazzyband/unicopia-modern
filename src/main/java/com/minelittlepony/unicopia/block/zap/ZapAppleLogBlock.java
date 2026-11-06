@@ -3,70 +3,67 @@ package com.minelittlepony.unicopia.block.zap;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.*;
-import net.minecraft.block.enums.NoteBlockInstrument;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.math.*;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
+import net.minecraft.world.level.material.MapColor;
 
-public class ZapAppleLogBlock extends PillarBlock implements ElectrifiedBlock {
-    private static final MapCodec<ZapAppleLogBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockState.CODEC.fieldOf("model_block").forGetter(b -> b.artifialModelBlock),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, ZapAppleLogBlock::new));
-    public static final BooleanProperty NATURAL = BooleanProperty.of("natural");
+public class ZapAppleLogBlock extends RotatedPillarBlock implements ElectrifiedBlock {
+    public static final BooleanProperty NATURAL = BooleanProperty.create("natural");
 
-    public static Settings settings(MapColor topMapColor, MapColor sideMapColor) {
-        return Settings.create()
-            .mapColor(state -> state.get(PillarBlock.AXIS) == Direction.Axis.Y ? topMapColor : sideMapColor)
+    public static Properties settings(MapColor topMapColor, MapColor sideMapColor) {
+        return Properties.of()
+            .mapColor(state -> state.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.Y ? topMapColor : sideMapColor)
             .instrument(NoteBlockInstrument.BASS)
             .strength(2.0f)
-            .sounds(BlockSoundGroup.WOOD)
-            .burnable();
+            .sound(SoundType.WOOD)
+            .ignitedByLava();
     }
 
     private final BlockState artifialModelBlock;
 
-    public ZapAppleLogBlock(BlockState artifialModelBlock, Settings settings) {
+    public ZapAppleLogBlock(BlockState artifialModelBlock, Properties settings) {
         super(settings);
-        setDefaultState(getDefaultState().with(NATURAL, true));
+        registerDefaultState(defaultBlockState().setValue(NATURAL, true));
         this.artifialModelBlock = artifialModelBlock;
     }
 
-    @Override
-    public MapCodec<? extends ZapAppleLogBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(NATURAL);
     }
 
     @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return super.getPlacementState(ctx).with(NATURAL, false);
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        return super.getStateForPlacement(ctx).setValue(NATURAL, false);
     }
 
     @Deprecated
     @Override
-    public void onBlockBreakStart(BlockState state, World world, BlockPos pos, PlayerEntity player) {
+    public void attack(BlockState state, Level world, BlockPos pos, Player player) {
         triggerLightning(state, world, pos);
     }
 
     @Deprecated
     @Override
-    public float calcBlockBreakingDelta(BlockState state, PlayerEntity player, BlockView world, BlockPos pos) {
-        if (!state.get(NATURAL)) {
-            return artifialModelBlock.calcBlockBreakingDelta(player, world, pos);
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter world, BlockPos pos) {
+        if (!state.getValue(NATURAL)) {
+            return artifialModelBlock.getDestroyProgress(player, world, pos);
         }
 
-        return getBlockBreakingDelta(super.calcBlockBreakingDelta(state, player, world, pos), player);
+        return getBlockBreakingDelta(super.getDestroyProgress(state, player, world, pos), player);
     }
 }

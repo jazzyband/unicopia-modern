@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet_convert",
+  "key": {
+    "X": {
+      "fabric:type": "unicopia:exclusive",
+      "exclude": "unicopia:rainbow_bpy_bed_sheets",
+      "include": "#unicopia:wool_bed_sheets"
+    },
+    "c": "minecraft:pink_wool",
+    "h": "minecraft:light_blue_wool",
+    "v": "minecraft:yellow_wool"
+  },
+  "pattern": [
+    "cvc",
+    "h h",
+    "Xvc"
+  ],
+  "result": {
+    "count": 2,
+    "id": "unicopia:rainbow_bpy_bed_sheets"
+  }
+}

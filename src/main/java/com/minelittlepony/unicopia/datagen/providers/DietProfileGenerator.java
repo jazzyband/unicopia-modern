@@ -3,6 +3,9 @@ package com.minelittlepony.unicopia.datagen.providers;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.food.Foods;
+import net.minecraft.world.item.component.Consumables;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.diet.DietProfile;
@@ -16,10 +19,6 @@ import com.minelittlepony.unicopia.diet.affliction.Range;
 import com.minelittlepony.unicopia.diet.affliction.StatusEffectAffliction;
 import com.minelittlepony.unicopia.entity.effect.UEffects;
 import com.minelittlepony.unicopia.item.UFoodComponents;
-
-import net.minecraft.component.type.ConsumableComponents;
-import net.minecraft.component.type.FoodComponents;
-import net.minecraft.entity.effect.StatusEffects;
 
 public class DietProfileGenerator {
 
@@ -39,7 +38,7 @@ public class DietProfileGenerator {
                 .hunger(0).saturation(0).build();
         var loveSicknessEffects = CompoundAffliction.of(
                 new StatusEffectAffliction(UEffects.FOOD_POISONING, Range.of(100), Range.of(2), 95),
-                new StatusEffectAffliction(StatusEffects.WEAKNESS, Range.of(200), Range.of(1), 0),
+                new StatusEffectAffliction(MobEffects.WEAKNESS, Range.of(200), Range.of(1), 0),
                 new LoseHungerAffliction(0.5F));
         var seaFoodExclusions = new Multiplier.Builder()
                 .tag(Unicopia.id("sea_vegetable/raw")).tag(Unicopia.id("sea_vegetable/cooked"))
@@ -120,9 +119,9 @@ public class DietProfileGenerator {
                 new FoodGroupEffects.Builder().tag(Unicopia.id("insect/cooked")).tag(Unicopia.id("meat/cooked")).build(),
                 // Becomes hyper when eating mangoes
                 new FoodGroupEffects.Builder().tag(Unicopia.id("bat_ponys_delight")).ailment(CompoundAffliction.of(
-                        new StatusEffectAffliction(StatusEffects.HEALTH_BOOST, Range.of(30, 60), Range.of(2, 6), 0),
-                        new StatusEffectAffliction(StatusEffects.JUMP_BOOST, Range.of(30, 60), Range.of(1, 6), 0),
-                        new StatusEffectAffliction(StatusEffects.REGENERATION, Range.of(3, 30), Range.of(3, 6), 0)
+                        new StatusEffectAffliction(MobEffects.HEALTH_BOOST, Range.of(30, 60), Range.of(2, 6), 0),
+                        new StatusEffectAffliction(MobEffects.JUMP_BOOST, Range.of(30, 60), Range.of(1, 6), 0),
+                        new StatusEffectAffliction(MobEffects.REGENERATION, Range.of(3, 30), Range.of(3, 6), 0)
                 )).build()
         ), Optional.empty()));
         // Much like Earth Ponies, Kirins must cook their meat before they eat it
@@ -135,12 +134,12 @@ public class DietProfileGenerator {
                 new Multiplier.Builder().tag(Unicopia.id("insect/cooked")).hunger(0.25F).saturation(0.74F).build()
         ), List.of(
                 // can eat these without negative effects
-                new FoodGroupEffects.Builder().tag(Unicopia.id("insect/cooked")).tag(Unicopia.id("meat/cooked")).food(FoodComponents.COOKED_BEEF).build(),
+                new FoodGroupEffects.Builder().tag(Unicopia.id("insect/cooked")).tag(Unicopia.id("meat/cooked")).food(Foods.COOKED_BEEF).build(),
                 new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/blinding")).food(4, 0.2F).build(),
                 new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/prickly")).food(0, 1.5F).build(),
                 new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/severely_prickly")).food(2, 0.9F).build(),
-                new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/strengthening")).food(4, 0.2F).ailment(new StatusEffectAffliction(StatusEffects.STRENGTH, Range.of(1300), Range.of(0), 0)).build(),
-                new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/glowing")).food(1, 1.6F).ailment(new StatusEffectAffliction(StatusEffects.GLOWING, Range.of(30), Range.of(0), 30)).build()
+                new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/strengthening")).food(4, 0.2F).ailment(new StatusEffectAffliction(MobEffects.STRENGTH, Range.of(1300), Range.of(0), 0)).build(),
+                new FoodGroupEffects.Builder().tag(Unicopia.id("foraging/glowing")).food(1, 1.6F).ailment(new StatusEffectAffliction(MobEffects.GLOWING, Range.of(30), Range.of(0), 30)).build()
         ), Optional.empty()));
         // Earth Ponies are vegans. They get the most from foraging
         exporter.accept(Race.EARTH, new DietProfile(0.7F, 1.2F, List.of(
@@ -158,11 +157,11 @@ public class DietProfileGenerator {
                 new FoodGroupEffects.Builder().tag(Unicopia.id("candy")).tag(Unicopia.id("rocks")).food(UFoodComponents.builder(5, 12).alwaysEdible()).build(),
                 new FoodGroupEffects.Builder().tag(Unicopia.id("gems")).food(
                         UFoodComponents.builder(2, 1.5F).alwaysEdible(),
-                        ConsumableComponents.food().consumeSeconds(0.8F)
+                        Consumables.defaultFood().consumeSeconds(0.8F)
                 ).build(),
                 new FoodGroupEffects.Builder().tag(Unicopia.id("desserts")).food(
                         UFoodComponents.builder(12, 32).alwaysEdible(),
-                        ConsumableComponents.food().consumeSeconds(0.8F)
+                        Consumables.defaultFood().consumeSeconds(0.8F)
                 ).build()
         ), Optional.empty()));
         // Pegasi prefer fish over other food sources

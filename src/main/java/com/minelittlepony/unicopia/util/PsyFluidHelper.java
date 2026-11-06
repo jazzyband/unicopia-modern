@@ -8,10 +8,10 @@ import java.util.function.Supplier;
 import com.google.common.base.Suppliers;
 
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.minecraft.component.ComponentType;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.material.FluidState;
 
 final class PsyFluidHelper {
     private static final Supplier<Optional<Class<?>>> SIMPLE_FLUID_CLASS = Suppliers.memoize(() -> {
@@ -28,18 +28,18 @@ final class PsyFluidHelper {
             return Optional.empty();
         }
     });
-    private static final Function<FluidVariant, FluidState> FALLBACK_METHOD = fluid -> fluid.getFluid().getDefaultState();
+    private static final Function<FluidVariant, FluidState> FALLBACK_METHOD = fluid -> fluid.getFluid().defaultFluidState();
     private static final Supplier<Function<FluidVariant, FluidState>> GET_FULL_FLUID_STATE = Suppliers.memoize(
             () -> SIMPLE_FLUID_CLASS.get().<Function<FluidVariant, FluidState>>map(type -> {
             return ITEM_FLUIDS_CLASS.get().<Function<FluidVariant, FluidState>>map(fluidsType -> {
                 try {
-                    ComponentType<?> fluidsComponentType = Registries.DATA_COMPONENT_TYPE.get(Identifier.of("psychedelicraft", "fluids"));
+                    DataComponentType<?> fluidsComponentType = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Identifier.fromNamespaceAndPath("psychedelicraft", "fluids"));
                     if (fluidsComponentType != null) {
                         final Method method = type.getDeclaredMethod("getFluidState", fluidsType);
                         if (method != null) {
                             return fluidVariant -> {
                                 try {
-                                    Object fluids = fluidVariant.getComponents().get(fluidsComponentType).orElse(null);
+                                    Object fluids = fluidVariant.getComponents().get(fluidsComponentType);
                                     if (fluids == null) {
                                         return FALLBACK_METHOD.apply(fluidVariant);
                                     }
@@ -58,6 +58,6 @@ final class PsyFluidHelper {
         return SIMPLE_FLUID_CLASS.get()
                 .filter(type -> type.isAssignableFrom(variant.getFluid().getClass()))
                 .map(type -> GET_FULL_FLUID_STATE.get().apply(variant))
-                .orElseGet(() -> variant.getFluid().getDefaultState());
+                .orElseGet(() -> variant.getFluid().defaultFluidState());
     }
 }

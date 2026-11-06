@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:unicorn/dear_princess",
+  "criteria": {
+    "send_scroll": {
+      "conditions": {
+        "item": {
+          "items": "unicopia:dragon_breath_scroll"
+        },
+        "recipient_present": false
+      },
+      "trigger": "unicopia:send_dragon_breath"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.i_await_your_reply.description"
+    },
+    "icon": {
+      "id": "unicopia:dragon_breath_scroll"
+    },
+    "title": {
+      "translate": "advancements.unicopia.i_await_your_reply.title"
+    }
+  },
+  "requirements": [
+    [
+      "send_scroll"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

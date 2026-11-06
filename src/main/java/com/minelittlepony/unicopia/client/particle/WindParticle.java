@@ -1,19 +1,19 @@
 package com.minelittlepony.unicopia.client.particle;
 
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.client.render.bezier.BezierSegment;
 import com.minelittlepony.unicopia.client.render.bezier.Trail;
 import com.minelittlepony.unicopia.particle.TargetBoundParticleEffect;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 public class WindParticle extends AbstractBillboardParticle {
     private static final Identifier TEXTURE = Unicopia.id("textures/particle/wind.png");
@@ -27,25 +27,25 @@ public class WindParticle extends AbstractBillboardParticle {
 
     private int attachmentTicks;
 
-    private final Vec3d offset;
+    private final Vec3 offset;
     private final boolean passive;
 
-    public WindParticle(TargetBoundParticleEffect effect, ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+    public WindParticle(TargetBoundParticleEffect effect, ClientLevel world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
         super(world, x, y, z, velocityX, velocityY, velocityZ);
-        trail = new Trail(new Vec3d(x, y, z), 0.02F);
-        setMaxAge(300);
+        trail = new Trail(new Vec3(x, y, z), 0.02F);
+        setLifetime(300);
         this.alpha = 0.15F;
-        this.velocityX = velocityX;
-        this.velocityY = velocityY;
-        this.velocityZ = velocityZ;
-        this.attachmentTicks = (int)world.random.nextTriangular(15, 12);
+        this.xd = velocityX;
+        this.yd = velocityY;
+        this.zd = velocityZ;
+        this.attachmentTicks = (int)world.getRandom().triangle(15, 12);
         this.passive = effect.targetId() <= 0;
-        this.collidesWithWorld = false;
+        this.hasPhysics = false;
 
         if (effect.targetId() > 0) {
-            this.target = world.getEntityById(effect.targetId());
+            this.target = world.getEntity(effect.targetId());
         }
-        offset = target == null ? Vec3d.ZERO : new Vec3d(x, y, z).subtract(target.getPos());
+        offset = target == null ? Vec3.ZERO : new Vec3(x, y, z).subtract(target.position());
     }
 
     @Override
@@ -55,13 +55,13 @@ public class WindParticle extends AbstractBillboardParticle {
 
     @Override
     public boolean isAlive() {
-        return age < getMaxAge() && (!dead || !trail.getSegments().isEmpty());
+        return age < getLifetime() && (!removed || !trail.getSegments().isEmpty());
     }
 
     @Override
     protected void renderQuads(VertexConsumer buffer, float x, float y, float z, float tickDelta) {
-        float alpha = this.alpha * (1 - (float)age / maxAge);
-        int light = getBrightness(tickDelta);
+        float alpha = this.alpha * (1 - (float)age / lifetime);
+        int light = getLightCoords(tickDelta);
         float scale = getScale(tickDelta);
 
         List<Trail.Segment> segments = trail.getSegments();
@@ -81,17 +81,17 @@ public class WindParticle extends AbstractBillboardParticle {
     public void tick() {
         super.tick();
 
-        float animationFrame = age + MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false);
+        float animationFrame = age + Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        float sin = MathHelper.sin(animationFrame / 5F) * 0.1F;
-        float cos = MathHelper.cos(animationFrame / 10F) * 0.2F;
+        float sin = Mth.sin(animationFrame / 5F) * 0.1F;
+        float cos = Mth.cos(animationFrame / 10F) * 0.2F;
 
         if (passive) {
-            trail.update(new Vec3d(x + cos, y + sin, z - cos));
+            trail.update(new Vec3(x + cos, y + sin, z - cos));
         } else {
             if (target != null && target.isAlive()) {
 
-                trail.update(target.getPos().add(target.getRotationVecClient().multiply(-7)).add(offset).add(cos, sin, -cos));
+                trail.update(target.position().add(target.getForward().scale(-7)).add(offset).add(cos, sin, -cos));
 
                 if (attachmentTicks > 0 && --attachmentTicks <= 0) {
                     target = null;
@@ -100,7 +100,7 @@ public class WindParticle extends AbstractBillboardParticle {
         }
 
         if (trail.tick()) {
-            markDead();
+            remove();
         }
     }
 }

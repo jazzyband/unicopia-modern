@@ -1,0 +1,8 @@
+{
+  "type": "unicopia:crafting_zap_apple",
+  "appearance": "unicopia:mango",
+  "ingredients": [
+    "unicopia:zap_apple",
+    "minecraft:lime_dye"
+  ]
+}

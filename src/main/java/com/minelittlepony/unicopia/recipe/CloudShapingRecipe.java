@@ -1,35 +1,42 @@
 package com.minelittlepony.unicopia.recipe;
 
 import com.minelittlepony.unicopia.util.Untyped;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.StonecutterRecipe;
+import net.minecraft.world.item.crafting.SingleItemRecipe;
+import net.minecraft.world.item.crafting.Recipe;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.StonecuttingRecipe;
+public class CloudShapingRecipe extends StonecutterRecipe {
+    public static final MapCodec<CloudShapingRecipe> CODEC = SingleItemRecipe.simpleMapCodec(CloudShapingRecipe::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, CloudShapingRecipe> PACKET_CODEC = SingleItemRecipe.simpleStreamCodec(CloudShapingRecipe::new);
 
-public class CloudShapingRecipe extends StonecuttingRecipe {
+    public CloudShapingRecipe(Recipe.CommonInfo info, Ingredient input, ItemStackTemplate output) {
+        super(info, input, output);
+    }
+
     public CloudShapingRecipe(String group, Ingredient input, ItemStack output) {
-        super(group, input, output);
+        this(new Recipe.CommonInfo(true), input, ItemStackTemplate.fromNonEmptyStack(output));
     }
 
     @Override
-    public boolean isIgnoredInRecipeBook() {
+    public boolean isSpecial() {
         return true;
     }
 
     @Override
-    public ItemStack result() {
-        return super.result();
-    }
-
-    @Override
-    public RecipeType<StonecuttingRecipe> getType() {
+    public RecipeType<StonecutterRecipe> getType() {
         return Untyped.cast(URecipes.CLOUD_SHAPING);
     }
 
     @Override
-    public RecipeSerializer<StonecuttingRecipe> getSerializer() {
+    public RecipeSerializer<StonecutterRecipe> getSerializer() {
         return Untyped.cast(URecipes.CLOUD_SHAPING_SERIALIZER);
     }
 }

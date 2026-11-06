@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_horseshoe": {
+      "conditions": {
+        "items": [
+          {
+            "items": "#unicopia:horse_shoes"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.blacksmith.description"
+    },
+    "icon": {
+      "id": "unicopia:copper_horse_shoe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.blacksmith.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_horseshoe"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

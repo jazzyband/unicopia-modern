@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:crystal",
+  "author": {
+    "translate": "painting.unicopia.crystal.author"
+  },
+  "height": 3,
+  "title": {
+    "translate": "painting.unicopia.crystal.title"
+  },
+  "width": 3
+}

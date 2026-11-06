@@ -1,0 +1,35 @@
+{
+  "values": [
+    "minecraft:melon_slice",
+    "minecraft:sweet_berries",
+    "minecraft:glow_berries",
+    "minecraft:chorus_fruit",
+    "unicopia:juice",
+    "unicopia:zap_apple",
+    "unicopia:zap_bulb",
+    "#c:foods/mango",
+    "#c:foods/pineapple",
+    "#c:foods/apple",
+    "#c:foods/banana",
+    {
+      "id": "#garnished:berries",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:pumpkin_slice",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:tomato",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:melon_juice",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:fruit_salad",
+      "required": false
+    }
+  ]
+}

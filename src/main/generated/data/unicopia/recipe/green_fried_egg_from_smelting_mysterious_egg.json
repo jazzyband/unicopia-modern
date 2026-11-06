@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 630,
+  "experience": 3.8,
+  "group": "fried_egg",
+  "ingredient": "unicopia:mysterious_egg",
+  "result": {
+    "id": "unicopia:green_fried_egg"
+  }
+}

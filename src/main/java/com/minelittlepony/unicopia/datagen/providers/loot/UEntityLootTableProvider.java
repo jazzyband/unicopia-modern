@@ -7,63 +7,64 @@ import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.entity.mob.UEntities;
 import com.minelittlepony.unicopia.item.UItems;
 
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.SimpleFabricLootTableProvider;
-import net.minecraft.entity.EntityType;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.LootTable.Builder;
-import net.minecraft.loot.condition.RandomChanceLootCondition;
-import net.minecraft.loot.context.LootContextTypes;
-import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.entry.TagEntry;
-import net.minecraft.loot.function.EnchantedCountIncreaseLootFunction;
-import net.minecraft.loot.function.SetCountLootFunction;
-import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.loot.provider.number.UniformLootNumberProvider;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.SimpleFabricLootTableSubProvider;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.LootTable.Builder;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.entries.TagEntry;
+import net.minecraft.world.level.storage.loot.functions.EnchantedCountIncreaseFunction;
+import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
+import net.minecraft.world.level.storage.loot.providers.number.floats.ContextFloatProviders;
 
-public class UEntityLootTableProvider extends SimpleFabricLootTableProvider {
-    private final CompletableFuture<RegistryWrapper.WrapperLookup> registryLookup;
 
-    public UEntityLootTableProvider(FabricDataOutput output, CompletableFuture<RegistryWrapper.WrapperLookup> registryLookup) {
-        super(output, registryLookup, LootContextTypes.ENTITY);
+public class UEntityLootTableProvider extends SimpleFabricLootTableSubProvider {
+    private final CompletableFuture<HolderLookup.Provider> registryLookup;
+
+    public UEntityLootTableProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registryLookup) {
+        super(output, registryLookup, LootContextParamSets.ENTITY);
         this.registryLookup = registryLookup;
     }
 
     @Override
-    public void accept(BiConsumer<RegistryKey<LootTable>, Builder> exporter) {
-        generate(registryLookup.join(), (type, builder) -> exporter.accept(RegistryKey.of(RegistryKeys.LOOT_TABLE, EntityType.getId(type).withPrefixedPath("entities/")), builder));
+    public void generate(BiConsumer<ResourceKey<LootTable>, Builder> exporter) {
+        generate(registryLookup.join(), (type, builder) -> exporter.accept(ResourceKey.create(Registries.LOOT_TABLE, EntityType.getKey(type).withPrefix("entities/")), builder));
     }
 
-    protected void generate(RegistryWrapper.WrapperLookup registryLookup, BiConsumer<EntityType<?>, Builder> exporter) {
-        exporter.accept(UEntities.BUTTERFLY, LootTable.builder()
-                .pool(LootPool.builder()
-                .rolls(ConstantLootNumberProvider.create(1))
-                .with(ItemEntry.builder(UItems.BUTTERFLY)
-                    .apply(EnchantedCountIncreaseLootFunction.builder(registryLookup, UniformLootNumberProvider.create(0, 1))))));
-        exporter.accept(UEntities.STORM_CLOUD, LootTable.builder()
-                .pool(LootPool.builder()
-                .rolls(ConstantLootNumberProvider.create(1))
-                .with(ItemEntry.builder(UItems.CLOUD_LUMP)
-                    .apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(6, 12)))
-                    .apply(EnchantedCountIncreaseLootFunction.builder(registryLookup, UniformLootNumberProvider.create(0, 1))))));
-        exporter.accept(UEntities.LOOT_BUG, LootTable.builder()
-                .pool(LootPool.builder()
-                .rolls(ConstantLootNumberProvider.create(1))
-                .with(TagEntry.builder(UTags.Items.LOOT_BUG_COMMON_DROPS)
-                        .apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(6, 12)))
-                        .apply(EnchantedCountIncreaseLootFunction.builder(registryLookup, UniformLootNumberProvider.create(0, 3))))
-                .with(TagEntry.builder(UTags.Items.LOOT_BUG_RARE_DROPS)
-                        .conditionally(RandomChanceLootCondition.builder(0.25F))
-                        .apply(SetCountLootFunction.builder(UniformLootNumberProvider.create(1, 3)))
-                        .apply(EnchantedCountIncreaseLootFunction.builder(registryLookup, UniformLootNumberProvider.create(0, 6))))
-                .with(TagEntry.builder(UTags.Items.LOOT_BUG_EPIC_DROPS)
-                        .conditionally(RandomChanceLootCondition.builder(0.1F))
-                        .apply(SetCountLootFunction.builder(ConstantLootNumberProvider.create(1)))
-                        .apply(EnchantedCountIncreaseLootFunction.builder(registryLookup, UniformLootNumberProvider.create(0, 2))))
+    protected void generate(HolderLookup.Provider registryLookup, BiConsumer<EntityType<?>, Builder> exporter) {
+        exporter.accept(UEntities.BUTTERFLY, LootTable.lootTable()
+                .withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.exactly(1))
+                .add(LootItem.lootTableItem(UItems.BUTTERFLY)
+                    .apply(EnchantedCountIncreaseFunction.lootingMultiplier(registryLookup.lookupOrThrow(Registries.ENCHANTMENT), ContextFloatProviders.between(0, 1))))));
+        exporter.accept(UEntities.STORM_CLOUD, LootTable.lootTable()
+                .withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.exactly(1))
+                .add(LootItem.lootTableItem(UItems.CLOUD_LUMP)
+                    .apply(SetItemCountFunction.setCount(ContextIntProviders.between(6, 12)))
+                    .apply(EnchantedCountIncreaseFunction.lootingMultiplier(registryLookup.lookupOrThrow(Registries.ENCHANTMENT), ContextFloatProviders.between(0, 1))))));
+        exporter.accept(UEntities.LOOT_BUG, LootTable.lootTable()
+                .withPool(LootPool.lootPool()
+                .setRolls(ContextIntProviders.exactly(1))
+                .add(TagEntry.tagContents(registryLookup.lookupOrThrow(Registries.ITEM).getOrThrow(UTags.Items.LOOT_BUG_COMMON_DROPS))
+                        .apply(SetItemCountFunction.setCount(ContextIntProviders.between(6, 12)))
+                        .apply(EnchantedCountIncreaseFunction.lootingMultiplier(registryLookup.lookupOrThrow(Registries.ENCHANTMENT), ContextFloatProviders.between(0, 3))))
+                .add(TagEntry.tagContents(registryLookup.lookupOrThrow(Registries.ITEM).getOrThrow(UTags.Items.LOOT_BUG_RARE_DROPS))
+                        .when(LootItemRandomChanceCondition.randomChance(0.25F))
+                        .apply(SetItemCountFunction.setCount(ContextIntProviders.between(1, 3)))
+                        .apply(EnchantedCountIncreaseFunction.lootingMultiplier(registryLookup.lookupOrThrow(Registries.ENCHANTMENT), ContextFloatProviders.between(0, 6))))
+                .add(TagEntry.tagContents(registryLookup.lookupOrThrow(Registries.ITEM).getOrThrow(UTags.Items.LOOT_BUG_EPIC_DROPS))
+                        .when(LootItemRandomChanceCondition.randomChance(0.1F))
+                        .apply(SetItemCountFunction.setCount(ContextIntProviders.exactly(1)))
+                        .apply(EnchantedCountIncreaseFunction.lootingMultiplier(registryLookup.lookupOrThrow(Registries.ENCHANTMENT), ContextFloatProviders.between(0, 2))))
         ));
     }
 }

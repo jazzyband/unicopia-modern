@@ -10,42 +10,47 @@ import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.block.FancyBedBlock.SheetPattern;
 import com.minelittlepony.unicopia.item.BedsheetsItem;
 
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
-import net.minecraft.block.jukebox.JukeboxSong;
-import net.minecraft.item.*;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Rarity;
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.minecraft.util.Util;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.JukeboxSong;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.ItemLike;
 
 public interface ItemGroupRegistry {
     List<Item> ITEMS = new ArrayList<>();
-    Map<RegistryKey<ItemGroup>, Set<Item>> REGISTRY = new HashMap<>();
+    Map<ResourceKey<CreativeModeTab>, Set<Item>> REGISTRY = new HashMap<>();
 
     static List<ItemStack> getVariations(Item item) {
         if (item instanceof MultiItem m) {
             return m.getDefaultStacks();
         }
-        return List.of(item.getDefaultStack());
+        return List.of(item.getDefaultInstance());
     }
 
-    static <T extends Item> T register(T item, RegistryKey<ItemGroup> group) {
+    static <T extends Item> T register(T item, ResourceKey<CreativeModeTab> group) {
         REGISTRY.computeIfAbsent(group, g -> new LinkedHashSet<>()).add(item);
         return item;
     }
 
-    static Item register(String name, RegistryKey<JukeboxSong> song) {
+    static Item register(String name, ResourceKey<JukeboxSong> song) {
         return register(name, s -> new Item(s
                 .jukeboxPlayable(song)
-                .maxCount(1)
+                .stacksTo(1)
                 .rarity(Rarity.RARE)
-            ), ItemGroups.TOOLS);
+            ), CreativeModeTabs.TOOLS_AND_UTILITIES);
     }
 
     static Item register(Race race) {
@@ -53,44 +58,44 @@ public interface ItemGroupRegistry {
     }
 
     static Item register(SheetPattern pattern) {
-        return register(pattern.asString() + "_bed_sheets", s -> new BedsheetsItem(pattern, s.maxCount(8)), ItemGroups.FUNCTIONAL);
+        return register(pattern.getSerializedName() + "_bed_sheets", s -> new BedsheetsItem(pattern, s.stacksTo(8)), CreativeModeTabs.FUNCTIONAL_BLOCKS);
     }
 
-    static <T extends Item> T register(String name, Function<Item.Settings, T> item, RegistryKey<ItemGroup> group) {
+    static <T extends Item> T register(String name, Function<Item.Properties, T> item, ResourceKey<CreativeModeTab> group) {
         return register(Unicopia.id(name), item, group);
     }
 
-    static <T extends Item> T register(String name, Function<Item.Settings, T> item) {
+    static <T extends Item> T register(String name, Function<Item.Properties, T> item) {
         return register(Unicopia.id(name), item);
     }
 
-    static <T extends Item> T register(Identifier id, Function<Item.Settings, T> item, RegistryKey<ItemGroup> group) {
+    static <T extends Item> T register(Identifier id, Function<Item.Properties, T> item, ResourceKey<CreativeModeTab> group) {
         return register(register(id, item), group);
     }
 
-    static <T extends Item> T register(Identifier id, Function<Item.Settings, T> itemFunc) {
-        RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, id);
-        T item = itemFunc.apply(new Item.Settings().registryKey(key));
+    static <T extends Item> T register(Identifier id, Function<Item.Properties, T> itemFunc) {
+        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
+        T item = itemFunc.apply(new Item.Properties().setId(key));
         if (item instanceof BlockItem bi && bi.getBlock() == null) {
             throw new NullPointerException("Registered block item did not have a block " + id);
         }
         ITEMS.add(item);
-        return Registry.register(Registries.ITEM, id, item);
+        return Registry.register(BuiltInRegistries.ITEM, id, item);
     }
 
-    static RegistryKey<ItemGroup> createDynamic(String name, ItemConvertible icon, Supplier<Stream<Item>> items) {
-        RegistryKey<ItemGroup> key = RegistryKey.of(RegistryKeys.ITEM_GROUP, Unicopia.id(name));
-        Registry.register(Registries.ITEM_GROUP, key.getValue(), FabricItemGroup.builder().entries((context, entries) -> {
+    static ResourceKey<CreativeModeTab> createDynamic(String name, ItemLike icon, Supplier<Stream<Item>> items) {
+        ResourceKey<CreativeModeTab> key = ResourceKey.create(Registries.CREATIVE_MODE_TAB, Unicopia.id(name));
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, key.identifier(), FabricCreativeModeTab.builder().displayItems((context, entries) -> {
             items.get().forEach(item -> {
-                entries.addAll(ItemGroupRegistry.getVariations(item));
+                entries.acceptAll(ItemGroupRegistry.getVariations(item));
             });
-        }).icon(() -> icon.asItem().getDefaultStack()).displayName(Text.translatable(Util.createTranslationKey("itemGroup", key.getValue()))).build());
+        }).icon(() -> icon.asItem().getDefaultInstance()).title(Component.translatable(Util.makeDescriptionId("itemGroup", key.identifier()))).build());
         return key;
     }
 
-    static RegistryKey<ItemGroup> createGroupFromTag(String name, TagKey<Item> tag, ItemConvertible icon) {
+    static ResourceKey<CreativeModeTab> createGroupFromTag(String name, TagKey<Item> tag, ItemLike icon) {
         return createDynamic(name, icon, () -> {
-            return Registries.ITEM.getOptional(tag)
+            return BuiltInRegistries.ITEM.get(tag)
                     .stream()
                     .flatMap(named -> named.stream())
                     .map(entry -> entry.value());
@@ -99,8 +104,8 @@ public interface ItemGroupRegistry {
 
     static void bootstrap() {
         REGISTRY.forEach((group, items) -> {
-            ItemGroupEvents.modifyEntriesEvent(group).register(event -> {
-                event.addAll(items.stream().map(Item::getDefaultStack).toList());
+            CreativeModeTabEvents.modifyOutputEvent(group).register(event -> {
+                event.acceptAll(items.stream().map(Item::getDefaultInstance).toList());
             });
         });
     }

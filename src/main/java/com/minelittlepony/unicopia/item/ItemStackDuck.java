@@ -1,11 +1,10 @@
 package com.minelittlepony.unicopia.item;
 
 import com.minelittlepony.unicopia.item.component.TransientComponentMap;
+import net.minecraft.core.component.DataComponentHolder;
+import net.minecraft.world.item.ItemStack;
 
-import net.minecraft.component.ComponentHolder;
-import net.minecraft.item.ItemStack;
-
-public interface ItemStackDuck extends ComponentHolder, TransientComponentMap.Holder {
+public interface ItemStackDuck extends DataComponentHolder, TransientComponentMap.Holder {
     default ItemDuck getItemDuck() {
         return (ItemDuck)((ItemStack)(Object)this).getItem();
     }

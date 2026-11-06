@@ -3,22 +3,22 @@ package com.minelittlepony.unicopia.datagen.providers.tag;
 import java.util.concurrent.CompletableFuture;
 
 import com.minelittlepony.unicopia.UTags;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagsProvider;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffects;
 
-public class UStatusEffectTagProvider extends FabricTagProvider<StatusEffect> {
-    public UStatusEffectTagProvider(FabricDataOutput output, CompletableFuture<WrapperLookup> registriesFuture) {
-        super(output, RegistryKeys.STATUS_EFFECT, registriesFuture);
+public class UStatusEffectTagProvider extends FabricTagsProvider<MobEffect> {
+    public UStatusEffectTagProvider(FabricPackOutput output, CompletableFuture<Provider> registriesFuture) {
+        super(output, Registries.MOB_EFFECT, registriesFuture);
     }
 
     @Override
-    protected void configure(WrapperLookup lookup) {
-        getOrCreateTagBuilder(UTags.StatusEffects.PINEAPPLE_EFFECTS).add(
-                StatusEffects.REGENERATION.value(), StatusEffects.ABSORPTION.value(), StatusEffects.LUCK.value(), StatusEffects.HASTE.value()
+    protected void addTags(Provider lookup) {
+        tag(UTags.StatusEffects.PINEAPPLE_EFFECTS).add(
+                MobEffects.REGENERATION.unwrapKey().orElseThrow(), MobEffects.ABSORPTION.unwrapKey().orElseThrow(), MobEffects.LUCK.unwrapKey().orElseThrow(), MobEffects.HASTE.unwrapKey().orElseThrow()
         );
     }
 }

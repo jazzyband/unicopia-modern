@@ -1,0 +1,490 @@
+{
+  "content": {
+    "pages": [
+      {
+        "elements": [
+          {
+            "bounds": {
+              "height": 128,
+              "width": 128,
+              "x": 15,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/container/pages/the_otherworldly.png"
+          }
+        ],
+        "level": 10,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.otherworldly.p1.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.p2.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.p2.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author2.name"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.otherworldly.p2.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.siphoning.1.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/darkness.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/blood.png"
+          }
+        ],
+        "level": 20,
+        "title": {
+          "translate": "spell.unicopia.siphoning"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:infernal"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:siphoning"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:blood": 8.0,
+                "unicopia:poison": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:infernal"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:poison"
+              },
+              {
+                "count": 8,
+                "trait": "unicopia:blood"
+              }
+            ]
+          }
+        ],
+        "level": 20
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.necromancy.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.necromancy.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/darkness.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/blood.png"
+          }
+        ],
+        "level": 21,
+        "title": {
+          "translate": "spell.unicopia.necromancy"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:siphoning"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:necromancy"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:blood": 10.0,
+                "unicopia:chaos": 8.0,
+                "unicopia:darkness": 19.0,
+                "unicopia:knowledge": 8.0,
+                "unicopia:poison": 9.0,
+                "unicopia:strength": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:siphoning"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:strength"
+              },
+              {
+                "count": 8,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 8,
+                "trait": "unicopia:chaos"
+              },
+              {
+                "count": 19,
+                "trait": "unicopia:darkness"
+              },
+              {
+                "count": 9,
+                "trait": "unicopia:poison"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:blood"
+              }
+            ]
+          }
+        ],
+        "level": 21
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.dark_vortex.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.dark_vortex.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/chaos.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/darkness.png"
+          }
+        ],
+        "level": 23,
+        "title": {
+          "translate": "spell.unicopia.dark_vortex"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:vortex"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:chaos": 5.0,
+                    "unicopia:darkness": 100.0,
+                    "unicopia:knowledge": 1.0,
+                    "unicopia:strength": 70.0
+                  },
+                  "unicopia:stored_spell": "unicopia:dark_vortex"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:chaos": 8.0,
+                "unicopia:darkness": 9.0,
+                "unicopia:knowledge": 8.0,
+                "unicopia:strength": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:vortex"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:strength"
+              },
+              {
+                "count": 8,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 8,
+                "trait": "unicopia:chaos"
+              },
+              {
+                "count": 9,
+                "trait": "unicopia:darkness"
+              }
+            ]
+          }
+        ],
+        "level": 23
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.portal.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.portal.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/knowledge.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/chaos.png"
+          }
+        ],
+        "level": 24,
+        "title": {
+          "translate": "spell.unicopia.portal"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:displacement"
+                },
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:dark_vortex"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:knowledge": 1.0,
+                    "unicopia:life": 10.0,
+                    "unicopia:order": 25.0
+                  },
+                  "unicopia:stored_spell": "unicopia:portal"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:chaos": 20.0,
+                "unicopia:knowledge": 18.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:displacement"
+              },
+              {
+                "spell": "unicopia:dark_vortex"
+              },
+              {
+                "count": 18,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 20,
+                "trait": "unicopia:chaos"
+              }
+            ]
+          }
+        ],
+        "level": 24
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.mind_swap.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.mind_swap.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/container/pages/dark_magic.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/chaos.png"
+          }
+        ],
+        "level": 24,
+        "title": {
+          "translate": "spell.unicopia.mind_swap"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:mimic"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:mind_swap"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:chaos": 40.0,
+                "unicopia:knowledge": 19.0,
+                "unicopia:life": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:mimic"
+              },
+              {
+                "count": 19,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:life"
+              },
+              {
+                "count": 40,
+                "trait": "unicopia:chaos"
+              }
+            ]
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.otherworldly.mind_swap.3.body"
+          }
+        ],
+        "level": 24
+      }
+    ]
+  },
+  "side": "right",
+  "y_position": 6
+}

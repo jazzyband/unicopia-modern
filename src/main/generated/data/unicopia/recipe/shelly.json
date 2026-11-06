@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "C": "unicopia:clam_shell",
+    "o": "unicopia:rock_candy"
+  },
+  "pattern": [
+    "o o",
+    " C "
+  ],
+  "result": {
+    "id": "unicopia:shelly"
+  }
+}

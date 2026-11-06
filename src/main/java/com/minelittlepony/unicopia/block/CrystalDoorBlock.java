@@ -2,7 +2,34 @@ package com.minelittlepony.unicopia.block;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockSetType;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.redstone.Orientation;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquineContext;
@@ -14,65 +41,28 @@ import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.BlockSetType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.enums.DoubleBlockHalf;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-import net.minecraft.world.block.WireOrientation;
-import net.minecraft.world.event.GameEvent;
+public class CrystalDoorBlock extends DoorBlock implements EntityBlock {
+    public static final BooleanProperty LOCKED = BlockStateProperties.LOCKED;
 
-public class CrystalDoorBlock extends DoorBlock implements BlockEntityProvider {
-    public static final BooleanProperty LOCKED = Properties.LOCKED;
-    public static final MapCodec<CrystalDoorBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockSetType.CODEC.fieldOf("block_set_type").forGetter(CrystalDoorBlock::getBlockSetType),
-            DoorBlock.createSettingsCodec()
-    ).apply(instance, CrystalDoorBlock::new));
-
-    public CrystalDoorBlock(BlockSetType blockSet, Settings settings) {
+    public CrystalDoorBlock(BlockSetType blockSet, Properties settings) {
         super(blockSet, settings);
-        setDefaultState(getDefaultState().with(LOCKED, false));
+        registerDefaultState(defaultBlockState().setValue(LOCKED, false));
     }
 
-    @Override
-    public MapCodec<? extends CrystalDoorBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(LOCKED);
     }
 
     @Override
-    protected boolean hasRandomTicks(BlockState state) {
-        return state.get(LOCKED);
+    protected boolean isRandomlyTicking(BlockState state) {
+        return state.getValue(LOCKED);
     }
 
     @Override
-    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+    protected void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
         super.randomTick(state, world, pos, random);
         if (!isLocked(world, pos)) {
             setOnGuard(state, world, pos, false);
@@ -80,90 +70,90 @@ public class CrystalDoorBlock extends DoorBlock implements BlockEntityProvider {
     }
 
     @Override
-    protected void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, @Nullable WireOrientation orientation, boolean notify) {
-        if (!state.get(LOCKED)) {
-            boolean powered = world.isReceivingRedstonePower(pos) || world.isReceivingRedstonePower(pos.offset(state.get(HALF) == DoubleBlockHalf.LOWER ? Direction.UP : Direction.DOWN));
-            if (!getDefaultState().isOf(sourceBlock) && powered != state.get(POWERED)) {
+    protected void neighborChanged(BlockState state, Level world, BlockPos pos, Block sourceBlock, @Nullable Orientation orientation, boolean notify) {
+        if (!state.getValue(LOCKED)) {
+            boolean powered = world.hasNeighborSignal(pos) || world.hasNeighborSignal(pos.relative(state.getValue(HALF) == DoubleBlockHalf.LOWER ? Direction.UP : Direction.DOWN));
+            if (!defaultBlockState().is(sourceBlock) && powered != state.getValue(POWERED)) {
                 if (powered) {
                     state = state.cycle(OPEN);
-                    playOpenCloseSound(null, world, pos, state.get(OPEN));
-                    world.emitGameEvent(null, state.get(OPEN) ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
+                    playSound(null, world, pos, state.getValue(OPEN));
+                    world.gameEvent(null, state.getValue(OPEN) ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
                 }
 
-                world.setBlockState(pos, state.with(POWERED, powered), Block.NOTIFY_LISTENERS);
+                world.setBlock(pos, state.setValue(POWERED, powered), Block.UPDATE_CLIENTS);
             }
         }
 
-        if (state.get(HALF) == DoubleBlockHalf.LOWER) {
-            if (!canPlaceAt(state, world, pos) && world.isAir(pos.down())) {
-                world.setBlockState(pos.down(), Blocks.DIRT.getDefaultState());
+        if (state.getValue(HALF) == DoubleBlockHalf.LOWER) {
+            if (!canSurvive(state, world, pos) && world.isEmptyBlock(pos.below())) {
+                world.setBlockAndUpdate(pos.below(), Blocks.DIRT.defaultBlockState());
             }
         }
     }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!shouldProvideAccess(world, pos, player)) {
-            if (isLocked(world, pos) || !stack.isOf(UItems.MEADOWBROOKS_STAFF)) {
-                playOpenCloseSound(player, world, pos, false);
+            if (isLocked(world, pos) || !stack.is(UItems.MEADOWBROOKS_STAFF)) {
+                playSound(player, world, pos, false);
                 setOnGuard(state, world, pos, true);
-                return ActionResult.CONSUME;
+                return InteractionResult.CONSUME;
             } else {
-                world.playSound(player, pos, USounds.ENTITY_CRYSTAL_SHARDS_AMBIENT, SoundCategory.BLOCKS, 1, world.getRandom().nextFloat() * 0.1F + 0.9F);
+                world.playSound(player, pos, USounds.ENTITY_CRYSTAL_SHARDS_AMBIENT, SoundSource.BLOCKS, 1, world.getRandom().nextFloat() * 0.1F + 0.9F);
             }
         } else if (!isLocked(world, pos)) {
-            if (stack.isOf(UItems.FRIENDSHIP_BRACELET)) {
+            if (stack.is(UItems.FRIENDSHIP_BRACELET)) {
                 @Nullable
                 UUID signator = FriendshipBraceletItem.getSignatorId(stack);
                 if (signator != null) {
-                    BlockEntityUtil.getOrCreateBlockEntity(world, state.get(HALF) == DoubleBlockHalf.LOWER ? pos.up() : pos, UBlockEntities.CRYSTAL_DOOR).ifPresent(data -> {
+                    BlockEntityUtil.getOrCreateBlockEntity(world, state.getValue(HALF) == DoubleBlockHalf.LOWER ? pos.above() : pos, UBlockEntities.CRYSTAL_DOOR).ifPresent(data -> {
                         data.setSignator(signator);
                         setOnGuard(state, world, pos, true);
-                        world.playSound(player, pos, USounds.ENTITY_CRYSTAL_SHARDS_AMBIENT, SoundCategory.BLOCKS, 1, world.getRandom().nextFloat() * 0.1F + 0.9F);
+                        world.playSound(player, pos, USounds.ENTITY_CRYSTAL_SHARDS_AMBIENT, SoundSource.BLOCKS, 1, world.getRandom().nextFloat() * 0.1F + 0.9F);
                     });
-                    return ActionResult.SUCCESS;
+                    return InteractionResult.SUCCESS;
                 }
             } else {
                 setOnGuard(state, world, pos, false);
             }
         }
-        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
+        return super.useItemOn(stack, state, world, pos, player, hand, hit);
     }
 
-    private void setOnGuard(BlockState state, World world, BlockPos pos, boolean locked) {
-        world.setBlockState(pos, state.with(LOCKED, locked));
-        pos = pos.offset(state.get(HALF) == DoubleBlockHalf.LOWER ? Direction.UP : Direction.DOWN);
+    private void setOnGuard(BlockState state, Level world, BlockPos pos, boolean locked) {
+        world.setBlockAndUpdate(pos, state.setValue(LOCKED, locked));
+        pos = pos.relative(state.getValue(HALF) == DoubleBlockHalf.LOWER ? Direction.UP : Direction.DOWN);
         state = world.getBlockState(pos);
-        if (state.isOf(this)) {
-            world.setBlockState(pos, state.with(LOCKED, locked));
+        if (state.is(this)) {
+            world.setBlockAndUpdate(pos, state.setValue(LOCKED, locked));
         }
     }
 
-    private boolean shouldProvideAccess(World world, BlockPos pos, PlayerEntity player) {
+    private boolean shouldProvideAccess(Level world, BlockPos pos, Player player) {
         UUID signator = getSignator(world, pos);
         if (signator != null) {
-            return signator.equals(player.getUuid()) || FriendshipBraceletItem.isComrade(signator, player);
+            return signator.equals(player.getUUID()) || FriendshipBraceletItem.isComrade(signator, player);
         }
         return EquineContext.of(player).getCompositeRace().any(Race::canCast);
     }
 
-    private boolean isLocked(World world, BlockPos pos) {
+    private boolean isLocked(Level world, BlockPos pos) {
         return getSignator(world, pos) != null;
     }
 
     @Nullable
-    private UUID getSignator(World world, BlockPos pos) {
-        pos = world.getBlockState(pos).get(HALF) == DoubleBlockHalf.LOWER ? pos.up() : pos;
+    private UUID getSignator(Level world, BlockPos pos) {
+        pos = world.getBlockState(pos).getValue(HALF) == DoubleBlockHalf.LOWER ? pos.above() : pos;
         var d = world.getBlockEntity(pos, UBlockEntities.CRYSTAL_DOOR);
         return d.flatMap(data -> data.signator).orElse(null);
     }
 
-    private void playOpenCloseSound(@Nullable Entity entity, World world, BlockPos pos, boolean open) {
-        world.playSound(entity, pos, open ? getBlockSetType().doorOpen() : getBlockSetType().doorClose(), SoundCategory.BLOCKS, 1, world.getRandom().nextFloat() * 0.1f + 0.9f);
+    private void playSound(@Nullable Entity entity, Level world, BlockPos pos, boolean open) {
+        world.playSound(entity, pos, open ? type().doorOpen() : type().doorClose(), SoundSource.BLOCKS, 1, world.getRandom().nextFloat() * 0.1f + 0.9f);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileData(pos, state);
     }
 
@@ -176,17 +166,17 @@ public class CrystalDoorBlock extends DoorBlock implements BlockEntityProvider {
 
         public void setSignator(UUID signator) {
             this.signator = Optional.ofNullable(signator);
-            markDirty();
+            setChanged();
         }
 
         @Override
-        public void readNbt(NbtCompound nbt, WrapperLookup lookup) {
-            signator = nbt.get("signator", Uuids.CODEC);
+        protected void loadAdditional(net.minecraft.world.level.storage.ValueInput nbt) {
+            signator = nbt.read("signator", UUIDUtil.AUTHLIB_CODEC);
         }
 
         @Override
-        protected void writeNbt(NbtCompound nbt, WrapperLookup lookup) {
-            nbt.put("signator", CodecUtils.OPTIONAL_UUID, signator);
+        protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput nbt) {
+            nbt.store("signator", CodecUtils.OPTIONAL_UUID, signator);
         }
     }
 }

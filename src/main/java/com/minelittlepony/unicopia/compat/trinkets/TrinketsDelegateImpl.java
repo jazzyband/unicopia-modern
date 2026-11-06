@@ -1,6 +1,10 @@
 package com.minelittlepony.unicopia.compat.trinkets;
 
 import java.util.*;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import com.minelittlepony.unicopia.container.SpellbookScreenHandler;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
 import com.minelittlepony.unicopia.item.enchantment.UEnchantments;
@@ -10,10 +14,6 @@ import io.wispforest.accessories.api.core.AccessoryRegistry;
 import io.wispforest.accessories.api.events.DropRule;
 import io.wispforest.accessories.api.events.OnDropCallback;
 import io.wispforest.accessories.api.menu.AccessoriesBasedSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.slot.Slot;
 
 public class TrinketsDelegateImpl implements TrinketsDelegate {
     public static final TrinketsDelegateImpl INSTANCE = new TrinketsDelegateImpl();

@@ -5,12 +5,12 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.server.world.UGameRules;
 import com.minelittlepony.unicopia.server.world.UnicopiaWorldProperties;
 import com.sollace.fabwork.api.packets.Handled;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.*;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Sent to the server when a client wants to request a species change.
@@ -20,31 +20,31 @@ import net.minecraft.text.*;
 public record MsgRequestSpeciesChange (
         boolean force,
         Race newRace
-    ) implements Handled<ServerPlayerEntity> {
-    public static final PacketCodec<RegistryByteBuf, MsgRequestSpeciesChange> PACKET_CODEC = PacketCodec.tuple(
-            PacketCodecs.BOOLEAN, MsgRequestSpeciesChange::force,
-            Race.PACKET_CODEC, MsgRequestSpeciesChange::newRace,
+    ) implements Handled<ServerPlayer> {
+    public static final StreamCodec<RegistryFriendlyByteBuf, MsgRequestSpeciesChange> PACKET_CODEC = StreamCodec.composite(
+            ByteBufCodecs.BOOL, MsgRequestSpeciesChange::force,
+            ByteBufCodecs.registry(Race.REGISTRY_KEY), MsgRequestSpeciesChange::newRace,
             MsgRequestSpeciesChange::new
     );
 
     @Override
-    public void handle(ServerPlayerEntity sender) {
+    public void handle(ServerPlayer sender) {
         Pony player = Pony.of(sender);
 
         if (force || player.getSpecies().isUnset()) {
             boolean permitted = newRace.isPermitted(sender);
-            player.setSpecies(permitted ? newRace : UnicopiaWorldProperties.forWorld((ServerWorld)player.asWorld()).getDefaultRace());
+            player.setSpecies(permitted ? newRace : UnicopiaWorldProperties.forWorld((ServerLevel)player.asWorld()).getDefaultRace());
             if (!permitted) {
-                sender.sendMessageToClient(Text.translatable("respawn.reason.illegal_race", newRace.getDisplayName()), false);
+                sender.sendSystemMessage(Component.translatable("respawn.reason.illegal_race", newRace.getDisplayName()), false);
             }
 
             if (force) {
-                if (((ServerWorld)sender.getWorld()).getGameRules().getBoolean(UGameRules.ANNOUNCE_TRIBE_JOINS)) {
-                    Text message = Text.translatable("respawn.reason.joined_new_tribe",
+                if (((ServerLevel)sender.level()).getGameRules().get(UGameRules.ANNOUNCE_TRIBE_JOINS)) {
+                    Component message = Component.translatable("respawn.reason.joined_new_tribe",
                             sender.getDisplayName(),
                             player.getSpecies().getDisplayName(), player.getSpecies().getAltDisplayName());
-                    sender.getWorld().getPlayers().forEach(p -> {
-                        ((ServerPlayerEntity)p).sendMessageToClient(message, false);
+                    sender.level().players().forEach(p -> {
+                        ((ServerPlayer)p).sendSystemMessage(message, false);
                     });
                 }
 

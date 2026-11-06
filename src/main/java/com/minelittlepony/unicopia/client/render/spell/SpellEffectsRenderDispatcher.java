@@ -4,33 +4,35 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.client.render.entity.state.CasterState;
 import com.minelittlepony.unicopia.client.render.spell.SpellRenderer.SpellRenderState;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer.TextLayerType;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexRendering;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SynchronousResourceReloader;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font.DisplayMode;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 
-public class SpellEffectsRenderDispatcher implements SynchronousResourceReloader, IdentifiableResourceReloadListener {
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.minecraft.util.CommonColors;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+public class SpellEffectsRenderDispatcher implements ResourceManagerReloadListener, IdentifiableResourceReloadListener {
     public static final SpellEffectsRenderDispatcher INSTANCE = new SpellEffectsRenderDispatcher();
     private static final Identifier ID = Unicopia.id("spell_renderers");
     private static final Map<SpellType<?>, SpellRendererFactory<?>> REGISTRY = new HashMap<>();
@@ -44,12 +46,12 @@ public class SpellEffectsRenderDispatcher implements SynchronousResourceReloader
         register(SpellType.DARK_VORTEX, DarkVortexSpellRenderer::new);
         register(SpellType.BUBBLE, BubbleSpellRenderer::new);
         register(SpellType.PORTAL, PortalSpellRenderer::new);
-        register(SpellType.RAINBOOM, EmptySpellRenderer::new);
+        register(SpellType.RAINBOOM, RainboomSpellRenderer::new);
     }
 
     @Nullable
     private Map<SpellType<?>, SpellRenderer<?, ?>> renderers = Map.of();
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
 
     private SpellEffectsRenderDispatcher() {}
 
@@ -69,31 +71,21 @@ public class SpellEffectsRenderDispatcher implements SynchronousResourceReloader
         return (SpellRenderer<?, S>)renderers.getOrDefault(spell.type.type(), SpellRenderer.DEFAULT);
     }
 
-    public void render(MatrixStack matrices, VertexConsumerProvider vertices, int light, SpellRenderState spell) {
+    public void render(PoseStack matrices, SubmitNodeCollector vertices, int light, CasterState caster, SpellRenderState spell) {
         var renderer = getRenderer(spell);
 
-        if (spell.casterState.debugLines != null) {
-            renderHotspot(matrices, vertices, spell.casterState);
-            renderSpellDebugInfo(matrices, vertices, spell.casterState, light);
-        }
-
         if (renderer != SpellRenderer.DEFAULT) {
-            client.getBufferBuilders().getEntityVertexConsumers().draw();
-            renderer.render(matrices, vertices, spell, light);
+            renderer.render(matrices, vertices, spell, caster, light);
         }
     }
 
-    public void render(MatrixStack matrices, VertexConsumerProvider vertices, int light, CasterState caster) {
+    public void render(PoseStack matrices, SubmitNodeCollector vertices, int light, CasterState caster) {
         if (!((RenderDispatcherAccessor)client.getEntityRenderDispatcher()).shouldRenderShadows()) {
             return;
         }
 
         caster.spells.forEach(spell -> {
-            var renderer = getRenderer(spell);
-            if (renderer != SpellRenderer.DEFAULT) {
-                client.getBufferBuilders().getEntityVertexConsumers().draw();
-                renderer.render(matrices, vertices, spell, light);
-            }
+            render(matrices, vertices, light, caster, spell);
         });
 
         if (caster.debugLines != null) {
@@ -103,42 +95,16 @@ public class SpellEffectsRenderDispatcher implements SynchronousResourceReloader
     }
 
     @Override
-    public void reload(ResourceManager manager) {
+    public void onResourceManagerReload(ResourceManager manager) {
         renderers = REGISTRY.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().create()));
     }
 
-    private void renderSpellDebugInfo(MatrixStack matrices, VertexConsumerProvider vertices, CasterState caster, int light) {
-        matrices.push();
-        matrices.multiply(client.getEntityRenderDispatcher().getRotation());
-
-        float scale = 0.0125F;
-        int rotationMultiple = caster.living ? 1 : -1;
-        matrices.scale(scale, scale * rotationMultiple, scale * rotationMultiple);
-        int backgroundColor = MinecraftClient.getInstance().options.getTextBackgroundColor(0.25F);
-        int spacing = client.textRenderer.fontHeight + 1;
-        int top = -(spacing * caster.debugLines.size());
-        int left = (int)caster.entityState.width * 64;
-
-        Matrix4f transform = matrices.peek().getPositionMatrix();
-        for (Text line : caster.debugLines) {
-            client.textRenderer.draw(line, left += 1, top += spacing, Colors.WHITE, false, transform, vertices, TextLayerType.SEE_THROUGH, backgroundColor, light);
-        }
-        matrices.pop();
+    private void renderSpellDebugInfo(PoseStack matrices, SubmitNodeCollector vertices, CasterState caster, int light) {
+        // Debug labels require a separate extracted text submission path.
     }
 
-    private void renderHotspot(MatrixStack matrices, VertexConsumerProvider vertices, CasterState caster) {
-        Box boundingBox = Box.of(Vec3d.ZERO, 0.5, 0.5, 0.5);
-        VertexConsumer buffer = vertices.getBuffer(RenderLayer.getLines());
-        Quaternionf rotation = new Quaternionf();
-
-        for (float i = -1; i < 1; i += 0.2F) {
-            matrices.push();
-            float angle = i * caster.entityState.age * MathHelper.RADIANS_PER_DEGREE;
-            matrices.multiply(rotation.rotationXYZ(angle, angle - caster.yawOffset, angle));
-            matrices.scale(i, i, i);
-            VertexRendering.drawBox(matrices, buffer, boundingBox, 1, 0, 0, 1);
-            matrices.pop();
-        }
+    private void renderHotspot(PoseStack matrices, SubmitNodeCollector vertices, CasterState caster) {
+        // Debug geometry is intentionally omitted until the 26.3 line submission is migrated.
     }
 
     public interface RenderDispatcherAccessor {

@@ -1,0 +1,967 @@
+{
+  "content": {
+    "pages": [
+      {
+        "elements": [
+          {
+            "bounds": {
+              "height": 128,
+              "width": 128,
+              "x": 15,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/container/pages/dark_magic.png"
+          }
+        ],
+        "level": 10,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p1.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p2.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p2.2.body"
+          }
+        ],
+        "level": 8,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p2.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p3.1.body"
+          }
+        ],
+        "level": 9,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p3.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p4.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p4.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 10,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p4.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.vortex.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.vortex.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/air.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/knowledge.png"
+          }
+        ],
+        "level": 5,
+        "title": {
+          "translate": "spell.unicopia.vortex"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:shield"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:air": 9.0,
+                    "unicopia:focus": 5.0,
+                    "unicopia:knowledge": 1.0,
+                    "unicopia:strength": 50.0
+                  },
+                  "unicopia:stored_spell": "unicopia:vortex"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:air": 9.0,
+                "unicopia:knowledge": 8.0,
+                "unicopia:strength": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:shield"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:strength"
+              },
+              {
+                "count": 8,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 9,
+                "trait": "unicopia:air"
+              }
+            ]
+          },
+          {
+            "ingredients": [
+              {
+                "text": {
+                  "translate": "gui.unicopia.spellbook.chapter.dark_magic.vortex.modifier.1"
+                }
+              },
+              {
+                "text": {
+                  "translate": "gui.unicopia.spellbook.chapter.dark_magic.vortex.modifier.2"
+                }
+              }
+            ]
+          }
+        ],
+        "level": 5
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p6.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p6.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p6.3.body"
+          }
+        ],
+        "level": 6,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p6.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p7.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p7.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p7.3.body"
+          }
+        ],
+        "level": 6,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p7.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p8.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 6,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p8.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p8.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p8.3.body"
+          }
+        ],
+        "level": 6
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p9.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p9.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p9.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 11,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p9.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p10.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p10.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p10.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 11,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p10.title"
+        }
+      },
+      {},
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.3.body"
+          }
+        ],
+        "level": 13,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.4.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.5.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p11.6.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 14
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.transformation.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.transformation.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/life.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/chaos.png"
+          }
+        ],
+        "level": 13,
+        "title": {
+          "translate": "spell.unicopia.transformation"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:transformation"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:chaos": 4.0,
+                "unicopia:knowledge": 10.0,
+                "unicopia:life": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "count": 10,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:life"
+              },
+              {
+                "count": 4,
+                "trait": "unicopia:chaos"
+              }
+            ]
+          }
+        ],
+        "level": 13
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.reveal.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.reveal.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/knowledge.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/chaos.png"
+          }
+        ],
+        "level": 15,
+        "title": {
+          "translate": "spell.unicopia.reveal"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:shield"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:reveal"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:knowledge": 18.0,
+                "unicopia:life": 1.0,
+                "unicopia:order": 4.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:shield"
+              },
+              {
+                "count": 18,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "trait": "unicopia:life"
+              },
+              {
+                "count": 4,
+                "trait": "unicopia:order"
+              }
+            ]
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.reveal.modifier.1"
+          }
+        ],
+        "level": 15
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p14.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p14.2.body"
+          }
+        ],
+        "level": 14,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p14.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p15.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p15.2.body"
+          }
+        ],
+        "level": 15,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p15.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p16.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p16.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 15,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p16.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p17.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p17.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p17.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 18,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p17.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p18.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p18.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 14,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p18.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.arcane_protection.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.arcane_protection.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/knowledge.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/darkness.png"
+          }
+        ],
+        "level": 16,
+        "title": {
+          "translate": "spell.unicopia.arcane_protection"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:shield"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:focus": 50.0,
+                    "unicopia:strength": 30.0
+                  },
+                  "unicopia:stored_spell": "unicopia:arcane_protection"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:darkness": 1.0,
+                "unicopia:knowledge": 18.0,
+                "unicopia:strength": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:shield"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:strength"
+              },
+              {
+                "count": 18,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "trait": "unicopia:darkness"
+              }
+            ]
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.arcane_protection.modifier.1"
+          }
+        ],
+        "level": 16
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.displacement.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.displacement.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/knowledge.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/chaos.png"
+          }
+        ],
+        "level": 17,
+        "title": {
+          "translate": "spell.unicopia.displacement"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:knowledge": 1.0,
+                    "unicopia:life": 10.0,
+                    "unicopia:order": 25.0
+                  },
+                  "unicopia:stored_spell": "unicopia:displacement"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:chaos": 10.0,
+                "unicopia:knowledge": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "count": 10,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:chaos"
+              }
+            ]
+          }
+        ],
+        "level": 17
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p21.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p21.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 14,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p21.title"
+        }
+      },
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.mimic.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.mimic.2.body"
+          },
+          {
+            "bounds": {
+              "height": 32,
+              "width": 32,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/darkness.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/darkness.png"
+          }
+        ],
+        "level": 18,
+        "title": {
+          "translate": "spell.unicopia.mimic"
+        }
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:transformation"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:stored_spell": "unicopia:mimic"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:chaos": 4.0,
+                "unicopia:knowledge": 19.0,
+                "unicopia:life": 10.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:transformation"
+              },
+              {
+                "count": 19,
+                "trait": "unicopia:knowledge"
+              },
+              {
+                "count": 10,
+                "trait": "unicopia:life"
+              },
+              {
+                "count": 4,
+                "trait": "unicopia:chaos"
+              }
+            ]
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.mimic.modifier.1"
+          }
+        ],
+        "level": 18
+      },
+      {},
+      {},
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p24.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p24.2.body"
+          }
+        ],
+        "level": 44,
+        "title": "????? ????"
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p25.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          }
+        ],
+        "level": 44,
+        "title": "????? ????"
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p26.1.body"
+          }
+        ],
+        "level": 21,
+        "title": {
+          "translate": "gui.unicopia.spellbook.chapter.dark_magic.p26.title"
+        }
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p27.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p27.2.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p27.3.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p27.4.body"
+          }
+        ],
+        "level": 33,
+        "title": "????? ????"
+      },
+      {
+        "elements": [
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.p28.1.body"
+          },
+          {
+            "translate": "gui.unicopia.spellbook.author1.name"
+          },
+          {
+            "bounds": {
+              "height": 128,
+              "width": 128,
+              "x": 15,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/container/pages/dark_magic.png"
+          },
+          {
+            "bounds": {
+              "height": 16,
+              "width": 16,
+              "x": 125,
+              "y": -10
+            },
+            "texture": "unicopia:textures/gui/trait/kindness.png"
+          }
+        ],
+        "level": 19,
+        "title": "????? ????"
+      },
+      {
+        "elements": [
+          {
+            "recipe": {
+              "type": "unicopia:spellbook/crafting",
+              "ingredients": [
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:arcane_protection"
+                },
+                {
+                  "item": "unicopia:gemstone",
+                  "spell": "unicopia:displacement"
+                }
+              ],
+              "material": {
+                "item": "unicopia:gemstone"
+              },
+              "result": {
+                "components": {
+                  "unicopia:spell_traits": {
+                    "unicopia:power": 1.0
+                  },
+                  "unicopia:stored_spell": "unicopia:dispel_evil"
+                },
+                "id": "unicopia:gemstone"
+              },
+              "traits": {
+                "unicopia:kindness": 1.0,
+                "unicopia:power": 1.0
+              }
+            }
+          },
+          {
+            "translate": "gui.unicopia.spellbook.recipe.requires"
+          },
+          {
+            "ingredients": [
+              {
+                "spell": "unicopia:arcane_protection"
+              },
+              {
+                "spell": "unicopia:displacement"
+              },
+              {
+                "trait": "unicopia:power"
+              },
+              {
+                "trait": "unicopia:kindness"
+              }
+            ]
+          },
+          {
+            "translate": "gui.unicopia.spellbook.chapter.dark_magic.dispel_evil.modifier.1"
+          }
+        ],
+        "level": 19
+      }
+    ]
+  },
+  "side": "right",
+  "y_position": 5
+}

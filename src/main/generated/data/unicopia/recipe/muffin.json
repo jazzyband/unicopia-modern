@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:sugar",
+    "minecraft:egg",
+    "minecraft:potato",
+    "unicopia:juice",
+    "unicopia:wheat_worms"
+  ],
+  "result": {
+    "id": "unicopia:muffin"
+  }
+}

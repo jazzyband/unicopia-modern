@@ -2,27 +2,26 @@ package com.minelittlepony.unicopia.server.world;
 
 import java.util.List;
 import java.util.function.*;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.util.Tickable;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerChunkLoadingManager;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
 
-public class WorldOverlay<T extends WorldOverlay.State> extends PersistentState implements Tickable {
+public class WorldOverlay<T extends WorldOverlay.State> extends SavedData implements Tickable {
 
-    private final World world;
+    private final Level world;
 
     private final Long2ObjectMap<Chunk> chunks = new Long2ObjectOpenHashMap<>();
 
@@ -30,42 +29,42 @@ public class WorldOverlay<T extends WorldOverlay.State> extends PersistentState 
 
     private final Supplier<T> factory;
     @Nullable
-    private final BiConsumer<Long2ObjectMap<T>, List<ServerPlayerEntity>> updateSender;
+    private final BiConsumer<Long2ObjectMap<T>, List<ServerPlayer>> updateSender;
 
-    public static <T extends State> PersistentStateKey<WorldOverlay<T>> createAccessor(Identifier id, Supplier<T> factory, @Nullable BiConsumer<Long2ObjectMap<T>, List<ServerPlayerEntity>> updateSender) {
+    public static <T extends State> PersistentStateKey<WorldOverlay<T>> createAccessor(Identifier id, Supplier<T> factory, @Nullable BiConsumer<Long2ObjectMap<T>, List<ServerPlayer>> updateSender) {
         return createAccessor(id, w -> new WorldOverlay<>(w, factory, updateSender));
     }
 
-    public static  <T extends State> PersistentStateKey<WorldOverlay<T>> createAccessor(Identifier id, Function<World, WorldOverlay<T>> overlayFactory) {
-        return new PersistentStateKey<>(id, context -> {
-            return NbtCompound.CODEC.xmap(tag -> {
-                WorldOverlay<T> overlay = overlayFactory.apply(context.getWorldOrThrow());
-                overlay.readNbt(tag, context.getWorldOrThrow().getRegistryManager());
+    public static  <T extends State> PersistentStateKey<WorldOverlay<T>> createAccessor(Identifier id, Function<Level, WorldOverlay<T>> overlayFactory) {
+        return new PersistentStateKey<>(id, world -> {
+            return CompoundTag.CODEC.xmap(tag -> {
+                WorldOverlay<T> overlay = overlayFactory.apply(world);
+                overlay.readNbt(tag, world.registryAccess());
                 return overlay;
             }, overlay -> {
-                return overlay.writeNbt(new NbtCompound(), context.getWorldOrThrow().getRegistryManager());
+                return overlay.writeNbt(new CompoundTag(), world.registryAccess());
             });
         }, overlayFactory);
     }
 
-    WorldOverlay(World world, Supplier<T> factory, @Nullable BiConsumer<Long2ObjectMap<T>, List<ServerPlayerEntity>> updateSender) {
+    WorldOverlay(Level world, Supplier<T> factory, @Nullable BiConsumer<Long2ObjectMap<T>, List<ServerPlayer>> updateSender) {
         this.world = world;
         this.factory = factory;
         this.updateSender = updateSender;
     }
 
-    public NbtCompound writeNbt(NbtCompound compound, WrapperLookup lookup) {
-        NbtCompound destructions = new NbtCompound();
+    public CompoundTag writeNbt(CompoundTag compound, Provider lookup) {
+        CompoundTag destructions = new CompoundTag();
         this.chunks.forEach((id, chunk) -> {
-            destructions.put(id.toString(), chunk.toNBT(lookup));
+            destructions.put(Long.toString(id), chunk.toNBT(lookup));
         });
         compound.put("chunks", destructions);
         return compound;
     }
 
-    public void readNbt(NbtCompound compound, WrapperLookup lookup) {
-        NbtCompound d = compound.getCompoundOrEmpty("chunks");
-        d.getKeys().forEach(id -> {
+    public void readNbt(CompoundTag compound, Provider lookup) {
+        CompoundTag d = compound.getCompoundOrEmpty("chunks");
+        d.keySet().forEach(id -> {
             chunks.computeIfAbsent(Long.valueOf(id), Chunk::new).fromNBT(d.getCompoundOrEmpty(id), lookup);
         });
     }
@@ -82,13 +81,13 @@ public class WorldOverlay<T extends WorldOverlay.State> extends PersistentState 
     }
 
     private Chunk getChunk(BlockPos pos) {
-        return chunks.computeIfAbsent(ChunkPos.toLong(pos), Chunk::new);
+        return chunks.computeIfAbsent(ChunkPos.pack(pos), Chunk::new);
     }
 
     public void setState(BlockPos pos, @Nullable T state) {
         synchronized (locker) {
             getChunk(pos).setState(pos, state);
-            markDirty();
+            setDirty();
         }
     }
 
@@ -97,7 +96,7 @@ public class WorldOverlay<T extends WorldOverlay.State> extends PersistentState 
         synchronized (locker) {
             chunks.long2ObjectEntrySet().removeIf(entry -> entry.getValue().tick());
 
-            if (world instanceof ServerWorld sw) {
+            if (world instanceof ServerLevel sw) {
                 chunks.forEach((chunkPos, chunk) -> chunk.sendUpdates(sw));
             }
         }
@@ -134,18 +133,18 @@ public class WorldOverlay<T extends WorldOverlay.State> extends PersistentState 
             return states.isEmpty();
         }
 
-        void sendUpdates(ServerWorld world) {
+        void sendUpdates(ServerLevel world) {
             if (updateSender == null) {
                 return;
             }
 
-            if (!world.getChunkManager().isChunkLoaded(ChunkPos.getPackedX(pos), ChunkPos.getPackedZ(pos))) {
+            if (!world.getChunkSource().hasChunk(ChunkPos.getX(pos), ChunkPos.getZ(pos))) {
                 return;
             }
 
-            ServerChunkLoadingManager storage = world.getChunkManager().chunkLoadingManager;
+            ChunkMap storage = world.getChunkSource().chunkMap;
 
-            List<ServerPlayerEntity> players = storage.getPlayersWatchingChunk(new ChunkPos(pos), false);
+            List<ServerPlayer> players = storage.getPlayers(ChunkPos.unpack(pos), false);
 
             if (!players.isEmpty()) {
                 updateSender.accept(states, players);
@@ -153,19 +152,19 @@ public class WorldOverlay<T extends WorldOverlay.State> extends PersistentState 
         }
 
         @Override
-        public void toNBT(NbtCompound compound, WrapperLookup lookup) {
-            NbtCompound states = new NbtCompound();
+        public void toNBT(CompoundTag compound, Provider lookup) {
+            CompoundTag states = new CompoundTag();
             this.states.forEach((id, state) -> {
-                states.put(id.toString(), state.toNBT(lookup));
+                states.put(Long.toString(id), state.toNBT(lookup));
             });
             compound.put("states", states);
         }
 
         @Override
-        public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
-            NbtCompound d = compound.getCompoundOrEmpty("states");
+        public void fromNBT(CompoundTag compound, Provider lookup) {
+            CompoundTag d = compound.getCompoundOrEmpty("states");
             chunks.clear();
-            d.getKeys().forEach(id -> {
+            d.keySet().forEach(id -> {
                 states.computeIfAbsent(Long.valueOf(id), i -> factory.get()).fromNBT(d.getCompoundOrEmpty(id), lookup);
             });
         }

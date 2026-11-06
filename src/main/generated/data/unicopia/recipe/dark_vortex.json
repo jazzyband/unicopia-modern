@@ -1,0 +1,30 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:vortex"
+    }
+  ],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:spell_traits": {
+        "unicopia:chaos": 5.0,
+        "unicopia:darkness": 100.0,
+        "unicopia:knowledge": 1.0,
+        "unicopia:strength": 70.0
+      },
+      "unicopia:stored_spell": "unicopia:dark_vortex"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:chaos": 8.0,
+    "unicopia:darkness": 9.0,
+    "unicopia:knowledge": 8.0,
+    "unicopia:strength": 10.0
+  }
+}

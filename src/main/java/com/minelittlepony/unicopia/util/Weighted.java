@@ -3,13 +3,11 @@ package com.minelittlepony.unicopia.util;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
+import net.minecraft.util.RandomSource;
 import org.jetbrains.annotations.NotNull;
 
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.random.Random;
-
 public final class Weighted {
+    private record Tuple<A, B>(A getA, B getB) {}
     private static final Supplier<Optional<?>> EMPTY = Optional::empty;
 
     @SuppressWarnings("unchecked")
@@ -27,16 +25,16 @@ public final class Weighted {
         return of(builder -> entries.forEach(entry -> entry.appendTo(builder)));
     }
 
-    public static Random getRng() {
+    public static RandomSource getRng() {
         return Builder.RANDOM;
     }
 
     public final static class Builder<T> {
-        public static final Random RANDOM = Random.create();
+        public static final RandomSource RANDOM = RandomSource.create();
 
         private float totalWeight = 0;
 
-        private final List<Pair<WeightedValue<T>, Range>> entries = new ArrayList<>();
+        private final List<Tuple<WeightedValue<T>, Range>> entries = new ArrayList<>();
 
         public Builder<T> putAll(Map<Integer, T> map) {
             map.forEach(this::put);
@@ -44,14 +42,14 @@ public final class Weighted {
         }
 
         public Builder<T> put(int weight, @NotNull T value) {
-            entries.add(new Pair<>(new WeightedValue<>(weight, value), new Range()));
+            entries.add(new Tuple<>(new WeightedValue<>(weight, value), new Range()));
 
             totalWeight += weight;
 
             float rangeStart = 0;
 
             for (var i : entries) {
-                rangeStart = i.getRight().set(rangeStart, (i.getLeft().weight() / totalWeight));
+                rangeStart = i.getB().set(rangeStart, (i.getA().weight() / totalWeight));
             }
 
             return this;
@@ -62,15 +60,15 @@ public final class Weighted {
                 return of();
             }
             if (entries.size() == 1) {
-                final var val = Optional.ofNullable(entries.get(0).getLeft().result());
+                final var val = Optional.ofNullable(entries.get(0).getA().result());
                 return () -> val;
             }
             final var entries = new ArrayList<>(this.entries);
             return () -> {
                 final float pointer = RANDOM.nextFloat();
                 return entries.stream()
-                        .filter(i -> i.getRight().isIn(pointer))
-                        .map(i -> i.getLeft().result())
+                        .filter(i -> i.getB().isIn(pointer))
+                        .map(i -> i.getA().result())
                         .findFirst();
             };
         }

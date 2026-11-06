@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 150,
+  "experience": 3.8,
+  "ingredient": "unicopia:mysterious_egg",
+  "result": {
+    "id": "unicopia:green_fried_egg"
+  }
+}

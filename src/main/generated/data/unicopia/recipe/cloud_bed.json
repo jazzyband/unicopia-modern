@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed",
+  "key": {
+    "#": "unicopia:dense_cloud",
+    "X": "unicopia:cloud_planks"
+  },
+  "pattern": [
+    "###",
+    "XXX"
+  ],
+  "result": {
+    "id": "unicopia:cloud_bed"
+  }
+}

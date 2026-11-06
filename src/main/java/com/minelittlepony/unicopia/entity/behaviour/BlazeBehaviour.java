@@ -3,44 +3,43 @@ package com.minelittlepony.unicopia.entity.behaviour;
 import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.mixin.MixinBlazeEntity;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.Blaze;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.hurtingprojectile.SmallFireball;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.mob.BlazeEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.SmallFireballEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.WorldEvents;
-
-public class BlazeBehaviour extends EntityBehaviour<BlazeEntity> {
+public class BlazeBehaviour extends EntityBehaviour<Blaze> {
     @Override
-    public void update(Living<?> source, BlazeEntity entity, Disguise spell) {
+    public void update(Living<?> source, Blaze entity, Disguise spell) {
         super.update(source, entity, spell);
 
         Entity src = source.asEntity();
 
-        if (src.isOnGround() || src instanceof PlayerEntity player && player.getAbilities().flying) {
+        if (src.onGround() || src instanceof Player player && player.getAbilities().flying) {
             return;
         }
 
-        Vec3d vel = src.getVelocity();
+        Vec3 vel = src.getDeltaMovement();
 
         if (vel.y < 0) {
-            src.setVelocity(vel.multiply(1, 0.8, 1));
+            src.setDeltaMovement(vel.multiply(1, 0.8, 1));
         }
     }
 
     @Override
-    public void update(Pony player, BlazeEntity entity, Disguise spell) {
+    public void update(Pony player, Blaze entity, Disguise spell) {
 
-        NbtCompound tag = spell.getAppearance().getOrCreateTag();
+        CompoundTag tag = spell.getAppearance().getOrCreateTag();
 
-        boolean firing = tag.getBoolean("isFiring", false);
-        int fireballCooldown = tag.getInt("fireballCooldown", 0);
-        int fireballsFired = tag.getInt("fireballsFired", 0);
+        boolean firing = tag.getBooleanOr("isFiring", false);
+        int fireballCooldown = tag.getIntOr("fireballCooldown", 0);
+        int fireballsFired = tag.getIntOr("fireballsFired", 0);
 
         if (player.sneakingChanged()) {
-            boolean sneaking = player.asEntity().isSneaking();
+            boolean sneaking = player.asEntity().isShiftKeyDown();
 
             if (sneaking) {
                 firing = true;
@@ -56,34 +55,34 @@ public class BlazeBehaviour extends EntityBehaviour<BlazeEntity> {
 
             if (fireballsFired == 1) {
                 fireballCooldown = 60;
-                ((MixinBlazeEntity)entity).invokeSetFireActive(true);
+                ((MixinBlazeEntity)entity).invokeSetCharged(true);
             } else if (fireballsFired <= 4) {
                 fireballCooldown = 6;
             } else {
                 fireballCooldown = 100;
                 fireballsFired = 0;
-                ((MixinBlazeEntity)entity).invokeSetFireActive(false);
+                ((MixinBlazeEntity)entity).invokeSetCharged(false);
             }
 
             if (fireballsFired > 0) {
                 if (!entity.isSilent()) {
-                    entity.getWorld().syncWorldEvent(null, WorldEvents.BLAZE_SHOOTS, entity.getBlockPos(), 0);
+                    entity.level().levelEvent(null, LevelEvent.SOUND_BLAZE_FIREBALL, entity.blockPosition(), 0);
                 }
 
-                Vec3d rot = player.asEntity().getRotationVec(1);
+                Vec3 rot = player.asEntity().getViewVector(1);
 
                 for (int i = 0; i < 1; ++i) {
-                   SmallFireballEntity proj = new SmallFireballEntity(
-                           entity.getWorld(),
+                   SmallFireball proj = new SmallFireball(
+                           entity.level(),
                            player.asEntity(),
                            rot.add(entity.getRandom().nextGaussian(), 0, entity.getRandom().nextGaussian())
                    );
-                   proj.setPosition(proj.getX(), entity.getBodyY(0.5D) + 0.5D, proj.getZ());
-                   entity.getWorld().spawnEntity(proj);
+                   proj.setPos(proj.getX(), entity.getY(0.5D) + 0.5D, proj.getZ());
+                   entity.level().addFreshEntity(proj);
                 }
             }
         } else if (!firing) {
-            ((MixinBlazeEntity)entity).invokeSetFireActive(false);
+            ((MixinBlazeEntity)entity).invokeSetCharged(false);
         }
 
         tag.putBoolean("isFiring", firing);

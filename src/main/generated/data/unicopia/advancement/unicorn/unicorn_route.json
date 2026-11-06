@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:root",
+  "criteria": {
+    "be_alicorn": {
+      "conditions": {
+        "race": "unicopia:alicorn"
+      },
+      "trigger": "unicopia:player_change_race"
+    },
+    "be_unicorn": {
+      "conditions": {
+        "race": "unicopia:unicorn"
+      },
+      "trigger": "unicopia:player_change_race"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.unicorn_route.description"
+    },
+    "icon": {
+      "id": "unicopia:unicorn_badge"
+    },
+    "title": {
+      "translate": "advancements.unicopia.unicorn_route.title"
+    }
+  },
+  "requirements": [
+    [
+      "be_unicorn",
+      "be_alicorn"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

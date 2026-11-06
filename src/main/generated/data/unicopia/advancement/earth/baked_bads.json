@@ -1,0 +1,33 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_muffin": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:muffin"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.baked_bads.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:muffin"
+    },
+    "title": {
+      "translate": "advancements.unicopia.baked_bads.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_muffin"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -4,7 +4,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.cow.Cow;
+import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -15,29 +25,17 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.VecHelper;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.passive.CowEntity;
-import net.minecraft.entity.passive.MerchantEntity;
-import net.minecraft.entity.passive.PigEntity;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-
 /**
  * Changeling ability to restore health from mobs
  */
 public class ChangelingFeedAbility implements Ability<Hit> {
     private static final Predicate<Entity> TARGET_PREDICATE = e -> (e instanceof LivingEntity)
-            && (e instanceof CowEntity
-            || e instanceof MerchantEntity
-            || e instanceof PlayerEntity
-            || e instanceof SheepEntity
-            || e instanceof PigEntity
-            || e instanceof HostileEntity);
+            && (e instanceof Cow
+            || e instanceof AbstractVillager
+            || e instanceof Player
+            || e instanceof Sheep
+            || e instanceof Pig
+            || e instanceof Monster);
 
     @Override
     public int getWarmupTime(Pony player) {
@@ -56,7 +54,7 @@ public class ChangelingFeedAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -71,10 +69,10 @@ public class ChangelingFeedAbility implements Ability<Hit> {
             return false;
         }
 
-        PlayerEntity player = iplayer.asEntity();
+        Player player = iplayer.asEntity();
 
         float maximumHealthGain = player.getMaxHealth() - player.getHealth();
-        int maximumFoodGain = player.canConsume(false) ? (20 - player.getHungerManager().getFoodLevel()) : 0;
+        int maximumFoodGain = player.canEat(false) ? (20 - player.getFoodData().getFoodLevel()) : 0;
 
         if (maximumHealthGain > 0 || maximumFoodGain > 0) {
             List<LivingEntity> targets = getTargets(iplayer).map(LivingEntity.class::cast).toList();
@@ -87,7 +85,7 @@ public class ChangelingFeedAbility implements Ability<Hit> {
             }
         }
 
-        iplayer.playSound(USounds.Vanilla.ENTITY_PLAYER_BURP, 1, player.getWorld().random.nextTriangular(1F, 0.2F));
+        iplayer.playSound(USounds.Vanilla.PLAYER_BURP, 1, player.level().getRandom().triangle(1F, 0.2F));
         return true;
     }
 
@@ -105,7 +103,7 @@ public class ChangelingFeedAbility implements Ability<Hit> {
 
     @Override
     public void coolDown(Pony player, AbilitySlot slot) {
-        if (player.asWorld().random.nextInt(10) == 0) {
+        if (player.asWorld().getRandom().nextInt(10) == 0) {
             player.spawnParticles(ParticleTypes.HEART, 1);
         }
     }

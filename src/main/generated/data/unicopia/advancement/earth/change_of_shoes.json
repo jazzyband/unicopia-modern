@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/blacksmith",
+  "criteria": {
+    "has_iron_horseshoe": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:iron_horse_shoe"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.change_of_shoes.description"
+    },
+    "icon": {
+      "id": "unicopia:iron_horse_shoe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.change_of_shoes.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_iron_horseshoe"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

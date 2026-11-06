@@ -12,12 +12,11 @@ import com.minelittlepony.unicopia.entity.EntityReference;
 import com.minelittlepony.unicopia.entity.damage.UDamageTypes;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class DisplacementSpell extends AbstractSpell implements HomingSpell, ProjectileDelegate.HitListener {
 
@@ -42,7 +41,7 @@ public class DisplacementSpell extends AbstractSpell implements HomingSpell, Pro
     public boolean tick(Caster<?> source, Situation situation) {
         Caster<?> originator = source.getOriginatingCaster();
 
-        originator.asEntity().setGlowing(true);
+        originator.asEntity().setGlowingTag(true);
 
         if (situation == Situation.PROJECTILE) {
             return !isDead();
@@ -56,7 +55,7 @@ public class DisplacementSpell extends AbstractSpell implements HomingSpell, Pro
 
         if (!originator.isClient()) {
             target.ifPresent(originator.asWorld(), target -> {
-                target.setGlowing(true);
+                target.setGlowingTag(true);
                 if (ticks == 0) {
                     apply(originator, target);
                 }
@@ -77,17 +76,17 @@ public class DisplacementSpell extends AbstractSpell implements HomingSpell, Pro
     @Override
     public void onImpact(MagicProjectileEntity projectile) {
         if (projectile.getMaster() != null) {
-            projectile.getMaster().setGlowing(false);
+            projectile.getMaster().setGlowingTag(false);
         }
-        target.ifPresent(projectile.asWorld(), e -> e.setGlowing(false));
+        target.ifPresent(projectile.asWorld(), e -> e.setGlowingTag(false));
     }
 
     private void apply(Caster<?> originator, Entity target) {
-        Vec3d destinationPos = target.getPos();
-        Vec3d destinationVel = target.getVelocity();
+        Vec3 destinationPos = target.position();
+        Vec3 destinationVel = target.getDeltaMovement();
 
-        Vec3d sourcePos = originator.getOriginVector();
-        Vec3d sourceVel = originator.asEntity().getVelocity();
+        Vec3 sourcePos = originator.getOriginVector();
+        Vec3 sourceVel = originator.asEntity().getDeltaMovement();
 
         Entity targetVehicle = teleport(originator, target, sourcePos, sourceVel);
         Entity sourceVehicle = teleport(originator, originator.asEntity(), destinationPos, destinationVel);
@@ -102,16 +101,16 @@ public class DisplacementSpell extends AbstractSpell implements HomingSpell, Pro
         originator.subtractEnergyCost(destinationPos.distanceTo(sourcePos) / 20F);
     }
 
-    private Entity teleport(Caster<?> source, Entity entity, Vec3d pos, Vec3d vel) {
+    private Entity teleport(Caster<?> source, Entity entity, Vec3 pos, Vec3 vel) {
         Entity oldVehicle = entity.getVehicle();
-        entity.requestTeleportAndDismount(pos.x, pos.y, pos.z);
-        entity.setVelocity(vel);
-        entity.setGlowing(false);
+        entity.dismountTo(pos.x, pos.y, pos.z);
+        entity.setDeltaMovement(vel);
+        entity.setGlowingTag(false);
         entity.playSound(USounds.SPELL_DISPLACEMENT_TELEPORT, 1, 1);
 
         float damage = DAMAGE_TO_TARGET.get(getTraits());
         if (damage > 0 && !source.isClient()) {
-            entity.damage(source.asServerWorld(), source.damageOf(UDamageTypes.EXHAUSTION, source), damage);
+            entity.hurtServer(source.asServerWorld(), source.damageOf(UDamageTypes.EXHAUSTION, source), damage);
         }
         return oldVehicle;
     }
@@ -130,21 +129,21 @@ public class DisplacementSpell extends AbstractSpell implements HomingSpell, Pro
     @Override
     protected void onDestroyed(Caster<?> caster) {
         super.onDestroyed(caster);
-        caster.getOriginatingCaster().asEntity().setGlowing(false);
-        target.ifPresent(caster.asWorld(), e -> e.setGlowing(false));
+        caster.getOriginatingCaster().asEntity().setGlowingTag(false);
+        target.ifPresent(caster.asWorld(), e -> e.setGlowingTag(false));
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.putInt("ticks", ticks);
         compound.put("target", target.toNBT(lookup));
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        ticks = compound.getInt("ticks", 0);
+        ticks = compound.getIntOr("ticks", 0);
         target.fromNBT(compound.getCompoundOrEmpty("target"), lookup);
     }
 }

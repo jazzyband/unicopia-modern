@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:hippogriff/hippogriff_route",
+  "criteria": {
+    "has_baited_fishing_rod": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:baited_fishing_rod"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.bait.description"
+    },
+    "icon": {
+      "id": "unicopia:baited_fishing_rod"
+    },
+    "title": {
+      "translate": "advancements.unicopia.bait.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_baited_fishing_rod"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

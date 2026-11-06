@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/fashionably_expensive",
+  "criteria": {
+    "has_netherite_horseshoe": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:netherite_horse_shoe"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.overkill.description"
+    },
+    "icon": {
+      "id": "unicopia:netherite_horse_shoe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.overkill.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_netherite_horseshoe"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

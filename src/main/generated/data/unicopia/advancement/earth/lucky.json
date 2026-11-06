@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_horse_shoe_fries": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:horse_shoe_fries"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.lucky.description"
+    },
+    "icon": {
+      "id": "unicopia:horse_shoe_fries"
+    },
+    "title": {
+      "translate": "advancements.unicopia.lucky.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_horse_shoe_fries"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

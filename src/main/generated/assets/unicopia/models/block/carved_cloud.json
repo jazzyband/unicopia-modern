@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "unicopia:block/carved_cloud_top",
+    "side": "unicopia:block/carved_cloud_side"
+  }
+}

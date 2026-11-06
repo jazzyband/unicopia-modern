@@ -12,26 +12,25 @@ import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RedstoneWireBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraft.world.World.ExplosionSourceType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.Level.ExplosionInteraction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RedstoneWireBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Simple fire spell that triggers an effect when used on a block.
@@ -48,8 +47,8 @@ public class FireSpell extends AbstractAreaEffectSpell implements ProjectileDele
     @Override
     public void onImpact(MagicProjectileEntity projectile, BlockHitResult hit) {
         if (!projectile.isClient()) {
-            Vec3d pos = hit.getPos();
-            projectile.asWorld().createExplosion(projectile.getOwner(), pos.getX(), pos.getY(), pos.getZ(), 2, ExplosionSourceType.MOB);
+            Vec3 pos = hit.getLocation();
+            projectile.asWorld().explode(projectile.getOwner(), pos.x(), pos.y(), pos.z(), 2, ExplosionInteraction.MOB);
         }
     }
 
@@ -57,7 +56,7 @@ public class FireSpell extends AbstractAreaEffectSpell implements ProjectileDele
     public void onImpact(MagicProjectileEntity projectile, EntityHitResult hit) {
         if (!projectile.isClient()) {
             Entity entity = hit.getEntity();
-            projectile.asWorld().createExplosion(projectile.getOwner(), entity.getX(), entity.getY(), entity.getZ(), 2, ExplosionSourceType.MOB);
+            projectile.asWorld().explode(projectile.getOwner(), entity.getX(), entity.getY(), entity.getZ(), 2, ExplosionInteraction.MOB);
         }
     }
 
@@ -75,39 +74,39 @@ public class FireSpell extends AbstractAreaEffectSpell implements ProjectileDele
 
     protected void generateParticles(Caster<?> source) {
         source.spawnParticles(new Sphere(false, RANGE.get(getTraits())), (int)(1 + source.getLevel().getScaled(8)) * 6, pos -> {
-            source.addParticle(ParticleTypes.LARGE_SMOKE, pos, Vec3d.ZERO);
+            source.addParticle(ParticleTypes.LARGE_SMOKE, pos, Vec3.ZERO);
         });
     }
 
-    protected boolean applyBlocks(World world, BlockPos pos) {
+    protected boolean applyBlocks(Level world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
 
         if (!state.isAir()) {
-            if (state.isOf(Blocks.NETHERRACK)) {
-                if (world.isAir(pos.up())) {
+            if (state.is(Blocks.NETHERRACK)) {
+                if (world.isEmptyBlock(pos.above())) {
 
-                    if (world.random.nextInt(300) == 0) {
-                        world.setBlockState(pos.up(), Blocks.FIRE.getDefaultState());
+                    if (world.getRandom().nextInt(300) == 0) {
+                        world.setBlockAndUpdate(pos.above(), Blocks.FIRE.defaultBlockState());
                     }
 
                     return true;
                 }
-            } else if (state.isOf(Blocks.REDSTONE_WIRE)) {
-                int power = world.random.nextInt(5) == 3 ? 15 : 3;
+            } else if (state.is(Blocks.REDSTONE_WIRE)) {
+                int power = world.getRandom().nextInt(5) == 3 ? 15 : 3;
 
                 sendPower(world, pos, power, 3, 0);
 
                 return true;
-            } else if (state.isIn(BlockTags.SAND) && world.random.nextInt(10) == 0) {
+            } else if (state.is(BlockTags.SAND) && world.getRandom().nextInt(10) == 0) {
                 if (isSurroundedBySand(world, pos)) {
-                    world.setBlockState(pos, Blocks.GLASS.getDefaultState());
+                    world.setBlockAndUpdate(pos, Blocks.GLASS.defaultBlockState());
 
                     playEffect(world, pos);
                     return true;
                 }
-            } else if (state.isIn(BlockTags.LEAVES)) {
-                if (world.isAir(pos.up())) {
-                    world.setBlockState(pos.up(), Blocks.FIRE.getDefaultState());
+            } else if (state.is(BlockTags.LEAVES)) {
+                if (world.isEmptyBlock(pos.above())) {
+                    world.setBlockAndUpdate(pos.above(), Blocks.FIRE.defaultBlockState());
 
                     playEffect(world, pos);
                     return true;
@@ -125,18 +124,18 @@ public class FireSpell extends AbstractAreaEffectSpell implements ProjectileDele
         return Math.max(0, RANGE.get(getTraits()) - 1);
     }
 
-    protected boolean applyEntities(Caster<?> source, Vec3d pos) {
+    protected boolean applyEntities(Caster<?> source, Vec3 pos) {
         return source.findAllEntitiesInRange(getEntityEffectRange(), e -> {
             LivingEntity master = source.getMaster();
             return (!(e.equals(source.asEntity()) || e.equals(master)) ||
-                    (master instanceof PlayerEntity && !EquinePredicates.PLAYER_UNICORN.test(master))) && !(e instanceof ItemEntity)
+                    (master instanceof Player && !EquinePredicates.PLAYER_UNICORN.test(master))) && !(e instanceof ItemEntity)
                     && !(e instanceof Caster<?>);
         }).filter(e -> {
-            e.setOnFireFor(60);
+            e.igniteForSeconds(60);
             if (!source.isClient()) {
-                e.damage(source.asServerWorld(), getDamageCause(source, e), 0.1f);
+                e.hurtServer(source.asServerWorld(), getDamageCause(source, e), 0.1f);
             }
-            playEffect(source.asWorld(), e.getBlockPos());
+            playEffect(source.asWorld(), e.blockPosition());
             return true;
         })
         .count() > 0;
@@ -149,17 +148,17 @@ public class FireSpell extends AbstractAreaEffectSpell implements ProjectileDele
     /**
      * Transmits power to a piece of redstone
      */
-    private void sendPower(World w, BlockPos pos, int power, int max, int i) {
+    private void sendPower(Level w, BlockPos pos, int power, int max, int i) {
         BlockState state = w.getBlockState(pos);
         Block id = state.getBlock();
 
         if (i < max && id == Blocks.REDSTONE_WIRE) {
             i++;
 
-            w.setBlockState(pos, state.with(RedstoneWireBlock.POWER, power));
+            w.setBlockAndUpdate(pos, state.setValue(RedstoneWireBlock.POWER, power));
 
-            sendPower(w, pos.up(), power, max, i);
-            sendPower(w, pos.down(), power, max, i);
+            sendPower(w, pos.above(), power, max, i);
+            sendPower(w, pos.below(), power, max, i);
             sendPower(w, pos.north(), power, max, i);
             sendPower(w, pos.south(), power, max, i);
             sendPower(w, pos.east(), power, max, i);
@@ -167,29 +166,29 @@ public class FireSpell extends AbstractAreaEffectSpell implements ProjectileDele
         }
     }
 
-    protected void playEffect(World world, BlockPos pos) {
+    protected void playEffect(Level world, BlockPos pos) {
         int x = pos.getX();
         int y = pos.getY();
         int z = pos.getZ();
 
-        world.playSound(null, pos, USounds.SPELL_FIRE_CRACKLE, SoundCategory.AMBIENT, 0.5F, 2.6F + (world.random.nextFloat() - world.random.nextFloat()) * 0.8F);
+        world.playSound(null, pos, USounds.SPELL_FIRE_CRACKLE, SoundSource.AMBIENT, 0.5F, 2.6F + (world.getRandom().nextFloat() - world.getRandom().nextFloat()) * 0.8F);
 
         for (int i = 0; i < 8; ++i) {
-            ParticleUtils.spawnParticle(world, ParticleTypes.LARGE_SMOKE, new Vec3d(
+            ParticleUtils.spawnParticle(world, ParticleTypes.LARGE_SMOKE, new Vec3(
                     x + Math.random(),
                     y + Math.random(),
                     z + Math.random()
-            ), Vec3d.ZERO);
+            ), Vec3.ZERO);
         }
     }
 
-    public static boolean isSurroundedBySand(World w, BlockPos pos) {
-        return isSand(w, pos.up()) && isSand(w, pos.down()) &&
+    public static boolean isSurroundedBySand(Level w, BlockPos pos) {
+        return isSand(w, pos.above()) && isSand(w, pos.below()) &&
                 isSand(w, pos.north()) && isSand(w, pos.south()) &&
                 isSand(w, pos.east()) && isSand(w, pos.west());
     }
 
-    public static boolean isSand(World world, BlockPos pos) {
+    public static boolean isSand(Level world, BlockPos pos) {
         Block id = world.getBlockState(pos).getBlock();
         return id == Blocks.SAND || id == Blocks.GLASS;
     }

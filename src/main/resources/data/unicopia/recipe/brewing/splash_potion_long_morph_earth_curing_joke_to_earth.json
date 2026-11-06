@@ -1,0 +1,20 @@
+{
+    "type":  "minecraft:brewing",
+    "input":  {
+                  "item":  "minecraft:splash_potion",
+                  "potion_contents":  {
+                                          "potions":  "unicopia:long_morph_earth"
+                                      }
+              },
+    "output":  {
+                   "components":  {
+                                      "minecraft:potion_contents":  {
+                                                                        "potion":  "unicopia:earth"
+                                                                    }
+                                  },
+                   "id":  "minecraft:splash_potion"
+               },
+    "reagent":  {
+                    "item":  "unicopia:curing_joke"
+                }
+}

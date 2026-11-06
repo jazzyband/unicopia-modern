@@ -1,32 +1,31 @@
 package com.minelittlepony.unicopia.block.zap;
 
 import java.util.Optional;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.LightningBoltParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
-
 public interface ElectrifiedBlock {
 
-    default void spawnElectricalParticles(World world, BlockPos pos, Random random) {
-        world.addParticleClient(new LightningBoltParticleEffect(true, 10, 1, 0.6F, Optional.empty()),
+    default void spawnElectricalParticles(Level world, BlockPos pos, RandomSource random) {
+        world.addParticle(new LightningBoltParticleEffect(true, 10, 1, 0.6F, Optional.empty()),
                 pos.getX() + 0.5,
                 pos.getY() + 0.5,
                 pos.getZ() + 0.5,
@@ -34,50 +33,50 @@ public interface ElectrifiedBlock {
         );
     }
 
-    default float getBlockBreakingDelta(float delta, PlayerEntity player) {
+    default float getBlockBreakingDelta(float delta, Player player) {
         if (Pony.of(player).getCompositeRace().canUseEarth()) {
             delta *= 50;
         }
 
-        return MathHelper.clamp(delta, 0, 0.9F);
+        return Mth.clamp(delta, 0, 0.9F);
     }
 
-    default void triggerLightning(BlockState state, World world, BlockPos pos) {
-        Vec3d center = pos.toCenterPos();
-        if (world instanceof ServerWorld serverWorld) {
-            LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(world, SpawnReason.EVENT);
-            world.getOtherEntities(null, Box.from(center).expand(7)).forEach(entity -> {
+    default void triggerLightning(BlockState state, Level world, BlockPos pos) {
+        Vec3 center = Vec3.atCenterOf(pos);
+        if (world instanceof ServerLevel serverWorld) {
+            LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(world, EntitySpawnReason.EVENT);
+            world.getEntities(null, AABB.unitCubeFromLowerCorner(center).inflate(7)).forEach(entity -> {
                 shockEntity(serverWorld, center, lightning, entity);
             });
         }
-        world.emitGameEvent(GameEvent.LIGHTNING_STRIKE, pos, GameEvent.Emitter.of(state));
-        ParticleUtils.spawnParticle(world, LightningBoltParticleEffect.DEFAULT, center, Vec3d.ZERO);
+        world.gameEvent(GameEvent.LIGHTNING_STRIKE, pos, GameEvent.Context.of(state));
+        ParticleUtils.spawnParticle(world, LightningBoltParticleEffect.DEFAULT, center, Vec3.ZERO);
     }
 
-    default void triggerLightning(BlockState state, World world, BlockPos pos, LivingEntity entity, boolean knockBack) {
-        Vec3d center = pos.toCenterPos();
-        if (world instanceof ServerWorld serverWorld) {
-            shockEntity(serverWorld, center, EntityType.LIGHTNING_BOLT.create(world, SpawnReason.EVENT), entity);
+    default void triggerLightning(BlockState state, Level world, BlockPos pos, LivingEntity entity, boolean knockBack) {
+        Vec3 center = Vec3.atCenterOf(pos);
+        if (world instanceof ServerLevel serverWorld) {
+            shockEntity(serverWorld, center, EntityTypes.LIGHTNING_BOLT.create(world, EntitySpawnReason.EVENT), entity);
         }
         if (knockBack) {
-            Vec3d offset = center.subtract(entity.getPos());
-            entity.takeKnockback(0.8, offset.x, offset.z);
+            Vec3 offset = center.subtract(entity.position());
+            entity.knockback(0.8, offset.x, offset.z, world.damageSources().lightningBolt(), 1);
         }
-        world.emitGameEvent(GameEvent.LIGHTNING_STRIKE, pos, GameEvent.Emitter.of(state));
-        ParticleUtils.spawnParticle(world, LightningBoltParticleEffect.DEFAULT, center, Vec3d.ZERO);
+        world.gameEvent(GameEvent.LIGHTNING_STRIKE, pos, GameEvent.Context.of(state));
+        ParticleUtils.spawnParticle(world, LightningBoltParticleEffect.DEFAULT, center, Vec3.ZERO);
     }
 
-    private static void shockEntity(ServerWorld serverWorld, Vec3d center, LightningEntity lightning, Entity entity) {
+    private static void shockEntity(ServerLevel serverWorld, Vec3 center, LightningBolt lightning, Entity entity) {
         if (entity instanceof ItemEntity) {
             return;
         }
-        float dist = (float)entity.getPos().distanceTo(center);
+        float dist = (float)entity.position().distanceTo(center);
         if (dist < 4) {
-            entity.onStruckByLightning(serverWorld, EntityType.LIGHTNING_BOLT.create(serverWorld, SpawnReason.EVENT));
+            entity.thunderHit(serverWorld, EntityTypes.LIGHTNING_BOLT.create(serverWorld, EntitySpawnReason.EVENT));
         } else {
             float damage = 3 / dist;
             if (damage > 1) {
-                entity.damage(serverWorld, entity.getDamageSources().lightningBolt(), damage);
+                entity.hurtServer(serverWorld, entity.damageSources().lightningBolt(), damage);
             }
         }
     }

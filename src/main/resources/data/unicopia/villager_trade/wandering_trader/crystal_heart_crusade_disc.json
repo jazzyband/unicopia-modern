@@ -1,0 +1,11 @@
+{
+  "wants": {
+    "id": "unicopia:crystal_heart"
+  },
+  "gives": {
+    "id": "unicopia:music_disc_crusade"
+  },
+  "max_uses": 10,
+  "xp": 6,
+  "reputation_discount": 0.08
+}

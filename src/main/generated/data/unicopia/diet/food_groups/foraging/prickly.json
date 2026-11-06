@@ -1,0 +1,31 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:many",
+      "afflictions": [
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 0,
+            "min": 0
+          },
+          "chance": 12,
+          "effect": "minecraft:instant_damage",
+          "seconds": {
+            "max": 1,
+            "min": 1
+          }
+        }
+      ]
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 0,
+      "saturation": 0.0
+    }
+  },
+  "tags": [
+    "unicopia:forage/prickly"
+  ]
+}

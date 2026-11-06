@@ -4,35 +4,40 @@ import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.item.component.Appearance;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.level.Level;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.SpecialCraftingRecipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.world.World;
-
-public class JarExtractRecipe extends SpecialCraftingRecipe {
-    public JarExtractRecipe(CraftingRecipeCategory category) {
-        super(category);
+public class JarExtractRecipe extends CustomRecipe {
+    private final CraftingBookCategory recipeCategory;
+    public JarExtractRecipe(CraftingBookCategory category) {
+        this.recipeCategory = category;
     }
 
     @Override
-    public final boolean matches(CraftingRecipeInput inventory, World world) {
-        return !craft(inventory, null).isEmpty();
+    public CraftingBookCategory category() {
+        return recipeCategory;
     }
 
     @Override
-    public ItemStack craft(CraftingRecipeInput inventory, @Nullable WrapperLookup manager) {
+    public final boolean matches(CraftingInput inventory, Level world) {
+        return !assemble(inventory).isEmpty();
+    }
+
+    @Override
+    public ItemStack assemble(CraftingInput inventory) {
         ItemStack jar = ItemStack.EMPTY;
         for (int i = 0; i < inventory.size(); i++) {
-            ItemStack stack = inventory.getStackInSlot(i);
+            ItemStack stack = inventory.getItem(i);
             if (stack.isEmpty()) {
                 continue;
             }
 
-            if (!stack.isOf(UItems.FILLED_JAR) || !jar.isEmpty() || !Appearance.hasAppearance(stack)) {
+            if (!stack.is(UItems.FILLED_JAR) || !jar.isEmpty() || !Appearance.hasAppearance(stack)) {
                 return ItemStack.EMPTY;
             }
 
@@ -45,6 +50,6 @@ public class JarExtractRecipe extends SpecialCraftingRecipe {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public RecipeSerializer<JarExtractRecipe> getSerializer() {
-        return (RecipeSerializer)URecipes.JAR_INSERT_SERIALIZER;
+        return URecipes.JAR_EXTRACT_SERIALIZER;
     }
 }

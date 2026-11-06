@@ -13,67 +13,66 @@ import com.minelittlepony.unicopia.network.MsgConfigurationChange;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.argument.*;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 
 public class ConfigCommand {
 
-    public static LiteralArgumentBuilder<ServerCommandSource> create(CommandRegistryAccess registries) {
-        return CommandManager.literal("config").requires(s -> s.hasPermissionLevel(2))
-            .then(createSet("dimensionswithoutatmosphere", createSuggestion(registries, RegistryKeys.DIMENSION_TYPE)))
-            .then(createSet("wantitneeditentityexcludelist", createSuggestion(registries, RegistryKeys.ENTITY_TYPE)));
+    public static LiteralArgumentBuilder<CommandSourceStack> create(CommandBuildContext registries) {
+        return Commands.literal("config").requires(s -> s.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
+            .then(createSet("dimensionswithoutatmosphere", createSuggestion(registries, Registries.DIMENSION_TYPE)))
+            .then(createSet("wantitneeditentityexcludelist", createSuggestion(registries, Registries.ENTITY_TYPE)));
     }
 
-    private static LiteralArgumentBuilder<ServerCommandSource> createSet(String configName, SuggestionProvider<ServerCommandSource> suggestions) {
-        return CommandManager.literal(configName)
-            .then(CommandManager.literal("clear").executes(source -> {
-                        source.getSource().sendFeedback(() -> Text.translatable("command.unicopia.config.clear", configName), true);
+    private static LiteralArgumentBuilder<CommandSourceStack> createSet(String configName, SuggestionProvider<CommandSourceStack> suggestions) {
+        return Commands.literal(configName)
+            .then(Commands.literal("clear").executes(source -> {
+                        source.getSource().sendSuccess(() -> Component.translatable("command.unicopia.config.clear", configName), true);
                         return changeProperty(source.getSource(), configName, values -> new HashSet<>());
                     }))
-            .then(CommandManager.literal("add").then(
-                CommandManager.argument("id", IdentifierArgumentType.identifier()).suggests(suggestions).executes(source -> ConfigCommand.<Set<String>>changeProperty(source.getSource(), configName, values -> {
-                        String value = IdentifierArgumentType.getIdentifier(source, "id").toString();
-                        source.getSource().sendFeedback(() -> Text.translatable("command.unicopia.config.add", value, configName), true);
+            .then(Commands.literal("add").then(
+                Commands.argument("id", IdentifierArgument.id()).suggests(suggestions).executes(source -> ConfigCommand.<Set<String>>changeProperty(source.getSource(), configName, values -> {
+                        String value = IdentifierArgument.getId(source, "id").toString();
+                        source.getSource().sendSuccess(() -> Component.translatable("command.unicopia.config.add", value, configName), true);
                         values.add(value);
                         return values;
                     })))
             )
-            .then(CommandManager.literal("remove").then(
-                CommandManager.argument("id", IdentifierArgumentType.identifier()).suggests((context, builder) -> {
-                    return CommandSource.suggestIdentifiers(Unicopia.getConfig().getCategory("server").<Set<String>>get(configName).get().stream()
+            .then(Commands.literal("remove").then(
+                Commands.argument("id", IdentifierArgument.id()).suggests((context, builder) -> {
+                    return SharedSuggestionProvider.suggestResource(Unicopia.getConfig().getCategory("server").<Set<String>>get(configName).get().stream()
                             .map(Identifier::tryParse)
                             .filter(Objects::nonNull)
                             .toList(), builder);
                 }).executes(source -> ConfigCommand.<Set<String>>changeProperty(source.getSource(), configName, values -> {
-                        String value = IdentifierArgumentType.getIdentifier(source, "id").toString();
-                        source.getSource().sendFeedback(() -> Text.translatable("command.unicopia.config.remove", value, configName), true);
+                        String value = IdentifierArgument.getId(source, "id").toString();
+                        source.getSource().sendSuccess(() -> Component.translatable("command.unicopia.config.remove", value, configName), true);
                         values.remove(value);
                         return values;
                     })))
             )
-            .then(CommandManager.literal("list").executes(source -> ConfigCommand.<Set<String>>getProperty(configName, values -> {
-                    source.getSource().sendFeedback(() -> Text.translatable("command.unicopia.config.list", configName, values.size()), false);
-                    values.forEach(line -> source.getSource().sendFeedback(() -> Text.literal(line), false));
+            .then(Commands.literal("list").executes(source -> ConfigCommand.<Set<String>>getProperty(configName, values -> {
+                    source.getSource().sendSuccess(() -> Component.translatable("command.unicopia.config.list", configName, values.size()), false);
+                    values.forEach(line -> source.getSource().sendSuccess(() -> Component.literal(line), false));
                 }))
             );
     }
 
-    private static <T> SuggestionProvider<ServerCommandSource> createSuggestion(CommandRegistryAccess registries, RegistryKey<Registry<T>> registryKey) {
-        RegistryWrapper<T> wrapper = registries.getOrThrow(registryKey);
-        return (context, builder) -> CommandSource.suggestIdentifiers(wrapper.streamKeys().map(RegistryKey::getValue), builder);
+    private static <T> SuggestionProvider<CommandSourceStack> createSuggestion(CommandBuildContext registries, ResourceKey<Registry<T>> registryKey) {
+        HolderLookup<T> wrapper = registries.lookupOrThrow(registryKey);
+        return (context, builder) -> SharedSuggestionProvider.suggestResource(wrapper.listElementIds().map(ResourceKey::identifier), builder);
     }
 
-    private static <T> int changeProperty(ServerCommandSource source, String configName, Function<T, T> changer) {
+    private static <T> int changeProperty(CommandSourceStack source, String configName, Function<T, T> changer) {
         Config config = Unicopia.getConfig();
         Setting<T> setting = config.getCategory("server").get(configName);
         setting.set(changer.apply(setting.get()));
@@ -81,7 +80,7 @@ public class ConfigCommand {
 
         MsgConfigurationChange msg = new MsgConfigurationChange(config.toSynced());
         InteractionManager.getInstance().setSyncedConfig(msg.config());
-        source.getServer().getPlayerManager().getPlayerList().forEach(recipient -> {
+        source.getServer().getPlayerList().getPlayers().forEach(recipient -> {
             Channel.CONFIGURATION_CHANGE.sendToPlayer(msg, recipient);
         });
 

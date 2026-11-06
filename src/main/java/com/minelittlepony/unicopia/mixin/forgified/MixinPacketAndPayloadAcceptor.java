@@ -1,14 +1,12 @@
 package com.minelittlepony.unicopia.mixin.forgified;
 
 import java.util.function.Consumer;
-
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ClientCommonPacketListener;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
-
-import net.minecraft.network.listener.ClientCommonPacketListener;
-import net.minecraft.network.packet.Packet;
 
 @Pseudo
 @Mixin(targets = "net.neoforged.neoforge.network.bundle.PacketAndPayloadAcceptor")

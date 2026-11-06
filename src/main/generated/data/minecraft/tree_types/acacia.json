@@ -1,0 +1,25 @@
+{
+  "drops": [
+    {
+      "item": "unicopia:sweet_apple",
+      "weight": 2
+    },
+    {
+      "item": "unicopia:rotten_apple",
+      "weight": 1
+    },
+    {
+      "item": "unicopia:green_apple",
+      "weight": 5
+    }
+  ],
+  "leaves": [
+    "minecraft:acacia_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:acacia_log",
+    "minecraft:acacia_wood"
+  ],
+  "rarity": 5
+}

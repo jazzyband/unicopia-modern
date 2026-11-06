@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia.entity.mob;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import java.util.UUID;
 
 import com.minelittlepony.unicopia.*;
@@ -19,31 +21,31 @@ import com.minelittlepony.unicopia.entity.MagicImmune;
 import com.minelittlepony.unicopia.entity.Physics;
 import com.minelittlepony.unicopia.network.track.Trackable;
 import com.minelittlepony.unicopia.server.world.Ether;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.level.Level;
 
 public class CastSpellEntity extends LightEmittingEntity implements Caster<CastSpellEntity>, WeaklyOwned.Mutable<LivingEntity>, MagicImmune {
-    private static final TrackedData<Integer> LEVEL = DataTracker.registerData(CastSpellEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> MAX_LEVEL = DataTracker.registerData(CastSpellEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> CORRUPTION = DataTracker.registerData(CastSpellEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> MAX_CORRUPTION = DataTracker.registerData(CastSpellEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final EntityDataAccessor<Integer> LEVEL = SynchedEntityData.defineId(CastSpellEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MAX_LEVEL = SynchedEntityData.defineId(CastSpellEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> CORRUPTION = SynchedEntityData.defineId(CastSpellEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MAX_CORRUPTION = SynchedEntityData.defineId(CastSpellEntity.class, EntityDataSerializers.INT);
 
-    private static final TrackedData<Boolean> DEAD = DataTracker.registerData(CastSpellEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DEAD = SynchedEntityData.defineId(CastSpellEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final EntityPhysics<CastSpellEntity> physics = new EntityPhysics<>(this);
 
@@ -52,14 +54,14 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     private final EntityReference<LivingEntity> owner = new EntityReference<>();
 
     private final LevelStore level = Levelled.of(
-            () -> dataTracker.get(LEVEL),
-            l -> dataTracker.set(LEVEL, l),
-            () -> dataTracker.get(MAX_LEVEL)
+            () -> entityData.get(LEVEL),
+            l -> entityData.set(LEVEL, l),
+            () -> entityData.get(MAX_LEVEL)
     );
     private final LevelStore corruption = Levelled.of(
-            () -> dataTracker.get(CORRUPTION),
-            l -> dataTracker.set(CORRUPTION, l),
-            () -> dataTracker.get(MAX_CORRUPTION)
+            () -> entityData.get(CORRUPTION),
+            l -> entityData.set(CORRUPTION, l),
+            () -> entityData.get(MAX_CORRUPTION)
     );
 
     private UUID controllingEntityUuid;
@@ -70,9 +72,9 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     private int prevDeathTicks;
     private int deathTicks;
 
-    public CastSpellEntity(World world, Caster<?> caster, PlacementControlSpell control) {
+    public CastSpellEntity(Level world, Caster<?> caster, PlacementControlSpell control) {
         this(UEntities.CAST_SPELL, world);
-        this.controllingEntityUuid = caster.asEntity().getUuid();
+        this.controllingEntityUuid = caster.asEntity().getUUID();
         this.controllingSpellUuid = control.getUuid();
         setCaster(caster);
 
@@ -80,41 +82,41 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
             delegate.onPlaced(caster, control);
         }
 
-        spells.getSlots().put(Spell.copy(control.getDelegate(), world.getRegistryManager()));
+        spells.getSlots().put(Spell.copy(control.getDelegate(), world.registryAccess()));
     }
 
-    public CastSpellEntity(EntityType<?> type, World world) {
+    public CastSpellEntity(EntityType<?> type, Level world) {
         super(type, world);
         Trackable.of(this).getDataTrackers().getPrimaryTracker().startTracking(owner);
     }
 
     @Override
-    protected void initDataTracker(Builder builder) {
-        builder.add(LEVEL, 0);
-        builder.add(CORRUPTION, 0);
-        builder.add(MAX_LEVEL, 1);
-        builder.add(MAX_CORRUPTION, 1);
-        builder.add(DEAD, false);
+    protected void defineSynchedData(Builder builder) {
+        builder.define(LEVEL, 0);
+        builder.define(CORRUPTION, 0);
+        builder.define(MAX_LEVEL, 1);
+        builder.define(MAX_CORRUPTION, 1);
+        builder.define(DEAD, false);
     }
 
     @Override
-    public void updatePositionAndAngles(double x, double y, double z, float yaw, float pitch) {
-        super.updatePositionAndAngles(x, y, z, yaw, pitch);
+    public void absSnapTo(double x, double y, double z, float yaw, float pitch) {
+        super.absSnapTo(x, y, z, yaw, pitch);
         spells.getSlots().stream(SpellPredicate.IS_ORIENTED).forEach(spell -> spell.setOrientation(this, pitch, yaw));
     }
 
     private boolean checkConnection() {
-        return Ether.get(getWorld()).get(SpellType.PLACE_CONTROL_SPELL, controllingEntityUuid, controllingSpellUuid) != null;
+        return Ether.get(level()).get(SpellType.PLACE_CONTROL_SPELL, controllingEntityUuid, controllingSpellUuid) != null;
     }
 
     public float getAge(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevAge, age);
+        return Mth.lerpInt(tickDelta, prevAge, tickCount);
     }
 
     public float getScale(float tickDelta) {
-        float add = MathHelper.clamp(getAge(tickDelta) / 25F, 0, 1);
-        float subtract = MathHelper.clamp(MathHelper.lerp(tickDelta, prevDeathTicks, deathTicks) / 20F, 0, 1);
-        return MathHelper.clamp(add - subtract, 0, 1);
+        float add = Mth.clamp(getAge(tickDelta) / 25F, 0, 1);
+        float subtract = Mth.clamp(Mth.lerpInt(tickDelta, prevDeathTicks, deathTicks) / 20F, 0, 1);
+        return Mth.clamp(add - subtract, 0, 1);
     }
 
     @Override
@@ -123,28 +125,28 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     }
 
     @Override
-    public Text getName() {
+    public Component getName() {
         Entity master = getMaster();
         if (master != null) {
-            return Text.translatable("entity.unicopia.cast_spell.by", master.getName());
+            return Component.translatable("entity.unicopia.cast_spell.by", master.getName());
         }
         return super.getName();
     }
 
     @Override
     public void baseTick() {
-        prevAge = age;
-        age++;
+        prevAge = tickCount;
+        tickCount++;
 
         super.baseTick();
 
         if (!isClient()) {
             if (!checkConnection()) {
-                kill((ServerWorld)getWorld());
+                kill((ServerLevel)level());
             }
 
             spells.getSlots().get().ifPresent(spell -> {
-                Ether.get(getWorld()).getOrCreate(spell, this);
+                Ether.get(level()).getOrCreate(spell, this);
             });
         } else if (isDead()) {
             spells.getSlots().clear();
@@ -158,29 +160,29 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     }
 
     @Override
-    public boolean damage(ServerWorld world, DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel world, DamageSource source, float amount) {
         return true;
     }
 
     @Override
-    public void kill(ServerWorld world) {
+    public void kill(ServerLevel world) {
         setDead(true);
     }
 
     public boolean isDead() {
-        return dataTracker.get(DEAD);
+        return entityData.get(DEAD);
     }
 
     public void setDead(boolean dead) {
-        dataTracker.set(DEAD, dead);
+        entityData.set(DEAD, dead);
         if (dead) {
             spells.getSlots().clear();
         }
     }
 
     @Override
-    public EntityDimensions getDimensions(EntityPose pose) {
-        return super.getDimensions(pose).scaled(getScale(1));
+    public EntityDimensions getDimensions(Pose pose) {
+        return super.getDimensions(pose).scale(getScale(1));
     }
 
     @Override
@@ -194,10 +196,10 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     }
 
     public void setCaster(Caster<?> caster) {
-        dataTracker.set(LEVEL, caster.getLevel().get());
-        dataTracker.set(MAX_LEVEL, caster.getLevel().getMax());
-        dataTracker.set(CORRUPTION, caster.getCorruption().get());
-        dataTracker.set(MAX_CORRUPTION, caster.getCorruption().getMax());
+        entityData.set(LEVEL, caster.getLevel().get());
+        entityData.set(MAX_LEVEL, caster.getLevel().getMax());
+        entityData.set(CORRUPTION, caster.getCorruption().get());
+        entityData.set(MAX_CORRUPTION, caster.getCorruption().getMax());
         setMaster(caster);
     }
 
@@ -227,7 +229,7 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     }
 
     @Override
-    public boolean canHit() {
+    public boolean isPickable() {
         return false;
     }
 
@@ -243,39 +245,39 @@ public class CastSpellEntity extends LightEmittingEntity implements Caster<CastS
     }
 
     @Override
-    protected void writeCustomDataToNbt(NbtCompound tag) {
-        tag.put("level", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), level);
-        tag.put("corruption", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE), corruption);
+    protected void addAdditionalSaveData(ValueOutput tag) {
+        tag.store("level", Levelled.CODEC, level);
+        tag.store("corruption", Levelled.CODEC, corruption);
 
-        tag.putNullable("owningEntity", Uuids.CODEC, controllingEntityUuid);
-        tag.putNullable("owningSpell", Uuids.CODEC, controllingSpellUuid);
+        tag.storeNullable("owningEntity", UUIDUtil.AUTHLIB_CODEC, controllingEntityUuid);
+        tag.storeNullable("owningSpell", UUIDUtil.AUTHLIB_CODEC, controllingSpellUuid);
 
-        spells.getSlots().toNBT(tag, getRegistryManager());
-        tag.putInt("age", age);
+        spells.getSlots().toValue(tag, registryAccess());
+        tag.putInt("age", tickCount);
         tag.putInt("prevAge", prevAge);
         tag.putBoolean("dead", isDead());
-        tag.put("owner", owner.toNBT(getRegistryManager()));
+        tag.store("owner", CompoundTag.CODEC, owner.toNBT(registryAccess()));
     }
 
     @Override
-    protected void readCustomDataFromNbt(NbtCompound tag) {
-        var level = tag.get("level", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE)).orElse(Levelled.ZERO);
-        dataTracker.set(MAX_LEVEL, level.getMax());
-        dataTracker.set(LEVEL, level.get());
-        var corruption = tag.get("corruption", Levelled.CODEC, getRegistryManager().getOps(NbtOps.INSTANCE)).orElse(Levelled.ZERO);
-        dataTracker.set(MAX_CORRUPTION, corruption.getMax());
-        dataTracker.set(CORRUPTION, corruption.get());
+    protected void readAdditionalSaveData(ValueInput tag) {
+        var level = tag.read("level", Levelled.CODEC).orElse(Levelled.ZERO);
+        entityData.set(MAX_LEVEL, level.getMax());
+        entityData.set(LEVEL, level.get());
+        var corruption = tag.read("corruption", Levelled.CODEC).orElse(Levelled.ZERO);
+        entityData.set(MAX_CORRUPTION, corruption.getMax());
+        entityData.set(CORRUPTION, corruption.get());
 
-        controllingEntityUuid = tag.get("owningEntity", Uuids.CODEC).orElse(null);
-        controllingSpellUuid = tag.get("owningSpell", Uuids.CODEC).orElse(null);
+        controllingEntityUuid = tag.read("owningEntity", UUIDUtil.AUTHLIB_CODEC).orElse(null);
+        controllingSpellUuid = tag.read("owningSpell", UUIDUtil.AUTHLIB_CODEC).orElse(null);
 
-        spells.getSlots().fromNBT(tag, getRegistryManager());
-        age = tag.getInt("age", 0);
-        prevAge = tag.getInt("prevAge", 0);
-        setDead(tag.getBoolean("dead", false));
+        spells.getSlots().fromValue(tag, registryAccess());
+        tickCount = tag.getIntOr("age", 0);
+        prevAge = tag.getIntOr("prevAge", 0);
+        setDead(tag.getBooleanOr("dead", false));
 
         if (tag.contains("owner")) {
-            owner.fromNBT(tag.getCompoundOrEmpty("owner"), getRegistryManager());
+            owner.fromNBT(tag.read("owner", CompoundTag.CODEC).orElseGet(CompoundTag::new), registryAccess());
         }
     }
 }

@@ -5,9 +5,9 @@ import java.util.Spliterators.AbstractSpliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.core.Vec3i;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
 
 /**
  *
@@ -17,17 +17,17 @@ public interface PointGenerator {
     /**
      * Computes a random coordinate that falls within this shape's designated area.
      */
-    Vec3d computePoint(Random rand);
+    Vec3 computePoint(RandomSource rand);
 
     /**
      * Returns a sequence of N random points.
      */
-    default Stream<Vec3d> randomPoints(int n, Random rand) {
-        return StreamSupport.stream(new AbstractSpliterator<Vec3d>(n, Spliterator.SIZED) {
+    default Stream<Vec3> randomPoints(int n, RandomSource rand) {
+        return StreamSupport.stream(new AbstractSpliterator<Vec3>(n, Spliterator.SIZED) {
             private int index = n;
 
             @Override
-            public boolean tryAdvance(Consumer<? super Vec3d> consumer) {
+            public boolean tryAdvance(Consumer<? super Vec3> consumer) {
                 if (--index >= 0) {
                     consumer.accept(computePoint(rand));
                     return true;
@@ -46,10 +46,10 @@ public interface PointGenerator {
     }
 
     default PointGenerator translate(Vec3i offset) {
-        return offset.equals(Vec3i.ZERO) ? this : translate(Vec3d.of(offset));
+        return offset.equals(Vec3i.ZERO) ? this : translate(Vec3.atLowerCornerOf(offset));
     }
 
-    default PointGenerator translate(Vec3d offset) {
-        return offset.equals(Vec3d.ZERO) ? this : new TranslatedPointGenerator(this, offset);
+    default PointGenerator translate(Vec3 offset) {
+        return offset.equals(Vec3.ZERO) ? this : new TranslatedPointGenerator(this, offset);
     }
 }

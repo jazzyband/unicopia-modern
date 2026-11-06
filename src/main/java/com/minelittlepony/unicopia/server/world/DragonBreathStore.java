@@ -11,14 +11,13 @@ import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
-import net.minecraft.item.ItemStack;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.WorldView;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.saveddata.SavedData;
 
-public class DragonBreathStore extends PersistentState {
+public class DragonBreathStore extends SavedData {
     private static final long PURGE_INTERVAL = 1000 * 60 * 60; // 1 hour
     private static final long MAX_MESSAGE_HOLD_TIME = PURGE_INTERVAL * 24; // 24 hours
     private static final long MIN_MESSAGE_HOLD_TIME = 1000; // 1 second
@@ -29,7 +28,7 @@ public class DragonBreathStore extends PersistentState {
             .xmap(DragonBreathStore::new, store -> store.payloads);
     private static final PersistentStateKey<DragonBreathStore> KEY = new PersistentStateKey<>(ID, CODEC, DragonBreathStore::new);
 
-    public static DragonBreathStore get(WorldView world) {
+    public static DragonBreathStore get(LevelReader world) {
         return KEY.get(world);
     }
 
@@ -50,7 +49,7 @@ public class DragonBreathStore extends PersistentState {
     }
 
     public static Stream<Pair<DragonBreathStore, Stream<Entry>>> popAll(MinecraftServer server, String recipient) {
-        return StreamSupport.stream(server.getWorlds().spliterator(), false)
+        return StreamSupport.stream(server.getAllLevels().spliterator(), false)
                 .map(DragonBreathStore::get)
                 .map(store -> new Pair<>(store, store.popEntries(recipient).stream()));
     }
@@ -87,7 +86,7 @@ public class DragonBreathStore extends PersistentState {
         if (conversion != null) {
             var item = conversion.getItem();
             if (item.isPresent()) {
-                payload = payload.withItem(item.get());
+                payload = payload.transmuteCopy(item.get());
             }
         }
 
@@ -96,9 +95,9 @@ public class DragonBreathStore extends PersistentState {
         synchronized (locker) {
             doPurge();
             if (peekEntries(recipient).stream().noneMatch(i -> {
-               if (ItemStack.areItemsAndComponentsEqual(i.payload(), finalPayload)) {
+               if (ItemStack.isSameItemSameComponents(i.payload(), finalPayload)) {
                    int combinedCount = i.payload().getCount() + finalPayload.getCount();
-                   if (combinedCount <= i.payload().getMaxCount()) {
+                   if (combinedCount <= i.payload().getMaxStackSize()) {
                        i.payload().setCount(combinedCount);
                        return true;
                    }

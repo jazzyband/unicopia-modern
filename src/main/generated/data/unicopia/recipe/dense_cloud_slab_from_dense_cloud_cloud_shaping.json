@@ -1,0 +1,8 @@
+{
+  "type": "unicopia:cloud_shaping",
+  "ingredient": "unicopia:dense_cloud",
+  "result": {
+    "count": 2,
+    "id": "unicopia:dense_cloud_slab"
+  }
+}

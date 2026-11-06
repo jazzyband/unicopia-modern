@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:bat/screech_twenty_mobs",
+  "criteria": {
+    "super_scare_entity": {
+      "conditions": {
+        "event": "super_scare_entity",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.extra_spooky.description"
+    },
+    "frame": "challenge",
+    "icon": {
+      "id": "minecraft:brick"
+    },
+    "title": {
+      "translate": "advancements.unicopia.extra_spooky.title"
+    }
+  },
+  "requirements": [
+    [
+      "super_scare_entity"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

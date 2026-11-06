@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_traits": {
+      "conditions": {
+        "traits": [
+          "unicopia:chaos",
+          "unicopia:life",
+          "unicopia:knowledge"
+        ]
+      },
+      "trigger": "unicopia:trait_discovered"
+    }
+  },
+  "requirements": [
+    [
+      "has_traits"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:mimic"
+    ]
+  }
+}

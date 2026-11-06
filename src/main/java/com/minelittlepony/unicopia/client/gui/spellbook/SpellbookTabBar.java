@@ -3,12 +3,10 @@ package com.minelittlepony.unicopia.client.gui.spellbook;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-
+import net.minecraft.resources.Identifier;
 import com.minelittlepony.common.client.gui.dimension.Bounds;
 import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookChapterList.Chapter;
 import com.minelittlepony.unicopia.container.spellbook.TabSide;
-
-import net.minecraft.util.Identifier;
 
 public class SpellbookTabBar {
 
@@ -59,12 +57,10 @@ public class SpellbookTabBar {
         for (int i = 0; i < totalTabs; i++) {
             int tabY = (int)((leftTabs.get(i).details().tabY() * tabHeight + (i * 5)) * squashFactor);
             int width = tabWidth;
-            int inset = tabInset;
             if (leftTabs.get(i) == chapters.getCurrentChapter()) {
-                width += 10;
-                inset += 3;
+                width += 3;
             }
-            int xPosition = side == TabSide.LEFT ? left - width + inset : left + backgroundWidth - inset;
+            int xPosition = side == TabSide.LEFT ? left - width + tabInset : left + backgroundWidth - tabInset;
 
             Chapter chapter = leftTabs.get(i);
             Identifier icon = Chapter.createIcon(chapter.id(), "");

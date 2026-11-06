@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia.projectile;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.USounds;
@@ -8,125 +10,124 @@ import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.entity.damage.UDamageTypes;
 import com.minelittlepony.unicopia.entity.mob.UEntities;
 import com.minelittlepony.unicopia.item.UItems;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.Container;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageSources;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.projectile.ItemSupplier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ButtonBlock;
-import net.minecraft.block.HopperBlock;
-import net.minecraft.block.LeverBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FlyingItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MovementType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageSources;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
+public class PhysicsBodyProjectileEntity extends AbstractArrow implements ItemSupplier {
 
-public class PhysicsBodyProjectileEntity extends PersistentProjectileEntity implements FlyingItemEntity {
-
-    private static final TrackedData<ItemStack> ITEM = DataTracker.registerData(PhysicsBodyProjectileEntity.class, TrackedDataHandlerRegistry.ITEM_STACK);
-    private static final TrackedData<Boolean> BOUNCY = DataTracker.registerData(PhysicsBodyProjectileEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final EntityDataAccessor<ItemStack> ITEM = SynchedEntityData.defineId(PhysicsBodyProjectileEntity.class, EntityDataSerializers.ITEM_STACK);
+    private static final EntityDataAccessor<Boolean> BOUNCY = SynchedEntityData.defineId(PhysicsBodyProjectileEntity.class, EntityDataSerializers.BOOLEAN);
 
     private int inWaterTime;
 
-    private RegistryKey<DamageType> damageType = UDamageTypes.ROCK;
+    private ResourceKey<DamageType> damageType = UDamageTypes.ROCK;
 
-    public PhysicsBodyProjectileEntity(EntityType<PhysicsBodyProjectileEntity> type, World world, ItemStack stack) {
+    public PhysicsBodyProjectileEntity(EntityType<PhysicsBodyProjectileEntity> type, Level world, ItemStack stack) {
         super(type, 0, 0, 0, world, stack, null);
-        setStack(stack);
+        setPickupItemStack(stack);
     }
 
-    public PhysicsBodyProjectileEntity(World world, ItemStack stack) {
+    public PhysicsBodyProjectileEntity(Level world, ItemStack stack) {
         this(UEntities.MUFFIN, world, stack);
     }
 
-    public PhysicsBodyProjectileEntity(World world, @Nullable LivingEntity thrower, ItemStack stack) {
+    public PhysicsBodyProjectileEntity(Level world, @Nullable LivingEntity thrower, ItemStack stack) {
         super(UEntities.MUFFIN, thrower, world, stack, null);
-        setStack(stack);
+        setPickupItemStack(stack);
     }
 
     @Override
-    protected void initDataTracker(DataTracker.Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(ITEM, ItemStack.EMPTY).add(BOUNCY, false);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(ITEM, ItemStack.EMPTY).define(BOUNCY, false);
     }
 
     @Override
-    public void setStack(ItemStack stack) {
-        getDataTracker().set(ITEM, stack.isEmpty() ? getDefaultItemStack() : stack.copy());
-        super.setStack(stack);
+    public void setPickupItemStack(ItemStack stack) {
+        getEntityData().set(ITEM, stack.isEmpty() ? getDefaultPickupItem() : stack.copy());
+        super.setPickupItemStack(stack);
     }
 
     @Override
-    public ItemStack getStack() {
-        return getDataTracker().get(ITEM);
+    public ItemStack getItem() {
+        return getEntityData().get(ITEM);
     }
 
     @Override
-    protected ItemStack getDefaultItemStack() {
-        return UItems.MUFFIN.getDefaultStack();
+    protected ItemStack getDefaultPickupItem() {
+        return UItems.MUFFIN.getDefaultInstance();
     }
 
-    public void setDamageType(RegistryKey<DamageType> damageType) {
+    public void setDamageType(ResourceKey<DamageType> damageType) {
         this.damageType = damageType;
     }
 
     @Override
-    protected ItemStack asItemStack() {
-        return getStack().copy();
+    protected ItemStack getPickupItem() {
+        return getItem().copy();
     }
 
     @Override
-    public ItemStack getItemStack() {
-        return getStack();
+    public ItemStack getPickupItemStackOrigin() {
+        return getItem();
     }
 
     public void setBouncy() {
-        getDataTracker().set(BOUNCY, true);
+        getEntityData().set(BOUNCY, true);
     }
 
     public boolean isBouncy() {
-        return getDataTracker().get(BOUNCY);
+        return getEntityData().get(BOUNCY);
     }
 
     @Override
     public void tick() {
         super.tick();
         if (inGroundTime > 0) {
-            Vec3d vel = getVelocity();
+            Vec3 vel = getDeltaMovement();
             vel = vel.multiply(0, 1, 0);
 
-            move(MovementType.SELF, vel);
+            move(MoverType.SELF, vel);
 
-            setVelocity(vel.multiply(0.3));
-            addVelocity(0, -0.025, 0);
+            setDeltaMovement(vel.scale(0.3));
+            push(0, -0.025, 0);
         }
 
-        if (isBouncy() && isTouchingWater()) {
-            setVelocity(getVelocity().multiply(0.3).add(0, 0.05125, 0));
+        if (isBouncy() && isInWater()) {
+            setDeltaMovement(getDeltaMovement().scale(0.3).add(0, 0.05125, 0));
             inWaterTime++;
         } else {
             inWaterTime = 0;
@@ -134,84 +135,84 @@ public class PhysicsBodyProjectileEntity extends PersistentProjectileEntity impl
     }
 
     @Override
-    public void onPlayerCollision(PlayerEntity player) {
+    public void playerTouch(Player player) {
 
-        if (getWorld().isClient || isNoClip() || shake > 0) {
+        if (level().isClientSide() || isNoPhysics() || shakeTime > 0) {
             return;
         }
 
         if (inWaterTime <= 0) {
-            super.onPlayerCollision(player);
+            super.playerTouch(player);
         } else if (tryPickup(player)) {
-            player.sendPickup(this, 1);
+            player.take(this, 1);
             discard();
         }
     }
 
     @Override
-    protected void onEntityHit(EntityHitResult hit) {
+    protected void onHitEntity(EntityHitResult hit) {
         if (isBouncy()) {
-            setVelocity(getVelocity().multiply(-0.1, -0.3, -0.1));
-            setYaw(getYaw() + 180);
-            lastYaw += 180;
+            setDeltaMovement(getDeltaMovement().multiply(-0.1, -0.3, -0.1));
+            setYRot(getYRot() + 180);
+            yRotO += 180;
             return;
         } else {
-            ItemStack stack = asItemStack();
-            if (stack.isIn(UTags.Items.HORSE_SHOES)) {
-                if (getWorld() instanceof ServerWorld sw) {
-                    stack.damage(1 + random.nextInt(10), sw, null, i -> {
-                        playSound(USounds.Vanilla.ENTITY_ITEM_BREAK.value(), 1, 1);
+            ItemStack stack = getPickupItem();
+            if (stack.is(UTags.Items.HORSE_SHOES)) {
+                if (level() instanceof ServerLevel sw) {
+                    stack.hurtAndBreak(1 + random.nextInt(10), sw, null, i -> {
+                        playSound(USounds.Vanilla.ITEM_BREAK.value(), 1, 1);
                     });
                     if (!stack.isEmpty()) {
-                        dropStack(sw, stack);
+                        spawnAtLocation(sw, stack);
                     }
                     discard();
                 }
             }
         }
-        super.onEntityHit(hit);
+        super.onHitEntity(hit);
     }
 
     @Override
-    public DamageSources getDamageSources() {
-        return new DamageSources(getRegistryManager()) {
+    public DamageSources damageSources() {
+        return new DamageSources(registryAccess()) {
             @Override
-            public DamageSource arrow(PersistentProjectileEntity source, @Nullable Entity attacker) {
-                return create(damageType, source, attacker);
+            public DamageSource arrow(AbstractArrow source, @Nullable Entity attacker) {
+                return source(damageType, source, attacker);
             }
         };
     }
 
     @Override
-    protected void onBlockHit(BlockHitResult hit) {
-        BlockPos buttonPos = hit.getBlockPos().offset(hit.getSide());
-        BlockState state = getWorld().getBlockState(buttonPos);
+    protected void onHitBlock(BlockHitResult hit) {
+        BlockPos buttonPos = hit.getBlockPos().relative(hit.getDirection());
+        BlockState state = level().getBlockState(buttonPos);
 
         @Nullable
-        PlayerEntity player = this.getOwner() instanceof PlayerEntity p ? p : null;
+        Player player = this.getOwner() instanceof Player p ? p : null;
 
-        if (state.isIn(BlockTags.WOODEN_BUTTONS) && state.getBlock() instanceof ButtonBlock button) {
-            button.powerOn(state, getWorld(), buttonPos, player);
+        if (state.is(BlockTags.WOODEN_BUTTONS) && state.getBlock() instanceof ButtonBlock button) {
+            button.press(state, level(), buttonPos, player);
         } else if (state.getBlock() instanceof LeverBlock lever) {
-            lever.togglePower(state, getWorld(), buttonPos, player);
+            lever.pull(state, level(), buttonPos, player);
         }
 
-        BlockPos belowPos = buttonPos.down();
-        BlockState below = getWorld().getBlockState(belowPos);
-        ItemStack stack = getStack();
+        BlockPos belowPos = buttonPos.below();
+        BlockState below = level().getBlockState(belowPos);
+        ItemStack stack = getItem();
         if (below.getBlock() instanceof HopperBlock) {
-            BlockEntity e = getWorld().getBlockEntity(belowPos);
-            if (e instanceof Inventory inventory) {
-                for (int i = 0; i < inventory.size(); i++) {
-                    ItemStack slotStack = inventory.getStack(i);
+            BlockEntity e = level().getBlockEntity(belowPos);
+            if (e instanceof Container inventory) {
+                for (int i = 0; i < inventory.getContainerSize(); i++) {
+                    ItemStack slotStack = inventory.getItem(i);
                     if (slotStack.isEmpty()) {
-                        inventory.setStack(i, stack);
+                        inventory.setItem(i, stack);
                         discard();
                         break;
                     }
 
-                    if (ItemStack.areItemsAndComponentsEqual(slotStack, stack) && slotStack.getCount() < slotStack.getMaxCount()) {
-                        slotStack.increment(1);
+                    if (ItemStack.isSameItemSameComponents(slotStack, stack) && slotStack.getCount() < slotStack.getMaxStackSize()) {
+                        slotStack.grow(1);
                         discard();
                         break;
                     }
@@ -219,55 +220,55 @@ public class PhysicsBodyProjectileEntity extends PersistentProjectileEntity impl
             }
         }
 
-        if (getVelocity().length() > 0.2F) {
-            boolean ownerCanModify = !getWorld().isClient && Caster.of(getOwner()).filter(pony -> pony.canModifyAt(hit.getBlockPos())).isPresent();
+        if (getDeltaMovement().length() > 0.2F) {
+            boolean ownerCanModify = !level().isClientSide() && Caster.of(getOwner()).filter(pony -> pony.canModifyAt(hit.getBlockPos())).isPresent();
 
-            if (ownerCanModify && ((ServerWorld)getWorld()).getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-                if ((!isBouncy() || getWorld().random.nextInt(200) == 0) && getWorld().getBlockState(hit.getBlockPos()).isIn(UTags.Blocks.FRAGILE)) {
-                    getWorld().breakBlock(hit.getBlockPos(), true);
+            if (ownerCanModify && ((ServerLevel)level()).getGameRules().get(GameRules.MOB_GRIEFING)) {
+                if ((!isBouncy() || level().getRandom().nextInt(200) == 0) && level().getBlockState(hit.getBlockPos()).is(UTags.Blocks.FRAGILE)) {
+                    level().destroyBlock(hit.getBlockPos(), true);
                 }
             }
 
             if (isBouncy()) {
-                Direction.Axis side = hit.getSide().getAxis();
+                Direction.Axis side = hit.getDirection().getAxis();
 
-                double randomisation = ((getWorld().random.nextFloat() - 0.5F) / 5);
+                double randomisation = ((level().getRandom().nextFloat() - 0.5F) / 5);
 
                 double inflectionAmount = randomisation + -0.4;
                 double deflectionAmount = randomisation + 0.3;
 
                 if (side == Direction.Axis.X) {
-                    setVelocity(getVelocity().multiply(inflectionAmount, deflectionAmount, deflectionAmount));
+                    setDeltaMovement(getDeltaMovement().multiply(inflectionAmount, deflectionAmount, deflectionAmount));
                 }
 
                 if (side == Direction.Axis.Y) {
-                    setVelocity(getVelocity().multiply(deflectionAmount, inflectionAmount, deflectionAmount));
+                    setDeltaMovement(getDeltaMovement().multiply(deflectionAmount, inflectionAmount, deflectionAmount));
                 }
 
                 if (side == Direction.Axis.Z) {
-                    setVelocity(getVelocity().multiply(deflectionAmount, deflectionAmount, inflectionAmount));
+                    setDeltaMovement(getDeltaMovement().multiply(deflectionAmount, deflectionAmount, inflectionAmount));
                 }
 
-                addVelocity(
-                        ((getWorld().random.nextFloat() - 0.5F) / 5),
-                        ((getWorld().random.nextFloat() - 0.5F) / 5),
-                        ((getWorld().random.nextFloat() - 0.5F) / 5)
+                push(
+                        ((level().getRandom().nextFloat() - 0.5F) / 5),
+                        ((level().getRandom().nextFloat() - 0.5F) / 5),
+                        ((level().getRandom().nextFloat() - 0.5F) / 5)
                 );
             } else {
-                super.onBlockHit(hit);
+                super.onHitBlock(hit);
             }
         } else {
-            super.onBlockHit(hit);
+            super.onHitBlock(hit);
         }
 
-        setSound(state.getSoundGroup().getStepSound());
-        emitGameEvent(GameEvent.STEP);
+        setSoundEvent(state.getSoundType().getStepSound());
+        gameEvent(GameEvent.STEP);
 
         if (!isBouncy()) {
-            if (stack.isIn(UTags.Items.HORSE_SHOES)) {
-                if (getWorld() instanceof ServerWorld sw) {
-                    stack.damage(1 + random.nextInt(10), sw, null, i -> {
-                        playSound(USounds.Vanilla.ENTITY_ITEM_BREAK.value(), 1, 1);
+            if (stack.is(UTags.Items.HORSE_SHOES)) {
+                if (level() instanceof ServerLevel sw) {
+                    stack.hurtAndBreak(1 + random.nextInt(10), sw, null, i -> {
+                        playSound(USounds.Vanilla.ITEM_BREAK.value(), 1, 1);
                     });
                 }
                 if (stack.isEmpty()) {
@@ -276,39 +277,39 @@ public class PhysicsBodyProjectileEntity extends PersistentProjectileEntity impl
                 }
             }
 
-            getWorld().playSoundFromEntity(null, this, getHitSound(), SoundCategory.BLOCKS, 0.6F, 1);
+            level().playSound(null, this, getDefaultHitGroundSoundEvent(), SoundSource.BLOCKS, 0.6F, 1);
         } else {
-            getWorld().playSoundFromEntity(null, this, state.getSoundGroup().getStepSound(), SoundCategory.BLOCKS, 1, 1);
+            level().playSound(null, this, state.getSoundType().getStepSound(), SoundSource.BLOCKS, 1, 1);
         }
     }
 
     @Override
-    public boolean canBreakBlocks(ServerWorld world) {
-        return !isBouncy() && super.canBreakBlocks(world);
+    public boolean mayBreak(ServerLevel world, BlockPos pos) {
+        return !isBouncy() && super.mayBreak(world, pos);
     }
 
     @Override
-    protected SoundEvent getHitSound() {
-        if (getStack().isIn(UTags.Items.HORSE_SHOES)) {
-            return USounds.Vanilla.ITEM_TRIDENT_HIT_GROUND;
+    protected SoundEvent getDefaultHitGroundSoundEvent() {
+        if (getItem().is(UTags.Items.HORSE_SHOES)) {
+            return USounds.Vanilla.TRIDENT_HIT_GROUND;
         }
         return isBouncy() ? USounds.ITEM_MUFFIN_BOUNCE.value() : USounds.ITEM_ROCK_LAND;
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound nbt) {
-        super.writeCustomDataToNbt(nbt);
-        ItemStack stack = getStack();
+    public void addAdditionalSaveData(ValueOutput nbt) {
+        super.addAdditionalSaveData(nbt);
+        ItemStack stack = getItem();
         if (!stack.isEmpty()) {
-            nbt.put("item", ItemStack.CODEC, stack);
+            nbt.store("item", ItemStack.CODEC, stack);
         }
-        nbt.putString("damageType", damageType.getValue().toString());
+        nbt.putString("damageType", damageType.identifier().toString());
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound nbt) {
-        super.readCustomDataFromNbt(nbt);
-        ItemStack.fromNbt(getRegistryManager(), nbt.getCompoundOrEmpty("item")).ifPresent(this::setStack);
-        nbt.get("damageType", RegistryKey.createCodec(RegistryKeys.DAMAGE_TYPE)).ifPresent(this::setDamageType);
+    public void readAdditionalSaveData(ValueInput nbt) {
+        super.readAdditionalSaveData(nbt);
+        nbt.read("item", ItemStack.CODEC).ifPresent(this::setPickupItemStack);
+        nbt.read("damageType", ResourceKey.codec(Registries.DAMAGE_TYPE)).ifPresent(this::setDamageType);
     }
 }

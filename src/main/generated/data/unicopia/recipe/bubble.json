@@ -1,0 +1,26 @@
+{
+  "type": "unicopia:spellbook/crafting",
+  "ingredients": [
+    {
+      "item": "unicopia:gemstone",
+      "spell": "unicopia:catapult"
+    }
+  ],
+  "material": {
+    "item": "unicopia:gemstone"
+  },
+  "result": {
+    "components": {
+      "unicopia:spell_traits": {
+        "unicopia:focus": 6.0,
+        "unicopia:power": 1.0
+      },
+      "unicopia:stored_spell": "unicopia:bubble"
+    },
+    "id": "unicopia:gemstone"
+  },
+  "traits": {
+    "unicopia:air": 9.0,
+    "unicopia:water": 9.0
+  }
+}

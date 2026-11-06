@@ -1,8 +1,7 @@
 package com.minelittlepony.unicopia.item;
 
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
-
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 public interface GlowableItem {
     static boolean isGlowing(ItemStack stack) {

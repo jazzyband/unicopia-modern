@@ -1,6 +1,6 @@
 package com.minelittlepony.unicopia.datagen.providers.loot;
 
-import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import com.minelittlepony.unicopia.block.EdibleBlock;
@@ -9,54 +9,58 @@ import com.minelittlepony.unicopia.datagen.IndirectionUtils;
 
 import net.fabricmc.fabric.api.resource.conditions.v1.ResourceCondition;
 import net.fabricmc.fabric.impl.datagen.FabricDataGenHelper;
-import net.minecraft.block.Block;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.condition.BlockStatePropertyLootCondition;
-import net.minecraft.loot.condition.LootConditionConsumingBuilder;
-import net.minecraft.loot.condition.SurvivesExplosionLootCondition;
-import net.minecraft.loot.entry.DynamicEntry;
-import net.minecraft.predicate.StatePredicate;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.Identifier;
+import net.minecraft.advancements.predicates.StatePropertiesPredicate;
+import net.minecraft.advancements.predicates.BlockPredicate;
+import net.minecraft.advancements.predicates.DataComponentMatchers;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.entries.DynamicLoot;
+import net.minecraft.world.level.storage.loot.predicates.ConditionUserBuilder;
+import net.minecraft.world.level.storage.loot.predicates.ExplosionCondition;
+import net.minecraft.world.level.storage.loot.predicates.MatchBlock;
 
 public class UExternalBlockLootTableProvider {
-    private final Map<RegistryKey<LootTable>, LootTable.Builder> lootTables;
+    private final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> lootTables;
     private final ResourceCondition[] conditions;
 
-    protected UExternalBlockLootTableProvider(Map<RegistryKey<LootTable>, LootTable.Builder> lootTables, ResourceCondition...conditions) {
+    protected UExternalBlockLootTableProvider(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> lootTables, ResourceCondition...conditions) {
         this.lootTables = lootTables;
         this.conditions = conditions;
     }
 
     public void addDrop(Identifier block, Function<Identifier, LootTable.Builder> drop) {
-        RegistryKey<LootTable> key = RegistryKey.of(RegistryKeys.LOOT_TABLE, block.withPrefixedPath("blocks/"));
+        ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE, block.withPrefix("blocks/"));
         LootTable.Builder table = drop.apply(block);
         FabricDataGenHelper.addConditions(table, conditions);
-        lootTables.put(key, table);
+        lootTables.accept(key, table);
     }
 
     public static LootTable.Builder edibleBlockDrops(Identifier block, Identifier drop) {
-        LootTable.Builder builder = LootTable.builder();
+        LootTable.Builder builder = LootTable.lootTable();
         for (BooleanProperty segment : EdibleBlock.SEGMENTS) {
             builder
-                .pool(LootPool.builder()
-                    .rolls(UBlockLootTableProvider.exactly(1))
-                        .with(applyStateCondition(block, segment, true, DynamicEntry.builder(drop)))
-                        .conditionally(SurvivesExplosionLootCondition.builder()));
+                .withPool(LootPool.lootPool()
+                    .setRolls(UBlockLootTableProvider.exactly(1))
+                        .add(applyStateCondition(block, segment, true, DynamicLoot.dynamicEntry(drop)))
+                        .when(ExplosionCondition.survivesExplosion()));
         }
         return builder;
     }
 
-    public static <T extends LootConditionConsumingBuilder<T>> T applyStateCondition(Identifier block,
-            BooleanProperty property, boolean value, LootConditionConsumingBuilder<T> builder) {
-        RegistryEntry<Block> entry = IndirectionUtils.entryOf(RegistryKeys.BLOCK, block, UBlocks.HAY_BLOCK);
-        return builder.conditionally(() -> new BlockStatePropertyLootCondition(
-                entry,
-                StatePredicate.Builder.create().exactMatch(property, value).build())
+    public static <T extends ConditionUserBuilder<T>> T applyStateCondition(Identifier block,
+            BooleanProperty property, boolean value, ConditionUserBuilder<T> builder) {
+        Holder<Block> entry = IndirectionUtils.entryOf(Registries.BLOCK, block, UBlocks.HAY_BLOCK);
+        return builder.when(() -> new MatchBlock(new BlockPredicate(
+                java.util.Optional.of(HolderSet.direct(entry)),
+                StatePropertiesPredicate.Builder.properties().hasProperty(property, value).build(),
+                java.util.Optional.empty(), DataComponentMatchers.ANY))
         );
     }
 }

@@ -6,10 +6,9 @@ import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.*;
 import com.minelittlepony.unicopia.server.world.UGameRules;
 import com.minelittlepony.unicopia.server.world.UnicopiaWorldProperties;
-
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 
 /**
  * Internal.
@@ -31,7 +30,7 @@ public class TimeControlAbilitySpell extends AbstractSpell {
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
 
-        if (!source.asWorld().getServer().getGameRules().getBoolean(UGameRules.DO_TIME_MAGIC) || situation != Situation.BODY || !source.canUse(Abilities.TIME)) {
+        if (!source.asWorld().getServer().getGameRules().get(UGameRules.DO_TIME_MAGIC) || situation != Situation.BODY || !source.canUse(Abilities.TIME)) {
             return false;
         }
 
@@ -40,10 +39,10 @@ public class TimeControlAbilitySpell extends AbstractSpell {
     }
 
     public void update(Caster<?> source, Rot rotation) {
-        if (!source.asWorld().getServer().getGameRules().getBoolean(UGameRules.DO_TIME_MAGIC)) {
+        if (!source.asWorld().getServer().getGameRules().get(UGameRules.DO_TIME_MAGIC)) {
             return;
         }
-        if (!(source.asWorld() instanceof ServerWorld sw)) {
+        if (!(source.asWorld() instanceof ServerLevel sw)) {
             return;
         }
 
@@ -55,7 +54,7 @@ public class TimeControlAbilitySpell extends AbstractSpell {
 
         if (!initilized) {
             initilized = true;
-            timeOffset = sw.getTimeOfDay() - time;
+            timeOffset = sw.getOverworldClockTime() - time;
             angleOffset = UnicopiaWorldProperties.forWorld(sw).getTangentalSkyAngle() - yaw;
         }
 
@@ -69,14 +68,14 @@ public class TimeControlAbilitySpell extends AbstractSpell {
         }
         time %= 24000;
 
-        sw.setTimeOfDay(time);
-        sw.getServer().sendTimeUpdatePackets();
+        sw.clockManager().setTotalTicks(sw.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_CLOCK)
+                .getOrThrow(net.minecraft.world.clock.WorldClocks.OVERWORLD), time);
 
-        UnicopiaWorldProperties.forWorld(sw).setTangentalSkyAngle(sw, angleOffset + yaw);
+        UnicopiaWorldProperties.forWorld(sw).setTangentalSkyAngle(angleOffset + yaw);
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         super.toNBT(compound, lookup);
         compound.putBoolean("initilized", initilized);
         compound.putLong("timeOffset", timeOffset);
@@ -84,10 +83,10 @@ public class TimeControlAbilitySpell extends AbstractSpell {
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         super.fromNBT(compound, lookup);
-        initilized = compound.getBoolean("initilized", false);
-        timeOffset = compound.getLong("timeOffset", 0);
-        angleOffset = compound.getFloat("angleOffset", 0);
+        initilized = compound.getBooleanOr("initilized", false);
+        timeOffset = compound.getLongOr("timeOffset", 0);
+        angleOffset = compound.getFloatOr("angleOffset", 0);
     }
 }

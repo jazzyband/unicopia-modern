@@ -1,13 +1,12 @@
 package com.minelittlepony.unicopia.entity.player;
 
 import java.util.Optional;
-
-import net.minecraft.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityDimensions;
 
 public final class PlayerDimensions {
     private static final float FLYING_HEIGHT = 0.6F;
     private static final Optional<EntityDimensions> FLYING_DIMENSIONS = Optional.of(
-            EntityDimensions.changing(FLYING_HEIGHT, FLYING_HEIGHT).withEyeHeight(FLYING_HEIGHT * 0.6F)
+            EntityDimensions.scalable(FLYING_HEIGHT, FLYING_HEIGHT).withEyeHeight(FLYING_HEIGHT * 0.6F)
     );
 
     private final PlayerPhysics physics;

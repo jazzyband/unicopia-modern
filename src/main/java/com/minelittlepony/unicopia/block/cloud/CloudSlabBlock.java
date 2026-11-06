@@ -1,7 +1,23 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquineContext;
@@ -10,58 +26,31 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.block.enums.SlabType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.state.StateManager;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.WorldAccess;
-
 public class CloudSlabBlock extends WaterloggableCloudBlock {
-    private static final MapCodec<WaterloggableCloudBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.fieldOf("meltable").forGetter(b -> b.meltable),
-            CodecUtils.supplierOf(Soakable.CODEC).optionalFieldOf("soggy_block", null).forGetter(b -> b.soggyBlock),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, WaterloggableCloudBlock::new));
-    private static final VoxelShape BOTTOM_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
-    private static final VoxelShape TOP_SHAPE = Block.createCuboidShape(0.0, 8.0, 0.0, 16.0, 16.0, 16.0);
+    private static final VoxelShape BOTTOM_SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
+    private static final VoxelShape TOP_SHAPE = Block.box(0.0, 8.0, 0.0, 16.0, 16.0, 16.0);
 
-    public CloudSlabBlock(boolean meltable, @Nullable Supplier<Soakable> soggyBlock, Settings settings) {
+    public CloudSlabBlock(boolean meltable, @Nullable Supplier<Soakable> soggyBlock, Properties settings) {
         super(meltable, soggyBlock, settings);
-        setDefaultState(getDefaultState().with(SlabBlock.TYPE, SlabType.BOTTOM));
+        registerDefaultState(defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM));
+    }
+
+
+    @Override
+    protected boolean useShapeForLightOcclusion(BlockState state) {
+        return state.getValue(SlabBlock.TYPE) != SlabType.DOUBLE;
     }
 
     @Override
-    public MapCodec<? extends WaterloggableCloudBlock> getCodec() {
-        return CODEC;
-    }
-
-    @Override
-    protected boolean hasSidedTransparency(BlockState state) {
-        return state.get(SlabBlock.TYPE) != SlabType.DOUBLE;
-    }
-
-    @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(SlabBlock.TYPE);
     }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context, EquineContext equineContext) {
-        return switch (state.get(SlabBlock.TYPE)) {
-            case DOUBLE -> VoxelShapes.fullCube();
+    protected VoxelShape getOutlineShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context, EquineContext equineContext) {
+        return switch (state.getValue(SlabBlock.TYPE)) {
+            case DOUBLE -> Shapes.block();
             case TOP -> TOP_SHAPE;
             case BOTTOM -> BOTTOM_SHAPE;
         };
@@ -69,33 +58,33 @@ public class CloudSlabBlock extends WaterloggableCloudBlock {
 
     @Override
     @Nullable
-    public BlockState getPlacementState(ItemPlacementContext ctx, EquineContext equineContext) {
-        BlockPos blockPos = ctx.getBlockPos();
-        BlockState blockState = ctx.getWorld().getBlockState(blockPos);
-        if (blockState.isOf(this)) {
-            return blockState.with(SlabBlock.TYPE, SlabType.DOUBLE).with(WATERLOGGED, false);
+    public BlockState getPlacementState(BlockPlaceContext ctx, EquineContext equineContext) {
+        BlockPos blockPos = ctx.getClickedPos();
+        BlockState blockState = ctx.getLevel().getBlockState(blockPos);
+        if (blockState.is(this)) {
+            return blockState.setValue(SlabBlock.TYPE, SlabType.DOUBLE).setValue(WATERLOGGED, false);
         }
-        BlockState state = super.getPlacementState(ctx, equineContext).with(SlabBlock.TYPE, SlabType.BOTTOM);
-        Direction direction = ctx.getSide();
-        if (direction == Direction.DOWN || direction != Direction.UP && ctx.getHitPos().y - blockPos.getY() > 0.5) {
-            return state.with(SlabBlock.TYPE, SlabType.TOP);
+        BlockState state = super.getPlacementState(ctx, equineContext).setValue(SlabBlock.TYPE, SlabType.BOTTOM);
+        Direction direction = ctx.getClickedFace();
+        if (direction == Direction.DOWN || direction != Direction.UP && ctx.getClickLocation().y - blockPos.getY() > 0.5) {
+            return state.setValue(SlabBlock.TYPE, SlabType.TOP);
         }
         return state;
     }
 
     @Override
-    protected boolean canReplace(BlockState state, ItemPlacementContext context, EquineContext equineContext) {
-        SlabType slabType = state.get(SlabBlock.TYPE);
-        if (slabType == SlabType.DOUBLE || !context.getStack().isOf(asItem())) {
+    protected boolean canReplace(BlockState state, BlockPlaceContext context, EquineContext equineContext) {
+        SlabType slabType = state.getValue(SlabBlock.TYPE);
+        if (slabType == SlabType.DOUBLE || !context.getItemInHand().is(asItem())) {
             return false;
         }
 
-        if (!context.canReplaceExisting()) {
+        if (!context.replacingClickedOnBlock()) {
             return true;
         }
 
-        boolean hitTop = context.getHitPos().y - context.getBlockPos().getY() > 0.5;
-        Direction side = context.getSide();
+        boolean hitTop = context.getClickLocation().y - context.getClickedPos().getY() > 0.5;
+        Direction side = context.getClickedFace();
         if (slabType == SlabType.BOTTOM) {
             return side == Direction.UP || hitTop && side.getAxis().isHorizontal();
         }
@@ -103,12 +92,12 @@ public class CloudSlabBlock extends WaterloggableCloudBlock {
     }
 
     @Override
-    public boolean tryFillWithFluid(WorldAccess world, BlockPos pos, BlockState state, FluidState fluidState) {
-        return state.get(SlabBlock.TYPE) != SlabType.DOUBLE && super.tryFillWithFluid(world, pos, state, fluidState);
+    public boolean placeLiquid(LevelAccessor world, BlockPos pos, BlockState state, FluidState fluidState) {
+        return state.getValue(SlabBlock.TYPE) != SlabType.DOUBLE && super.placeLiquid(world, pos, state, fluidState);
     }
 
     @Override
-    public boolean canFillWithFluid(LivingEntity filler, BlockView world, BlockPos pos, BlockState state, Fluid fluid) {
-        return state.get(SlabBlock.TYPE) != SlabType.DOUBLE && super.canFillWithFluid(filler, world, pos, state, fluid);
+    public boolean canPlaceLiquid(LivingEntity filler, BlockGetter world, BlockPos pos, BlockState state, Fluid fluid) {
+        return state.getValue(SlabBlock.TYPE) != SlabType.DOUBLE && super.canPlaceLiquid(filler, world, pos, state, fluid);
     }
 }

@@ -9,18 +9,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.minelittlepony.unicopia.entity.effect.SeaponyGraceStatusEffect;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.server.level.ServerLevel;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.GuardianEntity;
-
-@Mixin(targets = "net.minecraft.entity.mob.GuardianEntity$GuardianTargetPredicate")
+@Mixin(targets = "net.minecraft.world.entity.monster.Guardian$GuardianAttackSelector")
 abstract class MixinGuardianTargetPredicate {
     @Shadow
-    private @Final GuardianEntity owner;
+    private @Final Guardian guardian;
 
     @Inject(method = "test", at = @At("HEAD"), cancellable = true)
-    private void unicopia_excludeSeaponysGrace(@Nullable LivingEntity target, CallbackInfoReturnable<Boolean> info) {
-        if (!SeaponyGraceStatusEffect.hasIre(target, owner)) {
+    private void unicopia_excludeSeaponysGrace(@Nullable LivingEntity target, ServerLevel level, CallbackInfoReturnable<Boolean> info) {
+        if (!SeaponyGraceStatusEffect.hasIre(target, guardian)) {
             info.setReturnValue(false);
         }
     }

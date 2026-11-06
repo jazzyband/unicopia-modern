@@ -3,22 +3,20 @@ package com.minelittlepony.unicopia.entity;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.*;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 
 public class ItemTracker implements NbtSerialisable, Copyable<ItemTracker>, Tickable {
     public static final long TICKS = 1;
@@ -27,7 +25,7 @@ public class ItemTracker implements NbtSerialisable, Copyable<ItemTracker>, Tick
     public static final long DAYS = 24 * HOURS;
 
     public static String formatTicks(long ticks, float tickRate) {
-        ticks = MathHelper.floor(ticks / tickRate);
+        ticks = Mth.floor(ticks / tickRate);
         long days = ticks / (SECONDS * 60 * 24);
         ticks %= (SECONDS * 60 * 60 * 24);
         long hours = ticks / (SECONDS * 60 * 60);
@@ -40,7 +38,7 @@ public class ItemTracker implements NbtSerialisable, Copyable<ItemTracker>, Tick
 
     private final Map<Trackable, Long> items = new HashMap<>();
 
-    public static Predicate<LivingEntity> wearing(ItemConvertible charm, Predicate<Long> range) {
+    public static Predicate<LivingEntity> wearing(ItemLike charm, Predicate<Long> range) {
         return e -> Living.getOrEmpty(e)
                     .map(Living::getArmour)
                     .map(a -> a.getTicks(charm))
@@ -109,11 +107,11 @@ public class ItemTracker implements NbtSerialisable, Copyable<ItemTracker>, Tick
         return items.getOrDefault(charm.asItem(), 0L);
     }
 
-    public long getTicks(ItemConvertible charm) {
+    public long getTicks(ItemLike charm) {
         return charm.asItem() instanceof Trackable t ? items.getOrDefault(t, 0L) : 0;
     }
 
-    public boolean contains(ItemConvertible charm) {
+    public boolean contains(ItemLike charm) {
         return charm.asItem() instanceof Trackable t && getTicks(t) > 0;
     }
 
@@ -122,18 +120,18 @@ public class ItemTracker implements NbtSerialisable, Copyable<ItemTracker>, Tick
     }
 
     @Override
-    public void toNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void toNBT(CompoundTag compound, Provider lookup) {
         items.forEach((charm, count) -> {
-            compound.putLong(Registries.ITEM.getId(charm.asItem()).toString(), count);
+            compound.putLong(BuiltInRegistries.ITEM.getKey(charm.asItem()).toString(), count);
         });
     }
 
     @Override
-    public void fromNBT(NbtCompound compound, WrapperLookup lookup) {
+    public void fromNBT(CompoundTag compound, Provider lookup) {
         items.clear();
-        compound.getKeys().stream().map(Identifier::tryParse)
+        compound.keySet().stream().map(Identifier::tryParse)
             .filter(Objects::nonNull)
-            .map(id -> Map.entry(Registries.ITEM.get(id), compound.getLong(id.toString())))
+            .map(id -> Map.entry(BuiltInRegistries.ITEM.getValue(id), compound.getLong(id.toString())))
             .filter(i -> i.getKey() instanceof Trackable && i.getValue().orElse(0L) > 0)
             .forEach(item -> items.put((Trackable)item.getKey(), item.getValue().orElse(0L)));
     }
@@ -146,7 +144,7 @@ public class ItemTracker implements NbtSerialisable, Copyable<ItemTracker>, Tick
         }
     }
 
-    public interface Trackable extends ItemConvertible {
+    public interface Trackable extends ItemLike {
         void onUnequipped(Living<?> living, long timeWorn);
 
         void onEquipped(Living<?> living);

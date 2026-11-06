@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "eat_pinecone": {
+      "conditions": {
+        "item": {
+          "items": "unicopia:pinecone"
+        }
+      },
+      "trigger": "minecraft:consume_item"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.eat_pinecone.description"
+    },
+    "frame": "challenge",
+    "icon": {
+      "id": "unicopia:pinecone"
+    },
+    "title": {
+      "translate": "advancements.unicopia.eat_pinecone.title"
+    }
+  },
+  "requirements": [
+    [
+      "eat_pinecone"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

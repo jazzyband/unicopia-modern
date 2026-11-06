@@ -2,15 +2,16 @@ package com.minelittlepony.unicopia.client.render.entity;
 
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.entity.mob.IgnominiousBulbEntity;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
 
 public class IgnominiousBulbEntityRenderer extends EntityRenderer<IgnominiousBulbEntity, IgnominiousBulbEntityRenderer.State> {
     private static final Identifier IDLE_TEXTURE = Unicopia.id("textures/entity/poison_joke/bulb_idle.png");
@@ -18,9 +19,9 @@ public class IgnominiousBulbEntityRenderer extends EntityRenderer<IgnominiousBul
 
     private final IgnominiousBulbEntityModel model;
 
-    public IgnominiousBulbEntityRenderer(EntityRendererFactory.Context context) {
+    public IgnominiousBulbEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
-        model = new IgnominiousBulbEntityModel(IgnominiousBulbEntityModel.getTexturedModelData().createModel());
+        model = new IgnominiousBulbEntityModel(IgnominiousBulbEntityModel.getTexturedModelData().bakeRoot());
     }
 
     @Override
@@ -29,25 +30,29 @@ public class IgnominiousBulbEntityRenderer extends EntityRenderer<IgnominiousBul
     }
 
     @Override
-    public void updateRenderState(IgnominiousBulbEntity entity, State state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+    public void extractRenderState(IgnominiousBulbEntity entity, State state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
         state.angry = entity.isAngry();
         state.scale = entity.getScale(tickDelta);
-        state.pitch = entity.getPitch(tickDelta);
-        state.yaw = (180 + entity.getYaw(tickDelta)) * MathHelper.RADIANS_PER_DEGREE;
+        state.pitch = entity.getViewXRot(tickDelta);
+        state.yaw = (180 + entity.getViewYRot(tickDelta)) * Mth.DEG_TO_RAD;
         state.hurting = entity.hurtTime > 0;
     }
 
     @Override
-    public void render(State state, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        matrices.push();
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector vertices, CameraRenderState camera) {
+        matrices.pushPose();
         matrices.scale(-1, -1, 1);
         matrices.translate(0, -1.5F, 0);
 
-        model.setAngles(state);
-        model.render(matrices, vertices.getBuffer(model.getLayer(state.angry ? ANGRY_TEXTURE : IDLE_TEXTURE)), light, OverlayTexture.getUv(0, state.hurting), Colors.WHITE);
-        matrices.pop();
-        super.render(state, matrices, vertices, light);
+        vertices.submitCustomGeometry(matrices, model.renderType(state.angry ? ANGRY_TEXTURE : IDLE_TEXTURE), (pose, buffer) -> {
+            PoseStack stack = new PoseStack();
+            stack.mulPose(pose.pose());
+            model.setupAnim(state);
+            model.renderToBuffer(stack, buffer, state.lightCoords, OverlayTexture.pack(0, state.hurting), CommonColors.WHITE);
+        });
+        matrices.popPose();
+        super.submit(state, matrices, vertices, camera);
     }
 
     public static class State extends EntityRenderState {

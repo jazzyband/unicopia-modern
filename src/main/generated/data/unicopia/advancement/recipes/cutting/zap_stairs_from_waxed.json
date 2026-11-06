@@ -1,0 +1,33 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "farmersdelight"
+      ]
+    }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_waxed_zap_stairs": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:waxed_zap_stairs"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_waxed_zap_stairs"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:cutting/zap_stairs_from_waxed"
+    ]
+  }
+}

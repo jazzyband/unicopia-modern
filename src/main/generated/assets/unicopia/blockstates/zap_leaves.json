@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "stage=flowering": {
+      "model": "unicopia:block/flowering_zap_leaves"
+    },
+    "stage=fruiting": {
+      "model": "unicopia:block/zap_leaves"
+    },
+    "stage=greening": {
+      "model": "unicopia:block/zap_leaves"
+    },
+    "stage=hibernating": {
+      "model": "minecraft:block/air"
+    },
+    "stage=ripe": {
+      "model": "unicopia:block/zap_leaves"
+    }
+  }
+}

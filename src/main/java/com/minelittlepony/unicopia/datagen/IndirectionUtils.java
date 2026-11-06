@@ -3,31 +3,30 @@ package com.minelittlepony.unicopia.datagen;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.client.data.models.MultiVariant;
+import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
+import net.minecraft.client.data.models.blockstates.ConditionBuilder;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
+import net.minecraft.client.renderer.block.dispatch.multipart.Condition;
+import net.minecraft.client.renderer.block.dispatch.multipart.Selector;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
 import com.minelittlepony.unicopia.util.Untyped;
-
-import net.minecraft.block.Block;
-import net.minecraft.client.data.BlockModelDefinitionCreator;
-import net.minecraft.client.render.model.json.BlockModelDefinition;
-import net.minecraft.client.render.model.json.MultipartModelComponent;
-import net.minecraft.client.render.model.json.MultipartModelCondition;
-import net.minecraft.client.render.model.json.MultipartModelConditionBuilder;
-import net.minecraft.client.render.model.json.WeightedVariant;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Identifier;
 
 public interface IndirectionUtils {
 
-    static <T> RegistryEntry<T> entryOf(RegistryKey<Registry<T>> registry, Identifier value, T dummyValue) {
-        final Registry<T> registryRef = Untyped.cast(Registries.REGISTRIES.get(registry.getValue()));
-        class Entry extends RegistryEntry.Reference<T> {
+    static <T> Holder<T> entryOf(ResourceKey<Registry<T>> registry, Identifier value, T dummyValue) {
+        final Registry<T> registryRef = Untyped.cast(BuiltInRegistries.REGISTRY.getValue(registry.identifier()));
+        class Entry extends Holder.Reference<T> {
             Entry() {
                 super(
-                    RegistryEntry.Reference.Type.STAND_ALONE,
+                    Holder.Reference.Type.STAND_ALONE,
                     registryRef,
-                    RegistryKey.of(registry, value),
+                    ResourceKey.create(registry, value),
                     dummyValue
                 );
             }
@@ -39,7 +38,7 @@ public interface IndirectionUtils {
         return new IndirectMultipartBlockStateSupplier(block);
     }
 
-    public class IndirectMultipartBlockStateSupplier implements BlockModelDefinitionCreator, DataCollector.Identifiable {
+    public class IndirectMultipartBlockStateSupplier implements BlockModelDefinitionGenerator, DataCollector.Identifiable {
         private final List<Part> parts = new ArrayList<>();
 
         private final Identifier block;
@@ -49,7 +48,7 @@ public interface IndirectionUtils {
         }
 
         @Override
-        public Block getBlock() {
+        public Block block() {
             throw new RuntimeException("Stub");
         }
 
@@ -58,31 +57,31 @@ public interface IndirectionUtils {
             return block;
         }
 
-        public IndirectMultipartBlockStateSupplier with(WeightedVariant variant) {
+        public IndirectMultipartBlockStateSupplier with(MultiVariant variant) {
             parts.add(new Part(Optional.empty(), variant));
             return this;
         }
 
-        public IndirectMultipartBlockStateSupplier with(MultipartModelCondition condition, WeightedVariant variant) {
+        public IndirectMultipartBlockStateSupplier with(Condition condition, MultiVariant variant) {
             parts.add(new Part(Optional.of(condition), variant));
             return this;
         }
 
-        public IndirectMultipartBlockStateSupplier with(MultipartModelConditionBuilder conditionBuilder, WeightedVariant part) {
+        public IndirectMultipartBlockStateSupplier with(ConditionBuilder conditionBuilder, MultiVariant part) {
             return with(conditionBuilder.build(), part);
         }
 
         @Override
-        public BlockModelDefinition createBlockModelDefinition() {
-            return new BlockModelDefinition(
+        public BlockStateModelDispatcher create() {
+            return new BlockStateModelDispatcher(
                 Optional.empty(),
-                Optional.of(new BlockModelDefinition.Multipart(parts.stream().map(Part::toComponent).toList()))
+                Optional.of(new BlockStateModelDispatcher.MultiPartDefinition(parts.stream().map(Part::toComponent).toList()))
             );
         }
 
-        record Part(Optional<MultipartModelCondition> condition, WeightedVariant variants) {
-            public MultipartModelComponent toComponent() {
-                return new MultipartModelComponent(condition, variants.toModel());
+        record Part(Optional<Condition> condition, MultiVariant variants) {
+            public Selector toComponent() {
+                return new Selector(condition, variants.toUnbaked());
             }
         }
     }

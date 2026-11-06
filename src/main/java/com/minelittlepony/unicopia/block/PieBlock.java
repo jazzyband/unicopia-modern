@@ -7,161 +7,167 @@ import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.*;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.pathing.NavigationType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.*;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.stat.Stats;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.*;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.*;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.*;
-import net.minecraft.world.event.GameEvent;
-import net.minecraft.world.tick.ScheduledTickView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LevelEvent;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Items;
 
-public class PieBlock extends Block implements Waterloggable {
-    public static final MapCodec<PieBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            CodecUtils.ITEM.fieldOf("slice_item").forGetter(b -> b.sliceItem),
-            CodecUtils.ITEM.fieldOf("normal_item").forGetter(b -> b.normalItem),
-            CodecUtils.ITEM.fieldOf("stomped_item").forGetter(b -> b.stompedItem),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, PieBlock::new));
+public class PieBlock extends Block implements SimpleWaterloggedBlock {
     public static final int MAX_BITES = 3;
-    public static final IntProperty BITES = IntProperty.of("bites", 0, MAX_BITES);
-    public static final BooleanProperty STOMPED = BooleanProperty.of("stomped");
-    public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
+    public static final IntegerProperty BITES = IntegerProperty.create("bites", 0, MAX_BITES);
+    public static final BooleanProperty STOMPED = BooleanProperty.create("stomped");
+    public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     private static final VoxelShape[] SHAPES;
     static {
         final int PIE_HEIGHT = 4;
-        final VoxelShape WEDGE = Block.createCuboidShape(2, 0, 2, 8, PIE_HEIGHT, 8);
+        final VoxelShape WEDGE = Block.box(2, 0, 2, 8, PIE_HEIGHT, 8);
         final float OFFSET_AMOUNT = 6F/16F;
         SHAPES = new VoxelShape[] {
-                Block.createCuboidShape(2, 0, 2, 14, PIE_HEIGHT, 14),
-                VoxelShapes.union(WEDGE, WEDGE.offset(OFFSET_AMOUNT, 0, 0), WEDGE.offset(OFFSET_AMOUNT, 0, OFFSET_AMOUNT)),
-                VoxelShapes.union(WEDGE, WEDGE.offset(OFFSET_AMOUNT, 0, 0)),
+                Block.box(2, 0, 2, 14, PIE_HEIGHT, 14),
+                Shapes.or(WEDGE, WEDGE.move(OFFSET_AMOUNT, 0, 0), WEDGE.move(OFFSET_AMOUNT, 0, OFFSET_AMOUNT)),
+                Shapes.or(WEDGE, WEDGE.move(OFFSET_AMOUNT, 0, 0)),
                 WEDGE
             };
     }
 
-    private final ItemConvertible sliceItem;
-    private final ItemConvertible normalItem;
-    private final ItemConvertible stompedItem;
+    private final ItemLike sliceItem;
+    private final ItemLike normalItem;
+    private final ItemLike stompedItem;
 
-    public PieBlock(ItemConvertible sliceItem, ItemConvertible normalItem, ItemConvertible stompedItem, Settings settings) {
+    public PieBlock(ItemLike sliceItem, ItemLike normalItem, ItemLike stompedItem, Properties settings) {
         super(settings);
-        setDefaultState(getDefaultState().with(STOMPED, false).with(WATERLOGGED, false));
+        registerDefaultState(defaultBlockState().setValue(STOMPED, false).setValue(WATERLOGGED, false));
         this.sliceItem = sliceItem;
         this.normalItem = normalItem;
         this.stompedItem = stompedItem;
     }
 
+
     @Override
-    protected MapCodec<? extends PieBlock> getCodec() {
-        return CODEC;
+    protected VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return SHAPES[state.getValue(BITES)];
     }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return SHAPES[state.get(BITES)];
-    }
+    protected InteractionResult useItemOn(ItemStack itemStack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
 
-    @Override
-    protected ActionResult onUseWithItem(ItemStack itemStack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (world.isClientSide()) {
 
-        if (world.isClient) {
-
-            if (itemStack.isIn(UTags.Items.CAN_CUT_PIE)) {
-                return ActionResult.SUCCESS;
+            if (itemStack.is(UTags.Items.CAN_CUT_PIE)) {
+                return InteractionResult.SUCCESS;
             }
 
-            if (tryEat(world, pos, state, player).isAccepted()) {
-                return ActionResult.SUCCESS;
+            if (tryEat(world, pos, state, player).consumesAction()) {
+                return InteractionResult.SUCCESS;
             }
 
             if (itemStack.isEmpty()) {
-                return ActionResult.CONSUME;
+                return InteractionResult.CONSUME;
             }
         }
 
-        if (itemStack.isIn(UTags.Items.CAN_CUT_PIE)) {
-            SoundEmitter.playSoundAt(player, USounds.BLOCK_PIE_SLICE, SoundCategory.NEUTRAL, 1, 1);
+        if (itemStack.is(UTags.Items.CAN_CUT_PIE)) {
+            SoundEmitter.playSoundAt(player, USounds.BLOCK_PIE_SLICE, SoundSource.NEUTRAL, 1, 1);
             removeSlice(world, pos, state, player);
-            itemStack.damage(1, player, LivingEntity.getSlotForHand(hand));
-            SoundEmitter.playSoundAt(player, USounds.BLOCK_PIE_SLICE_POP, SoundCategory.NEUTRAL, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
-            Block.dropStack(world, pos, sliceItem.asItem().getDefaultStack());
-            return ActionResult.SUCCESS;
+            itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
+            SoundEmitter.playSoundAt(player, USounds.BLOCK_PIE_SLICE_POP, SoundSource.NEUTRAL, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
+            Block.popResource(world, pos, sliceItem.asItem().getDefaultInstance());
+            return InteractionResult.SUCCESS;
         }
 
         return tryEat(world, pos, state, player);
     }
 
-    protected ActionResult tryEat(WorldAccess world, BlockPos pos, BlockState state, PlayerEntity player) {
-        if (!player.canConsume(false)) {
-            return ActionResult.PASS_TO_DEFAULT_BLOCK_ACTION;
+    protected InteractionResult tryEat(LevelAccessor world, BlockPos pos, BlockState state, Player player) {
+        if (!player.canEat(false)) {
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
-        player.incrementStat(Stats.EAT_CAKE_SLICE);
-        player.getHungerManager().add(state.get(STOMPED) ? 1 : 2, 0.1f);
+        player.awardStat(Stats.EAT_CAKE_SLICE);
+        player.getFoodData().eat(state.getValue(STOMPED) ? 1 : 2, 0.1f);
 
-        world.emitGameEvent(player, GameEvent.EAT, pos);
-        SoundEmitter.playSoundAt(player, USounds.Vanilla.ENTITY_GENERIC_EAT.value(), 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
-        if (world instanceof World ww && (!player.canConsume(false) || world.getRandom().nextInt(10) == 0)) {
+        world.gameEvent(player, GameEvent.EAT, pos);
+        SoundEmitter.playSoundAt(player, USounds.Vanilla.GENERIC_EAT.value(), 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
+        if (world instanceof Level ww && (!player.canEat(false) || world.getRandom().nextInt(10) == 0)) {
             AwaitTickQueue.scheduleTask(ww, w -> {
-                SoundEmitter.playSoundAt(player, USounds.Vanilla.ENTITY_PLAYER_BURP, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
+                SoundEmitter.playSoundAt(player, USounds.Vanilla.PLAYER_BURP, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
             }, 5);
         }
 
         removeSlice(world, pos, state, player);
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
-    protected void removeSlice(WorldAccess world, BlockPos pos, BlockState state, PlayerEntity player) {
-        int bites = state.get(BITES);
+    protected void removeSlice(LevelAccessor world, BlockPos pos, BlockState state, Player player) {
+        int bites = state.getValue(BITES);
 
         if (bites < MAX_BITES) {
-            world.setBlockState(pos, state.with(BITES, bites + 1), Block.NOTIFY_ALL);
+            world.setBlock(pos, state.setValue(BITES, bites + 1), Block.UPDATE_ALL);
         } else {
             world.removeBlock(pos, false);
-            world.emitGameEvent(player, GameEvent.BLOCK_DESTROY, pos);
+            world.gameEvent(player, GameEvent.BLOCK_DESTROY, pos);
         }
     }
 
     @Override
-    public ItemStack getPickStack(WorldView world, BlockPos pos, BlockState state, boolean includeData) {
-        return (state.get(STOMPED) ? stompedItem : normalItem).asItem().getDefaultStack();
+    public ItemStack getCloneItemStack(LevelReader world, BlockPos pos, BlockState state, boolean includeData) {
+        return (state.getValue(STOMPED) ? stompedItem : normalItem).asItem().getDefaultInstance();
     }
 
     @Override
-    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (state.get(STOMPED)) {
-            Vec3d center = Vec3d.ofCenter(pos);
-            world.addParticleClient(ParticleTypes.SNEEZE,
-                    random.nextTriangular(center.getX(), 0.9),
-                    random.nextTriangular(center.getY(), 0.9),
-                    random.nextTriangular(center.getZ(), 0.9),
+    public void animateTick(BlockState state, Level world, BlockPos pos, RandomSource random) {
+        if (state.getValue(STOMPED)) {
+            Vec3 center = Vec3.atCenterOf(pos);
+            world.addParticle(ParticleTypes.SNEEZE,
+                    random.triangle(center.x(), 0.9),
+                    random.triangle(center.y(), 0.9),
+                    random.triangle(center.z(), 0.9),
                     0,
                     0,
                     0
             );
         } else {
-            if (world.random.nextInt(10) == 0) {
-                Vec3d center = Vec3d.ofCenter(pos);
-                world.addParticleClient(ParticleTypes.SNEEZE,
-                        random.nextTriangular(center.getX(), 0.2),
-                        random.nextTriangular(center.getY(), 0.2),
-                        random.nextTriangular(center.getZ(), 0.2),
+            if (world.getRandom().nextInt(10) == 0) {
+                Vec3 center = Vec3.atCenterOf(pos);
+                world.addParticle(ParticleTypes.SNEEZE,
+                        random.triangle(center.x(), 0.2),
+                        random.triangle(center.y(), 0.2),
+                        random.triangle(center.z(), 0.2),
                         0,
                         0.01F,
                         0
@@ -171,62 +177,62 @@ public class PieBlock extends Block implements Waterloggable {
     }
 
     @Override
-    public void onSteppedOn(World world, BlockPos pos, BlockState state, Entity entity) {
-        if (!state.get(STOMPED) && entity instanceof LivingEntity && !entity.bypassesSteppingEffects()) {
-            world.setBlockState(pos, state.cycle(STOMPED));
-            world.syncWorldEvent(WorldEvents.BLOCK_BROKEN, pos, Block.getRawIdFromState(state));
-            world.emitGameEvent(UGameEvents.PIE_STOMP, pos, GameEvent.Emitter.of(entity, state));
+    public void stepOn(Level world, BlockPos pos, BlockState state, Entity entity) {
+        if (!state.getValue(STOMPED) && entity instanceof LivingEntity && !entity.isSteppingCarefully()) {
+            world.setBlockAndUpdate(pos, state.cycle(STOMPED));
+            world.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, pos, Block.getId(state));
+            world.gameEvent(UGameEvents.PIE_STOMP, pos, GameEvent.Context.of(entity, state));
         }
     }
 
     @Override
-    protected BlockState getStateForNeighborUpdate(BlockState state, WorldView world, ScheduledTickView tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, Random random) {
-        if (direction == Direction.DOWN && !state.canPlaceAt(world, pos)) {
-            return Blocks.AIR.getDefaultState();
+    protected BlockState updateShape(BlockState state, LevelReader world, ScheduledTickAccess tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        if (direction == Direction.DOWN && !state.canSurvive(world, pos)) {
+            return Blocks.AIR.defaultBlockState();
         }
-        if (state.get(WATERLOGGED)) {
-            tickView.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+        if (state.getValue(WATERLOGGED)) {
+            tickView.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(world));
         }
-        return super.getStateForNeighborUpdate(state, world, tickView, pos, direction, neighborPos, neighborState, random);
+        return super.updateShape(state, world, tickView, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
-    protected boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        return world.getBlockState(pos.down()).isSideSolidFullSquare(world, pos, Direction.UP);
+    protected boolean canSurvive(BlockState state, LevelReader world, BlockPos pos) {
+        return world.getBlockState(pos.below()).isFaceSturdy(world, pos, Direction.UP);
     }
 
     @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return super.getDefaultState()
-                .with(WATERLOGGED, ctx.getWorld().getFluidState(ctx.getBlockPos()).getFluid() == Fluids.WATER)
-                .with(STOMPED, ctx.getStack().isOf(UItems.APPLE_PIE_HOOF));
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        return super.defaultBlockState()
+                .setValue(WATERLOGGED, ctx.getLevel().getFluidState(ctx.getClickedPos()).getType() == Fluids.WATER)
+                .setValue(STOMPED, ctx.getItemInHand().is(UItems.APPLE_PIE_HOOF));
     }
 
     @Override
     protected FluidState getFluidState(BlockState state) {
-        if (state.get(WATERLOGGED)) {
-            return Fluids.WATER.getStill(false);
+        if (state.getValue(WATERLOGGED)) {
+            return Fluids.WATER.getSource(false);
         }
         return super.getFluidState(state);
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(BITES, STOMPED, WATERLOGGED);
     }
 
     @Override
-    protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
-        return (5 - state.get(BITES)) * 2;
+    protected int getAnalogOutputSignal(BlockState state, Level world, BlockPos pos, net.minecraft.core.Direction direction) {
+        return (5 - state.getValue(BITES)) * 2;
     }
 
     @Override
-    protected boolean hasComparatorOutput(BlockState state) {
+    protected boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected boolean canPathfindThrough(BlockState state, NavigationType type) {
+    protected boolean isPathfindable(BlockState state, PathComputationType type) {
         return false;
     }
 }

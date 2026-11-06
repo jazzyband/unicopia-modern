@@ -1,0 +1,72 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unicopia:clam_shell"
+        }
+      ],
+      "modifier": [
+        {
+          "type": "minecraft:set_count",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:clam_shell",
+            "state": {
+              "count": "1"
+            }
+          },
+          "count": 1
+        },
+        {
+          "type": "minecraft:set_count",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:clam_shell",
+            "state": {
+              "count": "2"
+            }
+          },
+          "count": 2
+        },
+        {
+          "type": "minecraft:set_count",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:clam_shell",
+            "state": {
+              "count": "3"
+            }
+          },
+          "count": 3
+        },
+        {
+          "type": "minecraft:set_count",
+          "condition": {
+            "type": "minecraft:match_block",
+            "blocks": "unicopia:clam_shell",
+            "state": {
+              "count": "4"
+            }
+          },
+          "count": 4
+        },
+        {
+          "type": "minecraft:apply_bonus",
+          "enchantment": "minecraft:fortune",
+          "formula": "minecraft:binomial_with_bonus_count",
+          "parameters": {
+            "extra": 0,
+            "probability": 0.8714286
+          }
+        },
+        {
+          "type": "minecraft:explosion_decay"
+        }
+      ],
+      "rolls": 1
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "cases": [
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/giant_balloon"
+        },
+        "when": "none"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/luna_giant_balloon"
+        },
+        "when": "luna"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/dawn_giant_balloon"
+        },
+        "when": "dawn"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/equality_giant_balloon"
+        },
+        "when": "equality"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/storm_giant_balloon"
+        },
+        "when": "storm"
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "unicopia:item/tale_giant_balloon"
+        },
+        "when": "tale"
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "unicopia:item/giant_balloon"
+    },
+    "property": "unicopia:balloon_design"
+  }
+}

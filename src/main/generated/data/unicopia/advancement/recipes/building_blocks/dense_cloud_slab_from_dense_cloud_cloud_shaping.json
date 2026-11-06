@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_dense_cloud": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:dense_cloud"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:dense_cloud_slab_from_dense_cloud_cloud_shaping"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_dense_cloud"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:dense_cloud_slab_from_dense_cloud_cloud_shaping"
+    ]
+  }
+}

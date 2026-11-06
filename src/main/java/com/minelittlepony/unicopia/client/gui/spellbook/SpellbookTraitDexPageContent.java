@@ -14,26 +14,27 @@ import com.minelittlepony.common.client.gui.style.Style;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.*;
 import com.minelittlepony.unicopia.client.TextHelper;
-import com.minelittlepony.unicopia.client.gui.MagicText;
 import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookChapterList.Chapter;
 import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookScreen.ImageButton;
 import com.minelittlepony.unicopia.container.SpellbookState;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.group.ItemGroupRegistry;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumers;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.*;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
+import org.joml.Matrix3x2fStack;
+import com.mojang.blaze3d.vertex.SheetedDecalTextureGenerator;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public class SpellbookTraitDexPageContent implements SpellbookChapterList.Content, SpellbookScreen.RecipesChangedListener {
     private final Trait[] traits = Trait.values();
@@ -51,15 +52,13 @@ public class SpellbookTraitDexPageContent implements SpellbookChapterList.Conten
     }
 
     @Override
-    public void draw(DrawContext context, int mouseX, int mouseY, IViewRoot container) {
-        var textRenderer = MinecraftClient.getInstance().textRenderer;
-        Text pageText = Text.translatable("%s/%s", state.getOffset() + 1, (int)Math.ceil(traits.length / 2F));
-        context.drawText(textRenderer, pageText, (int)(337 - textRenderer.getWidth(pageText) / 2F), 190, MagicText.getColor(), false);
+    public void draw(GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
+
     }
 
     @Override
     public Identifier getIcon(Chapter chapter, Identifier icon) {
-        if (Pony.of(MinecraftClient.getInstance().player).getDiscoveries().isUnread()) {
+        if (Pony.of(Minecraft.getInstance().player).getDiscoveries().isUnread()) {
             return unreadIcon.apply(chapter.id());
         }
         return icon;
@@ -90,8 +89,8 @@ public class SpellbookTraitDexPageContent implements SpellbookChapterList.Conten
         leftPage.verticalScrollbar.scrollBy(leftPage.verticalScrollbar.getScrubber().getPosition());
         rightPage.verticalScrollbar.scrollBy(rightPage.verticalScrollbar.getScrubber().getPosition());
 
-        GameGui.playSound(USounds.Vanilla.ITEM_BOOK_PAGE_TURN);
-        screen.clearAndInit();
+        GameGui.playSound(USounds.Vanilla.BOOK_PAGE_TURN);
+        screen.rebuildWidgets();
     }
 
     @Override
@@ -125,18 +124,17 @@ public class SpellbookTraitDexPageContent implements SpellbookChapterList.Conten
             init(() -> {
                 Trait trait = traits[page];
 
-                boolean known = Pony.of(MinecraftClient.getInstance().player).getDiscoveries().isKnown(trait);
+                boolean known = Pony.of(Minecraft.getInstance().player).getDiscoveries().isKnown(trait);
 
                 addButton(new TraitButton(width / 2 - 8, 8, trait));
                 addButton(new Label(width / 2, 26).setCentered())
                     .getStyle()
-                        .setColor(Colors.BLACK)
-                        .setText(known ? Text.translatable("gui.unicopia.trait.label",
-                                Text.translatable("trait." + trait.getId().getNamespace() + "." + trait.getId().getPath() + ".name")
-                ) : Text.literal("???"));
+                        .setText(known ? Component.translatable("gui.unicopia.trait.label",
+                                Component.translatable("trait." + trait.getId().getNamespace() + "." + trait.getId().getPath() + ".name")
+                ) : Component.literal("???"));
                 IngredientTree tree = new IngredientTree(0, 50, width + 18).noLabels();
 
-                List<Item> knownItems = Pony.of(MinecraftClient.getInstance().player).getDiscoveries().getKnownItems(trait).toList();
+                List<Item> knownItems = Pony.of(Minecraft.getInstance().player).getDiscoveries().getKnownItems(trait).toList();
                 SpellTraits.getItems(trait)
                     .sorted(Comparator.comparing(u -> knownItems.contains(u) ? 0 : 1))
                     .forEach(i -> {
@@ -149,38 +147,38 @@ public class SpellbookTraitDexPageContent implements SpellbookChapterList.Conten
                     });
                 tree.build(this);
             });
-            screen.addDrawable(this);
+            screen.addRenderableOnly(this);
             screen.getChildElements().add(this);
         }
 
 
         @Override
-        public void drawOverlays(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-            MatrixStack matrices = context.getMatrices();
-            matrices.push();
-            matrices.translate(margin.left, margin.top, 0);
-            matrices.translate(-2, -2, 200);
+        public void drawOverlays(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+            Matrix3x2fStack matrices = context.pose();
+            matrices.pushMatrix();
+            matrices.translate(margin.left, margin.top);
+            matrices.translate(-2, -2);
             int tileSize = 25;
 
             final int bottom = height - tileSize + 4;
             final int right = width - tileSize + 9;
 
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, 0, 0, 405, 62, tileSize, tileSize, 512, 256);
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, 0, bottom, 405, 72, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, 0, 0, 405, 62, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, 0, bottom, 405, 72, tileSize, tileSize, 512, 256);
 
             for (int i = tileSize; i < right; i += tileSize) {
-                context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, i, 0, 415, 62, tileSize, tileSize, 512, 256);
-                context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, i, bottom, 415, 72, tileSize, tileSize, 512, 256);
+                context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, i, 0, 415, 62, tileSize, tileSize, 512, 256);
+                context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, i, bottom, 415, 72, tileSize, tileSize, 512, 256);
             }
 
             for (int i = tileSize; i < bottom; i += tileSize) {
-                context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, 0, i, 405, 67, tileSize, tileSize, 512, 256);
-                context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, right, i, 425, 67, tileSize, tileSize, 512, 256);
+                context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, 0, i, 405, 67, tileSize, tileSize, 512, 256);
+                context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, right, i, 425, 67, tileSize, tileSize, 512, 256);
             }
 
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, right, 0, 425, 62, tileSize, tileSize, 512, 256);
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, right, bottom, 425, 72, tileSize, tileSize, 512, 256);
-            matrices.pop();
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, right, 0, 425, 62, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, right, bottom, 425, 72, tileSize, tileSize, 512, 256);
+            matrices.popMatrix();
 
             if (this == rightPage) {
                 leftPage.drawDelayed(context, mouseX, mouseY, 0);
@@ -188,7 +186,7 @@ public class SpellbookTraitDexPageContent implements SpellbookChapterList.Conten
             }
         }
 
-        public void drawDelayed(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        public void drawDelayed(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
             super.drawOverlays(context, mouseX, mouseY, tickDelta);
         }
     }
@@ -208,66 +206,34 @@ public class SpellbookTraitDexPageContent implements SpellbookChapterList.Conten
             hiddenStyle
                 .setTooltip(Tooltip.of(TextHelper.wrap(trait.getObfuscatedTooltip(), 200).toList()));
 
-            onClick(sender -> Pony.of(MinecraftClient.getInstance().player).getDiscoveries().markRead(trait));
+            onClick(sender -> Pony.of(Minecraft.getInstance().player).getDiscoveries().markRead(trait));
         }
 
-        private void renderIcon(DrawContext context, int x, int y, int mouseX, int mouseY, float partialTicks) {
-            float amplify = Math.abs(MathHelper.sin((MinecraftClient.getInstance().player.age + partialTicks) / 80F) * 8);
-            float x1 = 0;
-            float x2 = 16 + amplify * 2;
-            float y1 = 0;
-            float y2 = 16 + amplify * 2;
-            float z = 0;
-
-            context.getMatrices().push();
-            context.getMatrices().translate(x - amplify, y - amplify, 0);
-
-            Matrix4f posMat = context.getMatrices().peek().getPositionMatrix();
-            Vector3f normal = context.getMatrices().peek().transformNormal(-1, -1, -1, new Vector3f());
-
-            context.getMatrices().pop();
-
-            Vector4f vec = new Vector4f();
-
-            context.draw();
-            context.draw(vertices -> {
-                context.getMatrices().peek();
-                VertexConsumer buffer = VertexConsumers.union(
-                        vertices.getBuffer(RenderLayer.getArmorEntityGlint()),
-                        vertices.getBuffer(RenderLayer.getArmorCutoutNoCull(trait.getSprite()))
-                );
-
-                int color = Colors.WHITE;
-                posMat.transform(vec.set(x1, y1, z));
-                buffer.vertex(vec.x(), vec.y(), vec.z(), color, 0, 0, OverlayTexture.DEFAULT_UV, LightmapTextureManager.MAX_LIGHT_COORDINATE, normal.x(), normal.y(), normal.z());
-                posMat.transform(vec.set(x1, y2, z));
-                buffer.vertex(vec.x(), vec.y(), vec.z(), color, 0, 1, OverlayTexture.DEFAULT_UV, LightmapTextureManager.MAX_LIGHT_COORDINATE, normal.x(), normal.y(), normal.z());
-                posMat.transform(vec.set(x2, y2, z));
-                buffer.vertex(vec.x(), vec.y(), vec.z(), color, 1, 1, OverlayTexture.DEFAULT_UV, LightmapTextureManager.MAX_LIGHT_COORDINATE, normal.x(), normal.y(), normal.z());
-                posMat.transform(vec.set(x2, y1, z));
-                buffer.vertex(vec.x(), vec.y(), vec.z(), color, 1, 0, OverlayTexture.DEFAULT_UV, LightmapTextureManager.MAX_LIGHT_COORDINATE, normal.x(), normal.y(), normal.z());
-            });
+        private void renderIcon(GuiGraphicsExtractor context, int x, int y, int mouseX, int mouseY, float partialTicks) {
+            float amplify = Math.abs(Mth.sin((Minecraft.getInstance().player.tickCount + partialTicks) / 80F) * 8);
+            int size = Math.round(16 + amplify * 2);
+            context.blit(RenderPipelines.GUI_TEXTURED, trait.getSprite(), Math.round(x - amplify), Math.round(y - amplify), 0, 0, size, size, 16, 16);
         }
 
         @Override
-        public void renderWidget(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-            hovered = isMouseOver(mouseX, mouseY);
-            TraitDiscovery discoveries = Pony.of(MinecraftClient.getInstance().player).getDiscoveries();
+        public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+            isHovered = isMouseOver(mouseX, mouseY);
+            TraitDiscovery discoveries = Pony.of(Minecraft.getInstance().player).getDiscoveries();
             boolean known = discoveries.isKnown(trait);
             setStyle(known ? revealedStyle : hiddenStyle);
 
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, getX() - 2, getY() - 8, 204, 219, 22, 32, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, getX() - 2, getY() - 8, 204, 219, 22, 32, 512, 256);
 
             if (!known) {
-                context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, getX() - 2, getY() - 1, 74, 223, 18, 18, 512, 256);
+                context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, getX() - 2, getY() - 1, 74, 223, 18, 18, 512, 256);
             }
 
             if (discoveries.isUnread(trait)) {
-                context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, getX() - 8, getY() - 8, 225, 219, 35, 32, 512, 256);
+                context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, getX() - 8, getY() - 8, 225, 219, 35, 32, 512, 256);
             }
 
-            super.renderWidget(context, mouseX, mouseY, tickDelta);
-            hovered &= active;
+            super.extractContents(context, mouseX, mouseY, tickDelta);
+            isHovered &= active;
         }
 
         @Override

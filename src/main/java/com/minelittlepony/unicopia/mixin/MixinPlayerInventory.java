@@ -8,12 +8,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.minelittlepony.unicopia.advancement.UCriteria;
 import com.minelittlepony.unicopia.item.enchantment.HeartboundEnchantmentUtil;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
 
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.Inventory;
-
-@Mixin(PlayerInventory.class)
-abstract class MixinPlayerInventory implements Inventory {
+@Mixin(Inventory.class)
+abstract class MixinPlayerInventory implements Container {
     @Nullable
     private HeartboundEnchantmentUtil.InventorySnapshot inventorySnapshot;
 
@@ -21,7 +20,7 @@ abstract class MixinPlayerInventory implements Inventory {
     public void beforeDropAll(CallbackInfo info) {
         inventorySnapshot = HeartboundEnchantmentUtil.createSnapshot(this);
         if (!inventorySnapshot.empty()) {
-            UCriteria.USE_SOULMATE.trigger(((PlayerInventory)(Object)this).player);
+            UCriteria.USE_SOULMATE.trigger(((Inventory)(Object)this).player);
         }
     }
 

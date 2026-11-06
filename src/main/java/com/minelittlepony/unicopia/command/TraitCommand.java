@@ -6,29 +6,28 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.*;
-import net.minecraft.util.Hand;
-import net.minecraft.world.GameRules;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.gamerules.GameRules;
 
 class TraitCommand {
-    static LiteralArgumentBuilder<ServerCommandSource> create() {
-        return CommandManager.literal("trait").requires(s -> s.hasPermissionLevel(2))
-            .then(CommandManager.literal("add")
-                    .then(CommandManager.argument("trait", Trait.argument())
-                    .then(CommandManager.argument("value", FloatArgumentType.floatArg()).executes(source -> add(
+    static LiteralArgumentBuilder<CommandSourceStack> create() {
+        return Commands.literal("trait").requires(s -> s.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
+            .then(Commands.literal("add")
+                    .then(Commands.argument("trait", Trait.argument())
+                    .then(Commands.argument("value", FloatArgumentType.floatArg()).executes(source -> add(
                             source.getSource(),
                             source.getSource().getPlayer(),
                             source.getArgument("trait", Trait.class),
                             FloatArgumentType.getFloat(source, "value")
                     )))
             ))
-            .then(CommandManager.literal("remove")
-                    .then(CommandManager.argument("trait", Trait.argument()).executes(source -> remove(
+            .then(Commands.literal("remove")
+                    .then(Commands.argument("trait", Trait.argument()).executes(source -> remove(
                             source.getSource(),
                             source.getSource().getPlayer(),
                             source.getArgument("trait", Trait.class)
@@ -36,42 +35,42 @@ class TraitCommand {
             ));
     }
 
-    static int add(ServerCommandSource source, PlayerEntity player, Trait trait, float amount) throws CommandSyntaxException {
+    static int add(CommandSourceStack source, Player player, Trait trait, float amount) throws CommandSyntaxException {
         if (trait == null) {
-            source.sendError(Text.literal("Invalid trait"));
+            source.sendFailure(Component.literal("Invalid trait"));
             return 0;
         }
 
-        ItemStack stack = player.getMainHandStack();
+        ItemStack stack = player.getMainHandItem();
         if (stack.isEmpty()) {
-            source.sendError(Text.literal("That trait cannot be added to the current item"));
+            source.sendFailure(Component.literal("That trait cannot be added to the current item"));
             return 0;
         }
 
-        player.setStackInHand(Hand.MAIN_HAND, SpellTraits.union(SpellTraits.of(stack), SpellTraits.of(trait, amount)).applyTo(stack));
+        player.setItemInHand(InteractionHand.MAIN_HAND, SpellTraits.union(SpellTraits.of(stack), SpellTraits.of(trait, amount)).applyTo(stack));
 
         return 0;
     }
 
-    static int remove(ServerCommandSource source, PlayerEntity player, Trait trait) throws CommandSyntaxException {
+    static int remove(CommandSourceStack source, Player player, Trait trait) throws CommandSyntaxException {
         if (trait == null) {
-            source.sendError(Text.literal("Invalid trait"));
+            source.sendFailure(Component.literal("Invalid trait"));
             return 0;
         }
 
-        ItemStack stack = player.getMainHandStack();
+        ItemStack stack = player.getMainHandItem();
 
         SpellTraits existing = SpellTraits.of(stack);
         if (existing.get(trait) == 0) {
             return 0;
         }
 
-        player.setStackInHand(Hand.MAIN_HAND, existing.map((t, v) -> t == trait ? 0 : v).applyTo(stack));
+        player.setItemInHand(InteractionHand.MAIN_HAND, existing.map((t, v) -> t == trait ? 0 : v).applyTo(stack));
 
         return 0;
     }
 
-    static int get(ServerCommandSource source, PlayerEntity player, Trait trait, float amount) throws CommandSyntaxException {
+    static int get(CommandSourceStack source, Player player, Trait trait, float amount) throws CommandSyntaxException {
         String translationKey = "commands.gravity.get";
 
         Pony iplayer = Pony.of(player);
@@ -79,11 +78,11 @@ class TraitCommand {
         float gravity = iplayer.getPhysics().getGravityModifier();
 
         if (source.getPlayer() == player) {
-            if (player.getServer().getGameRules().getBoolean(GameRules.SEND_COMMAND_FEEDBACK)) {
-                player.sendMessage(Text.translatable(translationKey, gravity), false);
+            if (player.level().getServer().getGameRules().get(GameRules.SEND_COMMAND_FEEDBACK)) {
+                player.sendSystemMessage(Component.translatable(translationKey, gravity));
             }
         } else {
-            source.sendFeedback(() -> Text.translatable(translationKey + ".other", player.getName(), gravity), true);
+            source.sendSuccess(() -> Component.translatable(translationKey + ".other", player.getName(), gravity), true);
         }
 
         return 0;

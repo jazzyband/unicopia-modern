@@ -1,0 +1,34 @@
+{
+  "parent": "unicopia:enchanting/experimental",
+  "criteria": {
+    "use_consumption": {
+      "conditions": {
+        "event": "use_consumption",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.xp_miner.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "minecraft:netherite_pickaxe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.xp_miner.title"
+    }
+  },
+  "requirements": [
+    [
+      "use_consumption"
+    ]
+  ],
+  "rewards": {
+    "experience": 1200
+  },
+  "sends_telemetry_event": true
+}

@@ -1,19 +1,19 @@
 package com.minelittlepony.unicopia.client;
 
 import java.util.SortedSet;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.BlockDestructionProgress;
 import com.google.common.collect.Sets;
 import com.minelittlepony.unicopia.server.world.BlockDestructionManager;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.minecraft.entity.player.BlockBreakingInfo;
-import net.minecraft.util.math.BlockPos;
 
 public class ClientBlockDestructionManager {
 
     private final Long2ObjectMap<Destruction> destructions = new Long2ObjectOpenHashMap<>();
 
-    private final Long2ObjectMap<SortedSet<BlockBreakingInfo>> combined = new Long2ObjectOpenHashMap<>();
+    private final Long2ObjectMap<SortedSet<BlockDestructionProgress>> combined = new Long2ObjectOpenHashMap<>();
 
     private final Object locker = new Object();
 
@@ -27,7 +27,7 @@ public class ClientBlockDestructionManager {
         }
     }
 
-    public void tick(Long2ObjectMap<SortedSet<BlockBreakingInfo>> vanilla) {
+    public void tick(Long2ObjectMap<SortedSet<BlockDestructionProgress>> vanilla) {
         synchronized (locker) {
             destructions.long2ObjectEntrySet().removeIf(entry -> entry.getValue().tick());
 
@@ -35,33 +35,33 @@ public class ClientBlockDestructionManager {
 
             if (!destructions.isEmpty()) {
                 destructions.forEach((pos, value) -> {
-                    combined.computeIfAbsent(pos.longValue(), p -> Sets.newTreeSet()).add(value.info);
+                    combined.computeIfAbsent(pos, p -> Sets.newTreeSet()).add(value.info);
                 });
                 vanilla.forEach((pos, value) -> {
-                    combined.computeIfAbsent(pos.longValue(), p -> Sets.newTreeSet()).addAll(value);
+                    combined.computeIfAbsent(pos, p -> Sets.newTreeSet()).addAll(value);
                 });
             }
         }
     }
 
-    public Long2ObjectMap<SortedSet<BlockBreakingInfo>> getCombinedDestructions(Long2ObjectMap<SortedSet<BlockBreakingInfo>> vanilla) {
+    public Long2ObjectMap<SortedSet<BlockDestructionProgress>> getCombinedDestructions(Long2ObjectMap<SortedSet<BlockDestructionProgress>> vanilla) {
         return destructions.isEmpty() ? vanilla : combined;
     }
 
     private class Destruction {
         int age = 50;
 
-        BlockBreakingInfo info;
+        BlockDestructionProgress info;
 
         Destruction(long pos) {
-            this.info = new BlockBreakingInfo(0, BlockPos.fromLong(pos));
+            this.info = new BlockDestructionProgress(0, BlockPos.of(pos));
         }
 
         boolean tick() {
             if (age-- > 0) {
                 return false;
             }
-            int amount = info.getStage();
+            int amount = info.getProgress();
 
             if (amount >= 0) {
                 amount--;
@@ -72,13 +72,12 @@ public class ClientBlockDestructionManager {
 
         void set(float amount) {
             this.age = 50;
-            info.setStage(amount >= 0 && amount < BlockDestructionManager.MAX_DAMAGE ? (int)amount : BlockDestructionManager.UNSET_DAMAGE);
+            info.setProgress(amount >= 0 && amount < BlockDestructionManager.MAX_DAMAGE ? (int)amount : BlockDestructionManager.UNSET_DAMAGE);
         }
     }
 
     public interface Source {
         ClientBlockDestructionManager getDestructionManager();
 
-        int getTicks();
     }
 }

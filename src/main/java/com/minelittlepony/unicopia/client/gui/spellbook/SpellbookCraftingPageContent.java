@@ -8,16 +8,16 @@ import com.minelittlepony.unicopia.client.gui.DrawableUtil;
 import com.minelittlepony.unicopia.client.gui.MagicText;
 import com.minelittlepony.unicopia.container.SpellbookState;
 import com.minelittlepony.unicopia.recipe.URecipeBookCategories;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
+import org.joml.Matrix3x2fStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 public class SpellbookCraftingPageContent extends ScrollContainer implements SpellbookChapterList.Content, SpellbookScreen.RecipesChangedListener {
-    public static final Text INVENTORY_TITLE = Text.translatable("gui.unicopia.spellbook.page.inventory");
-    public static final Text RECIPES_TITLE = Text.translatable("gui.unicopia.spellbook.page.recipes");
+    public static final Component INVENTORY_TITLE = Component.translatable("gui.unicopia.spellbook.page.inventory");
+    public static final Component RECIPES_TITLE = Component.translatable("gui.unicopia.spellbook.page.recipes");
     public static final int TOTAL_PAGES = 2;
 
     private final SpellbookScreen screen;
@@ -37,15 +37,16 @@ public class SpellbookCraftingPageContent extends ScrollContainer implements Spe
             state.swap(incr, TOTAL_PAGES);
         });
         initContents();
-        screen.addDrawable(this);
+        screen.addRenderableOnly(this);
+        screen.getChildElements().add(this);
     }
 
     @Override
-    public void draw(DrawContext context, int mouseX, int mouseY, IViewRoot container) {
+    public void draw(GuiGraphicsExtractor context, int mouseX, int mouseY, IViewRoot container) {
         DrawableUtil.drawScaledText(context, state.getOffset() == 0 ? INVENTORY_TITLE : RECIPES_TITLE, screen.getFrameBounds().left + screen.getFrameBounds().width / 2 + 20, SpellbookScreen.TITLE_Y, 1.3F, MagicText.getColor());
 
-        Text pageText = Text.translatable("%s/%s", state.getOffset() + 1, TOTAL_PAGES);
-        context.drawText(textRenderer, pageText, (int)(337 - textRenderer.getWidth(pageText) / 2F), 190, MagicText.getColor(), false);
+        Component pageText = Component.translatable("%s/%s", state.getOffset() + 1, TOTAL_PAGES);
+        context.text(font, pageText, (int)(337 - font.width(pageText) / 2F), 190, MagicText.getColor(), false);
     }
 
     @Override
@@ -63,15 +64,15 @@ public class SpellbookCraftingPageContent extends ScrollContainer implements Spe
 
         if (state.getOffset() == 1) {
             int top = 0;
-            for (var resultSet : client.player.getRecipeBook().getResultsForCategory(URecipeBookCategories.SPELLBOOK)) {
-                for (var recipeDisplay : resultSet.getAllRecipes()) {
+            for (var resultSet : minecraft.player.getRecipeBook().getCollection(URecipeBookCategories.SPELLBOOK)) {
+                for (var recipeDisplay : resultSet.getRecipes()) {
                     IngredientTree tree = new IngredientTree(0, top, width - verticalScrollbar.getBounds().width + 2);
                     ((SpellbookRecipeDisplay)recipeDisplay.display()).buildCraftingTree(tree);
                     top += tree.build(this);
                 }
             }
             if (top == 0) {
-                addButton(new Label(width / 2, 0).setCentered()).getStyle().setColor(Colors.GRAY).setText("gui.unicopia.spellbook.page.recipes.empty");
+                addButton(new Label(width / 2, 0).setCentered()).getStyle().setText("gui.unicopia.spellbook.page.recipes.empty");
             }
         }
     }
@@ -88,32 +89,32 @@ public class SpellbookCraftingPageContent extends ScrollContainer implements Spe
     }
 
     @Override
-    public void drawOverlays(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.translate(margin.left, margin.top, 0);
-        matrices.translate(-2, -2, 200);
+    public void drawOverlays(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+        Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate(margin.left, margin.top);
+        matrices.translate(-2, -2);
         int tileSize = 25;
 
         final int bottom = height - tileSize + 4;
         final int right = width - tileSize + 9;
 
-        context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, 0, 0, 405, 62, tileSize, tileSize, 512, 256);
-        context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, right, 0, 425, 62, tileSize, tileSize, 512, 256);
+        context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, 0, 0, 405, 62, tileSize, tileSize, 512, 256);
+        context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, right, 0, 425, 62, tileSize, tileSize, 512, 256);
 
-        context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, 0, bottom, 405, 72, tileSize, tileSize, 512, 256);
-        context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, right, bottom, 425, 72, tileSize, tileSize, 512, 256);
+        context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, 0, bottom, 405, 72, tileSize, tileSize, 512, 256);
+        context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, right, bottom, 425, 72, tileSize, tileSize, 512, 256);
 
         for (int i = tileSize; i < right; i += tileSize) {
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, i, 0, 415, 62, tileSize, tileSize, 512, 256);
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, i, bottom, 415, 72, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, i, 0, 415, 62, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, i, bottom, 415, 72, tileSize, tileSize, 512, 256);
         }
 
         for (int i = tileSize; i < bottom; i += tileSize) {
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, 0, i, 405, 67, tileSize, tileSize, 512, 256);
-            context.drawTexture(RenderLayer::getGuiTextured, SpellbookScreen.TEXTURE, right, i, 425, 67, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, 0, i, 405, 67, tileSize, tileSize, 512, 256);
+            context.blit(RenderPipelines.GUI_TEXTURED, SpellbookScreen.TEXTURE, right, i, 425, 67, tileSize, tileSize, 512, 256);
         }
-        matrices.pop();
+        matrices.popMatrix();
         screen.drawSlots(context, mouseX, mouseY, tickDelta);
 
         super.drawOverlays(context, mouseX, mouseY, tickDelta);

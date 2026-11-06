@@ -1,22 +1,22 @@
 package com.minelittlepony.unicopia.item.component;
 
 import java.util.Optional;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.item.ItemStackDuck;
-import net.minecraft.component.ComponentType;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemStack;
 
 public interface TransientComponentMap {
     TransientComponentMap EMPTY = new TransientComponentMap() {
         @Override
-        public <T> @Nullable T get(ComponentType<? extends T> type, TransientComponentMap map, @Nullable T upstreamValue) {
+        public <T> @Nullable T get(DataComponentType<? extends T> type, TransientComponentMap map, @Nullable T upstreamValue) {
             return upstreamValue;
         }
 
         @Override
-        public <T> boolean contains(ComponentType<? extends T> type, TransientComponentMap map, boolean parentContains) {
+        public <T> boolean contains(DataComponentType<? extends T> type, TransientComponentMap map, boolean parentContains) {
             return parentContains;
         }
     };
@@ -32,22 +32,22 @@ public interface TransientComponentMap {
     default void setCarrier(@Nullable Entity carrier) {
     }
 
-    default <T> T get(ComponentType<? extends T> type, T upstreamValue) {
+    default <T> T get(DataComponentType<? extends T> type, T upstreamValue) {
         return get(type, this, upstreamValue);
     }
 
-    default <T> T getOrDefault(ComponentType<? extends T> type, T upstreamValue, T fallback) {
+    default <T> T getOrDefault(DataComponentType<? extends T> type, T upstreamValue, T fallback) {
         upstreamValue = get(type, upstreamValue);
         return upstreamValue == null ? fallback : upstreamValue;
     }
 
-    default <T> boolean contains(ComponentType<? extends T> type, boolean parentContains) {
+    default <T> boolean contains(DataComponentType<? extends T> type, boolean parentContains) {
         return contains(type, this, parentContains);
     }
 
-    <T> @Nullable T get(ComponentType<? extends T> type, TransientComponentMap map, @Nullable T upstreamValue);
+    <T> @Nullable T get(DataComponentType<? extends T> type, TransientComponentMap map, @Nullable T upstreamValue);
 
-    <T> boolean contains(ComponentType<? extends T> type, TransientComponentMap map, boolean parentContains);
+    <T> boolean contains(DataComponentType<? extends T> type, TransientComponentMap map, boolean parentContains);
 
     public interface Holder {
         TransientComponentMap getTransientComponents();

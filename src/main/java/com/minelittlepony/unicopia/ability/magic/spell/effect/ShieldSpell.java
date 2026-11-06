@@ -1,7 +1,22 @@
 package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import java.util.Optional;
-
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.EyeOfEnder;
+import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
+import net.minecraft.world.entity.vehicle.boat.Boat;
+import net.minecraft.world.phys.Vec3;
 import com.minelittlepony.unicopia.Affinity;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.Unicopia;
@@ -25,23 +40,6 @@ import com.minelittlepony.unicopia.projectile.ProjectileUtil;
 import com.minelittlepony.unicopia.server.world.Ether;
 import com.minelittlepony.unicopia.util.Lerp;
 import com.minelittlepony.unicopia.util.shape.Sphere;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EyeOfEnderEntity;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.TntEntity;
-import net.minecraft.entity.Entity.RemovalReason;
-import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 
 public class ShieldSpell extends AbstractSpell {
     public static final SpellTraits DEFAULT_TRAITS = SpellTraits.builder()
@@ -87,27 +85,25 @@ public class ShieldSpell extends AbstractSpell {
     }
 
     protected void generateParticles(Caster<?> source) {
-        Vec3d origin = getOrigin(source);
+        Vec3 origin = getOrigin(source);
 
         source.spawnParticles(origin, new Sphere(true, radius.getValue()), (int)(radius.getValue() * 2), pos -> {
             int hornColor = MineLPDelegate.getInstance().getMagicColor(source.getOriginatingCaster().asEntity());
-            source.addParticle(new MagicParticleEffect(ColorHelper.lerp(0.6F, getType().getColor(), hornColor)), pos, Vec3d.ZERO);
+            source.addParticle(new MagicParticleEffect(ARGB.srgbLerp(0.6F, getType().getColor(), hornColor)), pos, Vec3.ZERO);
 
-            if (source.asWorld().random.nextInt(10) == 0 && source.asWorld().random.nextFloat() < source.getCorruption().getScaled(1)) {
-                ParticleUtils.spawnParticle(source.asWorld(), new LightningBoltParticleEffect(true, 3, 2, 0.1F, Optional.empty()), pos, Vec3d.ZERO);
+            if (source.asWorld().getRandom().nextInt(10) == 0 && source.asWorld().getRandom().nextFloat() < source.getCorruption().getScaled(1)) {
+                ParticleUtils.spawnParticle(source.asWorld(), new LightningBoltParticleEffect(true, 3, 2, 0.1F, Optional.empty()), pos, Vec3.ZERO);
             }
         });
 
-        if (!rangeMultiplier.isFinished() || !radius.isFinished()) {
+        if (source.asWorld().getRandom().nextInt(20) == 0 || !rangeMultiplier.isFinished() || !radius.isFinished()) {
             source.asEntity().playSound(USounds.SPELL_CAST_SUCCESS, 0.05F, 1.5F);
-        } else if (source.asWorld().random.nextInt(20) == 0) {
-            source.asEntity().playSound(USounds.SPELL_CAST_SUCCESS, 0.005F, 1.5F);
         }
     }
 
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
-        rangeMultiplier.update(source instanceof Pony pony && pony.asEntity().isSneaking() ? 1 : 2, 500L);
+        rangeMultiplier.update(source instanceof Pony pony && pony.asEntity().isShiftKeyDown() ? 1 : 2, 500L);
         radius.update((float)getDrawDropOffRange(source), 200L);
 
         if (source.isClient()) {
@@ -136,7 +132,7 @@ public class ShieldSpell extends AbstractSpell {
 
     @Override
     public void tickDying(Caster<?> caster) {
-        rangeMultiplier.update(caster instanceof Pony pony && pony.asEntity().isSneaking() ? 1 : 2, 10L);
+        rangeMultiplier.update(caster instanceof Pony pony && pony.asEntity().isShiftKeyDown() ? 1 : 2, 10L);
         radius.update((float)getDrawDropOffRange(caster), 10L);
         prevTicksDying = ticksDying;
         if (ticksDying++ > 25) {
@@ -158,7 +154,7 @@ public class ShieldSpell extends AbstractSpell {
 
     public float getRadius(float tickDelta) {
         float base = radius.getValue();
-        float scale = 1 - MathHelper.clamp(MathHelper.lerp(tickDelta, (float)prevTicksDying, ticksDying) / 25F, 0, 1);
+        float scale = 1 - Mth.clamp(Mth.lerp(tickDelta, (float)prevTicksDying, ticksDying) / 25F, 0, 1);
         return base * scale;
     }
 
@@ -179,32 +175,32 @@ public class ShieldSpell extends AbstractSpell {
         }
 
         boolean valid = (entity instanceof LivingEntity
-                || entity instanceof TntEntity
+                || entity instanceof PrimedTnt
                 || entity instanceof FallingBlockEntity
                 || ProjectileUtil.isFlyingProjectile(entity)
-                || entity instanceof AbstractMinecartEntity)
-            && !(  entity instanceof ArmorStandEntity
-                || entity instanceof EyeOfEnderEntity
-                || entity instanceof BoatEntity
+                || entity instanceof AbstractMinecart)
+            && !(  entity instanceof ArmorStand
+                || entity instanceof EyeOfEnder
+                || entity instanceof Boat
         );
 
         if (PERMIT_PASSIVE.get(getTraits())) {
-            valid &= !(entity instanceof PassiveEntity);
+            valid &= !(entity instanceof AgeableMob);
         }
         if (PERMIT_HOSTILE.get(getTraits())) {
-            valid &= !(entity instanceof HostileEntity);
+            valid &= !(entity instanceof Monster);
         }
         if (PERMIT_PLAYER.get(getTraits())) {
-            valid &= !(entity instanceof PlayerEntity);
+            valid &= !(entity instanceof Player);
         }
         return valid;
     }
 
     protected long applyEntities(Caster<?> source) {
-        Vec3d origin = getOrigin(source);
+        Vec3 origin = getOrigin(source);
         targetSelecter.getEntities(source, radius.getValue()).forEach(i -> {
             try {
-                applyRadialEffect(source, i, i.getPos().distanceTo(origin), radius.getValue());
+                applyRadialEffect(source, i, i.position().distanceTo(origin), radius.getValue());
             } catch (Throwable e) {
                 Unicopia.LOGGER.error("Error updating radial effect", e);
             }
@@ -213,12 +209,12 @@ public class ShieldSpell extends AbstractSpell {
         return targetSelecter.getTotalDamaged();
     }
 
-    protected Vec3d getOrigin(Caster<?> source) {
+    protected Vec3 getOrigin(Caster<?> source) {
         return source.getOriginVector();
     }
 
     protected void applyRadialEffect(Caster<?> source, Entity target, double distance, double radius) {
-        Vec3d pos = getOrigin(source);
+        Vec3 pos = getOrigin(source);
 
         if (ProjectileUtil.isFlyingProjectile(target)) {
             if (!ProjectileUtil.isProjectileThrownBy(target, source.getMaster())) {

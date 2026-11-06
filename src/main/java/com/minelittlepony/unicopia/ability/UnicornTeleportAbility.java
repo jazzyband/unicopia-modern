@@ -1,7 +1,25 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.PowderSnowBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import com.minelittlepony.unicopia.Debug;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.data.Pos;
@@ -14,26 +32,6 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.util.Trace;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.LeavesBlock;
-import net.minecraft.block.PowderSnowBlock;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.World;
-
 /**
  * Unicorn teleport ability
  */
@@ -41,13 +39,13 @@ public class UnicornTeleportAbility implements Ability<Pos> {
 
     @Override
     public Identifier getIcon(Pony player) {
-        return getId().withPath(p -> "textures/gui/ability/" + p + (player.asEntity().isSneaking() ? "_far" : "_near") + ".png");
+        return getId().withPath(p -> "textures/gui/ability/" + p + (player.asEntity().isShiftKeyDown() ? "_far" : "_near") + ".png");
     }
 
     @Override
-    public Text getName(Pony player) {
-        if (player.asEntity().isSneaking()) {
-            return Text.translatable(getTranslationKey() + ".far");
+    public Component getName(Pony player) {
+        if (player.asEntity().isShiftKeyDown()) {
+            return Component.translatable(getTranslationKey() + ".far");
         }
         return Ability.super.getName(player);
     }
@@ -81,18 +79,18 @@ public class UnicornTeleportAbility implements Ability<Pos> {
 
         int maxDistance = (int)((player.asEntity().isCreative() ? 1000 : 100) + (player.getLevel().get() * 0.25F));
 
-        World w = player.asWorld();
+        Level w = player.asWorld();
 
-        Trace trace = Trace.create(player.asEntity(), maxDistance, 1, EntityPredicates.EXCEPT_SPECTATOR);
+        Trace trace = Trace.create(player.asEntity(), maxDistance, 1, EntitySelector.NO_SPECTATORS);
         return trace.getBlockOrEntityPos().map(pos -> {
             final BlockPos originalPos = pos;
 
             Direction globalUp = player.getPhysics().isGravityNegative() ? Direction.DOWN : Direction.UP;
 
             boolean originalPosHasSupport = exception(w, pos, player.asEntity());
-            boolean originalPosValid = enterable(w, pos.offset(globalUp)) && enterable(w, pos.offset(globalUp, 2));
+            boolean originalPosValid = enterable(w, pos.relative(globalUp)) && enterable(w, pos.relative(globalUp, 2));
 
-            if (w.getBlockState(pos).isOf(Blocks.POWDER_SNOW) && !PowderSnowBlock.canWalkOnPowderSnow(player.asEntity())) {
+            if (w.getBlockState(pos).is(Blocks.POWDER_SNOW) && !PowderSnowBlock.canEntityWalkOnPowderSnow(player.asEntity())) {
                 return null;
             }
 
@@ -100,22 +98,22 @@ public class UnicornTeleportAbility implements Ability<Pos> {
                 final BlockPos p = pos;
                 // offset to adjacent
                 pos = trace.getSide().map(sideHit -> {
-                    if (player.asEntity().isSneaking()) {
+                    if (player.asEntity().isShiftKeyDown()) {
                         sideHit = sideHit.getOpposite();
                     }
 
-                    return p.offset(sideHit);
+                    return p.relative(sideHit);
                 }).orElse(pos);
             }
 
             if (pos.getX() != originalPos.getX() || pos.getZ() != originalPos.getZ()) {
                 // check support
                 int steps = 0;
-                while (enterable(w, pos.offset(globalUp.getOpposite()))) {
-                    pos = pos.offset(globalUp.getOpposite());
+                while (enterable(w, pos.relative(globalUp.getOpposite()))) {
+                    pos = pos.relative(globalUp.getOpposite());
                     if (++steps > 2) {
                         if (originalPosValid) {
-                            pos = originalPos.offset(globalUp);
+                            pos = originalPos.relative(globalUp);
                             break;
                         } else {
                             return null;
@@ -125,7 +123,7 @@ public class UnicornTeleportAbility implements Ability<Pos> {
             }
 
             if ((!enterable(w, pos) && exception(w, pos, player.asEntity()))
-             || (!enterable(w, pos.offset(globalUp)) && exception(w, pos.offset(globalUp), player.asEntity()))) {
+             || (!enterable(w, pos.relative(globalUp)) && exception(w, pos.relative(globalUp), player.asEntity()))) {
                 return null;
             }
 
@@ -134,7 +132,7 @@ public class UnicornTeleportAbility implements Ability<Pos> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Pos> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Pos> getSerializer() {
         return Pos.CODEC;
     }
 
@@ -155,18 +153,18 @@ public class UnicornTeleportAbility implements Ability<Pos> {
             return false;
         }
 
-        teleportee.asWorld().playSound(null, teleportee.getOrigin(), USounds.ENTITY_PLAYER_UNICORN_TELEPORT, SoundCategory.PLAYERS, 1, 1);
+        teleportee.asWorld().playSound(null, teleportee.getOrigin(), USounds.ENTITY_PLAYER_UNICORN_TELEPORT, SoundSource.PLAYERS, 1, 1);
 
         double distance = destination.distanceTo(teleportee) / 10;
 
-        if (participant.hasVehicle()) {
+        if (participant.isPassenger()) {
             Entity mount = participant.getVehicle();
 
             participant.stopRiding();
             Living.transmitPassengers(mount);
         }
 
-        Vec3d offset = teleportee.getOriginVector()
+        Vec3 offset = teleportee.getOriginVector()
                 .subtract(teleporter.getOriginVector())
                 .add(
                     participant.getX() - Math.floor(participant.getX()),
@@ -174,53 +172,53 @@ public class UnicornTeleportAbility implements Ability<Pos> {
                     participant.getZ() - Math.floor(participant.getZ())
                 );
 
-        double yPos = getTargetYPosition(participant.getEntityWorld(), destination.pos(), ShapeContext.of(participant));
-        Vec3d dest = new Vec3d(
-                destination.x() + offset.getX(),
+        double yPos = getTargetYPosition(participant.level(), destination.pos(), CollisionContext.of(participant));
+        Vec3 dest = new Vec3(
+                destination.x() + offset.x(),
                 yPos,
-                destination.z() + offset.getZ()
+                destination.z() + offset.z()
         );
 
-        participant.requestTeleport(dest.x, dest.y, dest.z);
-        if (participant.getWorld().getBlockCollisions(participant, participant.getBoundingBox()).iterator().hasNext()) {
+        participant.teleportTo(dest.x, dest.y, dest.z);
+        if (participant.level().getBlockCollisions(participant, participant.getBoundingBox()).iterator().hasNext()) {
             dest = destination.vec();
-            participant.requestTeleport(dest.x, participant.getY(), dest.z);
+            participant.teleportTo(dest.x, participant.getY(), dest.z);
         }
         teleporter.subtractEnergyCost(distance);
 
         participant.fallDistance /= Math.min(distance, 1);
 
-        BlockPos blockPos = BlockPos.ofFloored(dest);
+        BlockPos blockPos = BlockPos.containing(dest);
 
-        participant.getWorld().playSound(null, blockPos, USounds.ENTITY_PLAYER_UNICORN_TELEPORT, SoundCategory.PLAYERS, 1, 1);
-        if (!participant.getEntityWorld().isInBuildLimit(blockPos)) {
+        participant.level().playSound(null, blockPos, USounds.ENTITY_PLAYER_UNICORN_TELEPORT, SoundSource.PLAYERS, 1, 1);
+        if (!participant.level().isInWorldBounds(blockPos)) {
             UCriteria.TELEPORT_ABOVE_WORLD.trigger(teleporter.asEntity());
         }
 
         return true;
     }
 
-    private boolean enterable(World w, BlockPos pos) {
+    private boolean enterable(Level w, BlockPos pos) {
         BlockState state = w.getBlockState(pos);
         if (StatePredicate.isFluid(state) || state.getBlock() instanceof LeavesBlock) {
             return false;
         }
-        return w.isAir(pos) || !state.isOpaque() || !state.shouldSuffocate(w, pos);
+        return w.isEmptyBlock(pos) || !state.canOcclude() || !state.isSuffocating(w, pos);
     }
 
-    private boolean exception(World w, BlockPos pos, PlayerEntity player) {
+    private boolean exception(Level w, BlockPos pos, Player player) {
         BlockState state = w.getBlockState(pos);
         VoxelShape shape;
 
-        return state.hasSolidTopSurface(w, pos, player)
+        return state.entityCanStandOn(w, pos, player)
                 || StatePredicate.isFluid(state)
-                || (shape = state.getCollisionShape(w, pos, ShapeContext.of(player))).isEmpty()
-                || shape.getBoundingBox().getLengthY() > 1;
+                || (shape = state.getCollisionShape(w, pos, CollisionContext.of(player))).isEmpty()
+                || shape.bounds().getYsize() > 1;
     }
 
-    private double getTargetYPosition(World world, BlockPos pos, ShapeContext context) {
+    private double getTargetYPosition(Level world, BlockPos pos, CollisionContext context) {
         VoxelShape shape = world.getBlockState(pos).getCollisionShape(world, pos, context);
-        return pos.getY() + (shape.isEmpty() ? 0 : shape.getBoundingBox().getLengthY());
+        return pos.getY() + (shape.isEmpty() ? 0 : shape.bounds().getYsize());
     }
 
     @Override

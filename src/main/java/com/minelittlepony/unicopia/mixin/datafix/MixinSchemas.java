@@ -6,13 +6,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.datafixers.DataFixerBuilder;
+import net.minecraft.util.datafix.DataFixers;
 
-import net.minecraft.datafixer.Schemas;
-
-@Mixin(Schemas.class)
+@Mixin(DataFixers.class)
 abstract class MixinSchemas {
-    @Inject(method = "build", at = @At("TAIL"))
-    private static void unicopia_build(DataFixerBuilder builder, CallbackInfo info) {
+    @Inject(method = "addFixers", at = @At("TAIL"))
+    private static void unicopia_build(DataFixerBuilder builder, net.minecraft.util.filefix.FileFixerUpper.Builder fileBuilder, CallbackInfo info) {
         com.minelittlepony.unicopia.datafix.Schemas.build(builder);
     }
 }

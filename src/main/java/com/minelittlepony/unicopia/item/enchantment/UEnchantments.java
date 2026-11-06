@@ -2,13 +2,13 @@ package com.minelittlepony.unicopia.item.enchantment;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.enchantment.Enchantment;
 import com.minelittlepony.unicopia.Unicopia;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
 
 public interface UEnchantments {
-    List<RegistryKey<Enchantment>> REGISTRY = new ArrayList<>();
+    List<ResourceKey<Enchantment>> REGISTRY = new ArrayList<>();
 
     /**
      * Makes a sound when there are interesting blocks in your area.
@@ -16,7 +16,7 @@ public interface UEnchantments {
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> GEM_FINDER = register("gem_finder");
+    ResourceKey<Enchantment> GEM_FINDER = register("gem_finder");
 
     /**
      * Protects against wall collisions and earth pony attacks!
@@ -24,7 +24,7 @@ public interface UEnchantments {
      * EnchantmentTags.IN_ENCHANTING_TABLE
      * EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> PADDED = register("padded");
+    ResourceKey<Enchantment> PADDED = register("padded");
 
     /**
      * Allows non-flying races to mine and interact with cloud blocks
@@ -33,7 +33,7 @@ public interface UEnchantments {
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> FEATHER_TOUCH = register("feather_touch");
+    ResourceKey<Enchantment> FEATHER_TOUCH = register("feather_touch");
 
     /**
      * Heavy players move more slowly but are less likely to be flung around wildly.
@@ -42,7 +42,7 @@ public interface UEnchantments {
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> HEAVY = register("heavy");
+    ResourceKey<Enchantment> HEAVY = register("heavy");
 
     /**
      * It's dangerous to go alone, take this!
@@ -52,14 +52,14 @@ public interface UEnchantments {
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> HERDS = register("herds");
+    ResourceKey<Enchantment> HERDS = register("herds");
 
     /**
      * Alters gravity
      *
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> REPULSION = register("repulsion");
+    ResourceKey<Enchantment> REPULSION = register("repulsion");
 
     /**
      * I want it, I neeeed it!
@@ -69,7 +69,7 @@ public interface UEnchantments {
      *  EnchantmentTags.CURSE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> WANT_IT_NEED_IT = register("want_it_need_it");
+    ResourceKey<Enchantment> WANT_IT_NEED_IT = register("want_it_need_it");
 
     /**
      * Hahaha geddit?
@@ -80,7 +80,7 @@ public interface UEnchantments {
      *  EnchantmentTags.CURSE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> POISONED_JOKE = register("poisoned_joke");
+    ResourceKey<Enchantment> POISONED_JOKE = register("poisoned_joke");
 
     /**
      * Who doesn't like a good freakout?
@@ -88,7 +88,7 @@ public interface UEnchantments {
      *  EnchantmentTags.CURSE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> STRESSED = register("stressed");
+    ResourceKey<Enchantment> STRESSED = register("stressed");
 
     /**
      * This item just wants to be held.
@@ -96,7 +96,7 @@ public interface UEnchantments {
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> CLINGY = register("clingy");
+    ResourceKey<Enchantment> CLINGY = register("clingy");
 
     /**
      * Items with loyalty are kept after death.
@@ -104,7 +104,7 @@ public interface UEnchantments {
      *
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      */
-    RegistryKey<Enchantment> HEART_BOUND = register("heart_bound");
+    ResourceKey<Enchantment> HEART_BOUND = register("heart_bound");
 
     /**
      * Consumes drops whilst mining and produces experience instead
@@ -112,10 +112,10 @@ public interface UEnchantments {
      *  EnchantmentTags.IN_ENCHANTING_TABLE
      *  EnchantmentTags.TRADEABLE
      */
-    RegistryKey<Enchantment> CONSUMPTION = register("consumption");
+    ResourceKey<Enchantment> CONSUMPTION = register("consumption");
 
-    static RegistryKey<Enchantment> register(String name) {
-        RegistryKey<Enchantment> key = RegistryKey.of(RegistryKeys.ENCHANTMENT, Unicopia.id(name));
+    static ResourceKey<Enchantment> register(String name) {
+        ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, Unicopia.id(name));
         REGISTRY.add(key);
         return key;
     }

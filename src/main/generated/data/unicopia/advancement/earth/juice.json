@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/apple_route",
+  "criteria": {
+    "has_juice": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:juice"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.juice.description"
+    },
+    "icon": {
+      "id": "unicopia:juice"
+    },
+    "title": {
+      "translate": "advancements.unicopia.juice.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_juice"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

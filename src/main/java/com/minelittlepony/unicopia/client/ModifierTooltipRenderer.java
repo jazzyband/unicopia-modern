@@ -1,7 +1,16 @@
 package com.minelittlepony.unicopia.client;
 
 import java.util.function.Consumer;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.component.TooltipProvider;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.diet.PonyDiets;
@@ -11,25 +20,14 @@ import com.minelittlepony.unicopia.item.GlowableItem;
 import com.minelittlepony.unicopia.item.component.MimicComponent;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 
-import net.minecraft.component.ComponentType;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipAppender;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 public class ModifierTooltipRenderer {
     public static final ModifierTooltipRenderer INSTANCE = new ModifierTooltipRenderer();
 
-    public void getTooltip(ItemStack stack, Item.TooltipContext context, TooltipDisplayComponent displayComponent, @Nullable PlayerEntity player, TooltipType type, Consumer<Text> textConsumer) {
+    public void getTooltip(ItemStack stack, Item.TooltipContext context, TooltipDisplay displayComponent, @Nullable Player player, TooltipFlag type, Consumer<Component> textConsumer) {
         @Nullable
         Pony pony = Pony.of(player);
 
-        if (pony != null && displayComponent.shouldDisplay(UDataComponentTypes.SPELL_TRAITS)) {
+        if (pony != null && displayComponent.shows(UDataComponentTypes.SPELL_TRAITS)) {
             pony.getDiscoveries().appendTooltip(stack, textConsumer);
         }
 
@@ -37,30 +35,30 @@ public class ModifierTooltipRenderer {
         appendTooltip(stack, UDataComponentTypes.ISSUER, context, displayComponent, textConsumer, type);
         appendTooltip(stack, UDataComponentTypes.BUTTERFLY_VARIANT, context, displayComponent, textConsumer, type);
         appendTooltip(stack, UDataComponentTypes.BALLOON_DESIGN, context, displayComponent, textConsumer, type);
-        if (displayComponent.shouldDisplay(UDataComponentTypes.MIMIC)) {
+        if (displayComponent.shows(UDataComponentTypes.MIMIC)) {
             MimicComponent.appendTooltip(stack, context, textConsumer, type);
         }
-        if (displayComponent.shouldDisplay(UDataComponentTypes.STORED_SPELL)) {
-            EnchantableItem.getSpellEffect(stack).appendTooltip(context, textConsumer, type, stack);
+        if (displayComponent.shows(UDataComponentTypes.STORED_SPELL)) {
+            EnchantableItem.getSpellEffect(stack).addToTooltip(context, textConsumer, type, stack);
         }
-        if (displayComponent.shouldDisplay(UDataComponentTypes.GLOWING) && GlowableItem.isGlowing(stack)) {
-            textConsumer.accept(Text.translatable("item.unicopia.friendship_bracelet.glowing").formatted(Formatting.ITALIC, Formatting.GRAY));
+        if (displayComponent.shows(UDataComponentTypes.GLOWING) && GlowableItem.isGlowing(stack)) {
+            textConsumer.accept(Component.translatable("item.unicopia.friendship_bracelet.glowing").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
         }
 
-        if (pony != null && displayComponent.shouldDisplay(DataComponentTypes.FOOD)) {
+        if (pony != null && displayComponent.shows(DataComponents.FOOD)) {
             PonyDiets.getInstance().getDiet(pony).appendTooltip(stack, pony, textConsumer, type);
         }
     }
 
-    private void appendTooltip(ItemStack stack, ComponentType<? extends TooltipAppender> componentType, Item.TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
+    private void appendTooltip(ItemStack stack, DataComponentType<? extends TooltipProvider> componentType, Item.TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
         appendTooltip(stack, componentType, context, displayComponent, textConsumer, type, null);
     }
 
-    private void appendTooltip(ItemStack stack, ComponentType<? extends TooltipAppender> componentType, Item.TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type, TooltipAppender fallback) {
-        if (displayComponent.shouldDisplay(componentType)) {
-            TooltipAppender tooltipAppender = stack.getOrDefault(componentType, fallback);
+    private void appendTooltip(ItemStack stack, DataComponentType<? extends TooltipProvider> componentType, Item.TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type, TooltipProvider fallback) {
+        if (displayComponent.shows(componentType)) {
+            TooltipProvider tooltipAppender = stack.getOrDefault(componentType, fallback);
             if (tooltipAppender != null) {
-                tooltipAppender.appendTooltip(context, textConsumer, type, stack);
+                tooltipAppender.addToTooltip(context, textConsumer, type, stack);
             }
         }
     }

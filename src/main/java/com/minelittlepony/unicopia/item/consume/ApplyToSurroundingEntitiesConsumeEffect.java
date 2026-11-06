@@ -1,7 +1,14 @@
 package com.minelittlepony.unicopia.item.consume;
 
 import java.util.List;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.consume_effects.ConsumeEffect;
+import net.minecraft.world.level.Level;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.item.component.UDataComponentTypes;
 import com.minelittlepony.unicopia.util.VecHelper;
@@ -9,24 +16,15 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.consume.ConsumeEffect;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.world.World;
-
 public record ApplyToSurroundingEntitiesConsumeEffect(double range, List<ConsumeEffect> effects) implements DeathConsumeEffect {
     public static final MapCodec<ApplyToSurroundingEntitiesConsumeEffect> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.DOUBLE.fieldOf("range").forGetter(ApplyToSurroundingEntitiesConsumeEffect::range),
         ConsumeEffect.CODEC.listOf().fieldOf("effect").forGetter(ApplyToSurroundingEntitiesConsumeEffect::effects)
     ).apply(i, ApplyToSurroundingEntitiesConsumeEffect::new));
-    public static final PacketCodec<RegistryByteBuf, ApplyToSurroundingEntitiesConsumeEffect> PACKET_CODEC = PacketCodec.tuple(
-        PacketCodecs.DOUBLE,
+    public static final StreamCodec<RegistryFriendlyByteBuf, ApplyToSurroundingEntitiesConsumeEffect> STREAM_CODEC = StreamCodec.composite(
+        ByteBufCodecs.DOUBLE,
         ApplyToSurroundingEntitiesConsumeEffect::range,
-        ConsumeEffect.PACKET_CODEC.collect(PacketCodecs.toList()),
+        ConsumeEffect.STREAM_CODEC.apply(ByteBufCodecs.list()),
         ApplyToSurroundingEntitiesConsumeEffect::effects,
         ApplyToSurroundingEntitiesConsumeEffect::new
     );
@@ -37,8 +35,8 @@ public record ApplyToSurroundingEntitiesConsumeEffect(double range, List<Consume
     }
 
     @Override
-    public boolean onConsume(World world, ItemStack stack, LivingEntity user, DamageSource damage) {
-        var targets = VecHelper.findInRange(user, world, user.getPos(), range, e -> e instanceof LivingEntity & !SpellType.SHIELD.isOn(e));
+    public boolean onConsume(Level world, ItemStack stack, LivingEntity user, DamageSource damage) {
+        var targets = VecHelper.findInRange(user, world, user.position(), range, e -> e instanceof LivingEntity & !SpellType.SHIELD.isOn(e));
         for (var target : targets) {
             for (var effect : effects) {
                 if (effect instanceof ApplyToSurroundingEntitiesConsumeEffect) {
@@ -47,7 +45,7 @@ public record ApplyToSurroundingEntitiesConsumeEffect(double range, List<Consume
                 if (effect instanceof DeathConsumeEffect o) {
                     o.onConsume(world, stack, (LivingEntity)target, damage);
                 } else {
-                    effect.onConsume(world, stack, (LivingEntity)target);
+                    effect.apply(world, stack, (LivingEntity)target);
                 }
             }
         }

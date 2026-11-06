@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:tree",
+  "below_trunk_provider": {
+    "id": "minecraft:dirt"
+  },
+  "decorators": [],
+  "foliage_placer": {
+    "type": "unicopia:fruit_blob_foliage",
+    "height": 3,
+    "offset": 0,
+    "radius": 3
+  },
+  "foliage_provider": {
+    "id": "unicopia:sweet_apple_leaves",
+    "properties": {
+      "age": "0",
+      "distance": "7",
+      "persistent": "false",
+      "stage": "idle",
+      "waterlogged": "false"
+    }
+  },
+  "ignore_vines": false,
+  "minimum_size": {
+    "type": "minecraft:two_layers_feature_size",
+    "lower_size": 1,
+    "upper_size": 3
+  },
+  "trunk_placer": {
+    "type": "minecraft:straight_trunk_placer",
+    "base_height": 4,
+    "height_rand_a": 3,
+    "height_rand_b": 2
+  },
+  "trunk_provider": {
+    "id": "minecraft:oak_log",
+    "properties": {
+      "axis": "y"
+    }
+  }
+}

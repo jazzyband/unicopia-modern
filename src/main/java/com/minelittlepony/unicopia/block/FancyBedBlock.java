@@ -3,7 +3,31 @@ package com.minelittlepony.unicopia.block;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.monster.piglin.PiglinAi;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.item.BedsheetsItem;
@@ -12,145 +36,111 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.entity.BedBlockEntity;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.entity.mob.PiglinBrain;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.DyeColor;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
-
-public class FancyBedBlock extends BedBlock {
-    public static final MapCodec<FancyBedBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.fieldOf("base").forGetter(b -> b.base),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, FancyBedBlock::new));
+public class FancyBedBlock extends BedBlock implements net.minecraft.world.level.block.EntityBlock {
     private static final List<Function<Direction, VoxelShape>> SHAPES = List.of(
-        VoxelShapeUtil.rotator(VoxelShapes.union(
-                createCuboidShape(0, 3, 1, 16, 9, 16),
-                createCuboidShape(-0.5, 0, 1, 1.5, 13, 4),
-                createCuboidShape(14.5, 0, 1, 16.5, 13, 4),
-                createCuboidShape(1.5, 1, 0, 14.5, 16, 3)
+        VoxelShapeUtil.rotator(Shapes.or(
+                box(0, 3, 1, 16, 9, 16),
+                box(-0.5, 0, 1, 1.5, 13, 4),
+                box(14.5, 0, 1, 16.5, 13, 4),
+                box(1.5, 1, 0, 14.5, 16, 3)
         )),
-        VoxelShapeUtil.rotator(VoxelShapes.union(
-                createCuboidShape(0, 3, 0, 16, 9, 16),
-                createCuboidShape(-0.5, 0, -1, 2.5, 10, 2),
-                createCuboidShape(13.5, 0, -1, 16.5, 10, 2),
-                createCuboidShape(1.5, 1, -2, 14.5, 12, 1)
+        VoxelShapeUtil.rotator(Shapes.or(
+                box(0, 3, 0, 16, 9, 16),
+                box(-0.5, 0, -1, 2.5, 10, 2),
+                box(13.5, 0, -1, 16.5, 10, 2),
+                box(1.5, 1, -2, 14.5, 12, 1)
         ))
     );
 
     protected final String base;
 
-    public FancyBedBlock(String base, Settings settings) {
+    public FancyBedBlock(String base, Properties settings) {
         super(DyeColor.WHITE, settings);
         this.base = base;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    @Override
-    public MapCodec<BedBlock> getCodec() {
-        return (MapCodec)CODEC;
-    }
 
     public String getBase() {
         return base;
     }
 
     @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return SHAPES.get(state.get(PART).ordinal()).apply(BedBlock.getOppositePartDirection(state));
+    protected VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return SHAPES.get(state.getValue(PART).ordinal()).apply(BedBlock.getConnectedDirection(state));
     }
 
     @Override
-    protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
-        if (state.hasBlockEntity() && !state.isOf(world.getBlockState(pos).getBlock()) && state.get(PART) == BedPart.HEAD) {
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+        if (state.hasBlockEntity() && !state.is(world.getBlockState(pos).getBlock()) && state.getValue(PART) == BedPart.HEAD) {
             world.getBlockEntity(pos, UBlockEntities.FANCY_BED).ifPresent(tile -> {
                 SheetPattern pattern = tile.getPattern();
                 if (pattern != SheetPattern.NONE) {
-                    dropStack(world, pos, BedsheetsItem.forPattern(pattern).getDefaultStack());
+                    popResource(world, pos, BedsheetsItem.forPattern(pattern).getDefaultInstance());
                 }
             });
         }
-        super.onStateReplaced(state, world, pos, moved);
+        super.affectNeighborsAfterRemoval(state, world, pos, moved);
     }
 
     @Override
-    public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+    public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
         // MC-269785
-        BedPart part = state.get(PART);
-        BlockPos otherHalfPos = pos.offset(getDirectionTowardsOtherPart(part, state.get(FACING)));
+        BedPart part = state.getValue(PART);
+        BlockPos otherHalfPos = pos.relative(getNeighbourDirection(part, state.getValue(FACING)));
         BlockState otherHalfState = world.getBlockState(otherHalfPos);
-        if (/*!world.isClient &&*/ player.isCreative() && part == BedPart.FOOT && otherHalfState.isOf(this) && otherHalfState.get(PART) == BedPart.HEAD) {
-            if (!world.isClient) {
-                world.setBlockState(otherHalfPos, otherHalfState.getFluidState().getBlockState(), Block.NOTIFY_ALL | Block.SKIP_DROPS);
+        if (/*!world.isClient &&*/ player.isCreative() && part == BedPart.FOOT && otherHalfState.is(this) && otherHalfState.getValue(PART) == BedPart.HEAD) {
+            if (!world.isClientSide()) {
+                world.setBlock(otherHalfPos, otherHalfState.getFluidState().createLegacyBlock(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
             }
-            spawnBreakParticles(world, player, otherHalfPos, otherHalfState);
-            if (state.isIn(BlockTags.GUARDED_BY_PIGLINS) && !world.isClient) {
-                PiglinBrain.onGuardedBlockInteracted((ServerWorld)world, player, false);
+            spawnDestroyParticles(world, otherHalfPos, otherHalfState);
+            if (state.is(BlockTags.GUARDED_BY_PIGLINS) && !world.isClientSide()) {
+                PiglinAi.angerNearbyPiglins((ServerLevel)world, player, false);
             }
-            world.emitGameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Emitter.of(player, state));
+            world.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
         } else {
-            spawnBreakParticles(world, player, pos, state);
-            if (state.isIn(BlockTags.GUARDED_BY_PIGLINS) && !world.isClient) {
-                PiglinBrain.onGuardedBlockInteracted((ServerWorld)world, player, false);
+            spawnDestroyParticles(world, pos, state);
+            if (state.is(BlockTags.GUARDED_BY_PIGLINS) && !world.isClientSide()) {
+                PiglinAi.angerNearbyPiglins((ServerLevel)world, player, false);
             }
-            world.emitGameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Emitter.of(player, state));
+            world.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
         }
         return state;
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new Tile(pos, state);
     }
 
-    public static void setBedPattern(World world, BlockPos pos, SheetPattern pattern) {
+    public static void setBedPattern(Level world, BlockPos pos, SheetPattern pattern) {
         world.getBlockEntity(pos, UBlockEntities.FANCY_BED).ifPresent(tile -> {
-            ItemStack stack = BedsheetsItem.forPattern(tile.getPattern()).getDefaultStack();
+            ItemStack stack = BedsheetsItem.forPattern(tile.getPattern()).getDefaultInstance();
             if (!stack.isEmpty()) {
-                Block.dropStack(world, pos, stack);
+                Block.popResource(world, pos, stack);
             }
             tile.setPattern(pattern);
-            BlockState state = tile.getCachedState();
-            BlockPos other = pos.offset(getDirectionTowardsOtherPart(state.get(PART), state.get(FACING)));
+            BlockState state = tile.getBlockState();
+            BlockPos other = pos.relative(getNeighbourDirection(state.getValue(PART), state.getValue(FACING)));
             world.getBlockEntity(other, UBlockEntities.FANCY_BED).ifPresent(tile2 -> {
                 tile2.setPattern(pattern);
             });
         });
     }
 
-    private static Direction getDirectionTowardsOtherPart(BedPart part, Direction direction) {
+    private static Direction getNeighbourDirection(BedPart part, Direction direction) {
         return part == BedPart.FOOT ? direction : direction.getOpposite();
     }
 
-    public static class Tile extends BedBlockEntity {
+    public static class Tile extends BlockEntity {
         private SheetPattern pattern = SheetPattern.NONE;
 
         public Tile(BlockPos pos, BlockState state) {
-            super(pos, state);
+            super(UBlockEntities.FANCY_BED, pos, state);
         }
 
         @Override
-        public boolean supports(BlockState state) {
-            return getType().supports(state);
+        public boolean isValidBlockState(BlockState state) {
+            return getType().isValid(state);
         }
 
         @Override
@@ -159,29 +149,29 @@ public class FancyBedBlock extends BedBlock {
         }
 
         @Override
-        public void readNbt(NbtCompound nbt, WrapperLookup lookup) {
-            pattern = nbt.get("pattern", SheetPattern.CODEC).orElse(SheetPattern.NONE);
+        protected void loadAdditional(ValueInput nbt) {
+            pattern = nbt.read("pattern", SheetPattern.CODEC).orElse(SheetPattern.NONE);
         }
 
         @Override
-        protected void writeNbt(NbtCompound nbt, WrapperLookup lookup) {
-            nbt.put("pattern", SheetPattern.CODEC, pattern);
+        protected void saveAdditional(ValueOutput nbt) {
+            nbt.store("pattern", SheetPattern.CODEC, pattern);
         }
 
         @Override
-        public NbtCompound toInitialChunkDataNbt(WrapperLookup lookup) {
-            return createNbt(lookup);
+        public CompoundTag getUpdateTag(Provider lookup) {
+            return saveWithoutMetadata(lookup);
         }
 
         public String getBase() {
-            return ((FancyBedBlock)getCachedState().getBlock()).base;
+            return ((FancyBedBlock)getBlockState().getBlock()).base;
         }
 
         public void setPattern(SheetPattern pattern) {
             this.pattern = pattern;
-            markDirty();
-            if (world instanceof ServerWorld sw) {
-                sw.getChunkManager().markForUpdate(getPos());
+            setChanged();
+            if (level instanceof ServerLevel sw) {
+                sw.getChunkSource().blockChanged(getBlockPos());
             }
         }
 
@@ -190,7 +180,7 @@ public class FancyBedBlock extends BedBlock {
         }
     }
 
-    public enum SheetPattern implements StringIdentifiable {
+    public enum SheetPattern implements StringRepresentable {
         NONE(DyeColor.WHITE),
         WHITE(DyeColor.WHITE),
         LIGHT_GRAY(DyeColor.LIGHT_GRAY),
@@ -219,7 +209,7 @@ public class FancyBedBlock extends BedBlock {
         RAINBOW_PBG(null),
         RAINBOW_PWR(null);
 
-        public static final Codec<SheetPattern> CODEC = StringIdentifiable.createCodec(SheetPattern::values);
+        public static final Codec<SheetPattern> CODEC = StringRepresentable.fromEnum(SheetPattern::values);
 
         private final String name = name().toLowerCase(Locale.ROOT);
         @Nullable
@@ -235,7 +225,7 @@ public class FancyBedBlock extends BedBlock {
         }
 
         @Override
-        public String asString() {
+        public String getSerializedName() {
             return name;
         }
     }

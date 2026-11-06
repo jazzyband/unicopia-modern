@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather",
+    "unicopia:golden_feather"
+  ],
+  "result": {
+    "id": "unicopia:golden_wing"
+  }
+}

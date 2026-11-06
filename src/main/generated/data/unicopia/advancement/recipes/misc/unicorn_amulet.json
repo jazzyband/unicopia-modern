@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_broken_alicorn_amulet": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:broken_alicorn_amulet"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_broken_alicorn_amulet"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:unicorn_amulet"
+    ]
+  }
+}

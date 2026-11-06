@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_toast": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:toast"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.toast.description"
+    },
+    "icon": {
+      "id": "unicopia:toast"
+    },
+    "title": {
+      "translate": "advancements.unicopia.toast.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_toast"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -1,7 +1,22 @@
 package com.minelittlepony.unicopia.block.cloud;
 
 import java.util.function.Supplier;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
@@ -9,56 +24,29 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
 public class NaturalCloudBlock extends PoreousCloudBlock {
-    private static final MapCodec<NaturalCloudBlock> CODEC = RecordCodecBuilder.<NaturalCloudBlock>mapCodec(instance -> instance.group(
-            Codec.BOOL.fieldOf("meltable").forGetter(b -> b.meltable),
-            CodecUtils.supplierOf(Soakable.CODEC).optionalFieldOf("soggy_block", null).forGetter(b -> b.soggyBlock),
-            CodecUtils.supplierOf(Registries.BLOCK.getCodec()).fieldOf("compacted_block").forGetter(b -> b.compactedBlock),
-            BedBlock.createSettingsCodec()
-    ).apply(instance, NaturalCloudBlock::new));
 
     private final Supplier<Block> compactedBlock;
 
     public NaturalCloudBlock(boolean meltable,
             @Nullable Supplier<Soakable> soggyBlock,
             Supplier<Block> compactedBlock,
-            Settings settings) {
-        super(meltable, soggyBlock, settings.nonOpaque());
+            Properties settings) {
+        super(meltable, soggyBlock, settings.noOcclusion());
         this.compactedBlock = compactedBlock;
     }
 
-    @Override
-    public MapCodec<NaturalCloudBlock> getCodec() {
-        return CODEC;
-    }
 
     @Override
-    protected ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (stack.isIn(ItemTags.SHOVELS)) {
-            BooleanProperty property = CompactedCloudBlock.FACING_PROPERTIES.get(hit.getSide());
-            world.setBlockState(pos, compactedBlock.get().getDefaultState().with(property, false));
-            stack.damage(1, player, LivingEntity.getSlotForHand(hand));
-            world.playSound(null, pos, SoundEvents.ITEM_SHOVEL_FLATTEN, SoundCategory.BLOCKS);
-            return ActionResult.SUCCESS;
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (stack.is(ItemTags.SHOVELS)) {
+            BooleanProperty property = CompactedCloudBlock.FACING_PROPERTIES.get(hit.getDirection());
+            world.setBlockAndUpdate(pos, compactedBlock.get().defaultBlockState().setValue(property, false));
+            stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
+            world.playSound(null, pos, SoundEvents.SHOVEL_FLATTEN.value(), SoundSource.BLOCKS);
+            return InteractionResult.SUCCESS;
         }
 
-        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
+        return super.useItemOn(stack, state, world, pos, player, hand, hit);
     }
 }

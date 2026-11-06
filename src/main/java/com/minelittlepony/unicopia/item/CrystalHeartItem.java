@@ -16,29 +16,38 @@ import com.minelittlepony.unicopia.particle.FollowingParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.util.VecHelper;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.block.EndRodBlock;
-import net.minecraft.entity.*;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.MerchantEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.*;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.EndRodBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.Blocks;
 
 public class CrystalHeartItem extends Item implements FloatingArtefactEntity.Artifact {
-    static final Predicate<Entity> TARGET_PREDICATE = EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR
-            .and(EntityPredicates.VALID_ENTITY)
-            .and(e -> (e instanceof PlayerEntity || e instanceof MobEntity));
+    static final Predicate<Entity> TARGET_PREDICATE = EntitySelector.NO_CREATIVE_OR_SPECTATOR
+            .and(EntitySelector.ENTITY_STILL_ALIVE)
+            .and(e -> (e instanceof Player || e instanceof Mob));
     private static final Supplier<Map<Item, Item>> ITEM_MAP = Suppliers.memoize(() -> {
         return Map.of(
                 Items.BUCKET, UItems.LOVE_BUCKET,
@@ -53,91 +62,91 @@ public class CrystalHeartItem extends Item implements FloatingArtefactEntity.Art
 
     private static ItemStack fill(ItemStack stack) {
         Item item = ITEM_MAP.get().getOrDefault(stack.getItem(), stack.getItem());
-        return item == stack.getItem() ? stack : stack.withItem(item);
+        return item == stack.getItem() ? stack : stack.transmuteCopy(item);
     }
 
-    public CrystalHeartItem(Settings settings) {
+    public CrystalHeartItem(Properties settings) {
         super(settings);
     }
 
     @Override
-    public ActionResult useOnBlock(ItemUsageContext context) {
+    public InteractionResult useOn(UseOnContext context) {
 
-        World world = context.getWorld();
-        BlockPos blockPos = new ItemPlacementContext(context).getBlockPos();
+        Level world = context.getLevel();
+        BlockPos blockPos = new BlockPlaceContext(context).getClickedPos();
 
-        Box placementArea = UEntities.FLOATING_ARTEFACT.getDimensions().getBoxAt(Vec3d.ofBottomCenter(blockPos));
+        AABB placementArea = UEntities.FLOATING_ARTEFACT.getDimensions().makeBoundingBox(Vec3.atBottomCenterOf(blockPos));
 
-        if (!world.isSpaceEmpty(null, placementArea)) {
-            return ActionResult.FAIL;
+        if (!world.noCollision(null, placementArea)) {
+            return InteractionResult.FAIL;
         }
 
-        if (world instanceof ServerWorld serverWorld) {
-            Consumer<FloatingArtefactEntity> consumer = EntityType.copier(serverWorld, context.getStack(), context.getPlayer());
-            FloatingArtefactEntity entity = UEntities.FLOATING_ARTEFACT.create(serverWorld, consumer, blockPos, SpawnReason.SPAWN_ITEM_USE, false, true);
+        if (world instanceof ServerLevel serverWorld) {
+            var consumer = EntityType.<FloatingArtefactEntity>createDefaultStackConfig(serverWorld, context.getItemInHand(), context.getPlayer());
+            FloatingArtefactEntity entity = UEntities.FLOATING_ARTEFACT.create(serverWorld, consumer, blockPos, EntitySpawnReason.SPAWN_ITEM_USE, false, true);
 
             if (entity == null) {
-                return ActionResult.FAIL;
+                return InteractionResult.FAIL;
             }
 
-            entity.setStack(context.getStack().split(1));
-            serverWorld.spawnEntity(entity);
+            entity.setStack(context.getItemInHand().split(1));
+            serverWorld.addFreshEntity(entity);
 
             if (findStructure(entity)) {
                 entity.playSound(USounds.ENTITY_CRYSTAL_HEART_ACTIVATE, 0.75F, 0.8F);
                 UCriteria.POWER_UP_HEART.trigger(context.getPlayer());
             }
         } else {
-            context.getStack().decrement(1);
+            context.getItemInHand().shrink(1);
         }
 
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
     @Override
     public void onArtifactTick(FloatingArtefactEntity entity) {
 
         if (entity.getState() == State.INITIALISING) {
-            if (entity.age % 30 == 0 && findStructure(entity)) {
+            if (entity.tickCount % 30 == 0 && findStructure(entity)) {
                 entity.setState(State.RUNNING);
                 entity.setRotationSpeed(4, 30);
             }
         } else {
-            if (entity.age % 30 == 0 && !findStructure(entity)) {
+            if (entity.tickCount % 30 == 0 && !findStructure(entity)) {
                 entity.setState(State.INITIALISING);
             }
 
-            BlockPos pos = entity.getBlockPos();
-            entity.getWorld().addParticleClient(ParticleTypes.COMPOSTER,
-                    pos.getX() + entity.getWorld().getRandom().nextFloat(),
-                    pos.getY() + entity.getWorld().getRandom().nextFloat(),
-                    pos.getZ() + entity.getWorld().getRandom().nextFloat(),
+            BlockPos pos = entity.blockPosition();
+            entity.level().addParticle(ParticleTypes.COMPOSTER,
+                    pos.getX() + entity.level().getRandom().nextFloat(),
+                    pos.getY() + entity.level().getRandom().nextFloat(),
+                    pos.getZ() + entity.level().getRandom().nextFloat(),
                     0, 0, 0);
 
-            if (entity.age % 80 == 0 && entity.getWorld() instanceof ServerWorld sw) {
+            if (entity.tickCount % 80 == 0 && entity.level() instanceof ServerLevel sw) {
                 List<LivingEntity> inputs = new ArrayList<>();
                 List<LivingEntity> outputs = new ArrayList<>();
                 List<ItemEntity> containers = new ArrayList<>();
 
-                VecHelper.findInRange(entity, entity.getWorld(), entity.getPos(), 20, TARGET_PREDICATE).forEach(e -> {
+                VecHelper.findInRange(entity, entity.level(), entity.position(), 20, TARGET_PREDICATE).forEach(e -> {
                     LivingEntity living = (LivingEntity)e;
 
-                    if (e instanceof PlayerEntity
-                            || (e instanceof TameableEntity t && t.isTamed())
-                            || (e instanceof MobEntity s && s.hasSaddleEquipped())
-                            || (e instanceof MerchantEntity)) {
+                    if (e instanceof Player
+                            || (e instanceof TamableAnimal t && t.isTame())
+                            || (e instanceof Mob s && s.isSaddled())
+                            || (e instanceof AbstractVillager)) {
                         if (living.getHealth() < living.getMaxHealth()) {
                             outputs.add(living);
                         }
-                    } else if (e.getType().getSpawnGroup() == SpawnGroup.MONSTER) {
+                    } else if (e.getType().getCategory() == MobCategory.MONSTER) {
                         inputs.add(living);
                     }
                 });
-                VecHelper.findInRange(entity, entity.getWorld(), entity.getPos(), 20, i -> {
-                    return i instanceof ItemEntity ie && isFillable(ie.getStack()) && EquinePredicates.CHANGELING.test(i);
+                VecHelper.findInRange(entity, entity.level(), entity.position(), 20, i -> {
+                    return i instanceof ItemEntity ie && isFillable(ie.getItem()) && EquinePredicates.CHANGELING.test(i);
                 }).forEach(i -> containers.add((ItemEntity)i));
 
-                int demand = outputs.size() + containers.stream().mapToInt(i -> i.getStack().getCount()).sum();
+                int demand = outputs.size() + containers.stream().mapToInt(i -> i.getItem().getCount()).sum();
                 int supply = inputs.size();
 
                 if (demand == 0 || supply == 0) {
@@ -148,7 +157,7 @@ public class CrystalHeartItem extends Item implements FloatingArtefactEntity.Art
                 float takes = demand > supply ? demand / supply : 1;
 
                 inputs.forEach(input -> {
-                    input.damage(sw, entity.damageOf(UDamageTypes.LIFE_DRAINING), takes);
+                    input.hurtServer(sw, entity.damageOf(UDamageTypes.LIFE_DRAINING), takes);
                     ParticleUtils.spawnParticles(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, entity, 0.2F), input, 1);
                 });
                 outputs.forEach(output -> {
@@ -157,7 +166,7 @@ public class CrystalHeartItem extends Item implements FloatingArtefactEntity.Art
                 });
                 containers.forEach(container -> {
                     ParticleUtils.spawnParticles(new FollowingParticleEffect(UParticles.HEALTH_DRAIN, container, 0.2F), entity, 1);
-                    container.setStack(fill(container.getStack()));
+                    container.setItem(fill(container.getItem()));
                 });
 
                 if (gives > 0) {
@@ -169,12 +178,12 @@ public class CrystalHeartItem extends Item implements FloatingArtefactEntity.Art
     }
 
     @Override
-    public ActionResult onArtifactDestroyed(FloatingArtefactEntity entity) {
+    public InteractionResult onArtifactDestroyed(FloatingArtefactEntity entity) {
         entity.playSound(USounds.ENTITY_CRYSTAL_HEART_DEACTIVATE, 0.75F, 1);
-        if (entity.getWorld() instanceof ServerWorld sw) {
-            entity.dropStack(sw, new ItemStack(UItems.CRYSTAL_SHARD, 1 + sw.random.nextInt(5)), 0);
+        if (entity.level() instanceof ServerLevel sw) {
+            entity.spawnAtLocation(sw, new ItemStack(UItems.CRYSTAL_SHARD, 1 + sw.getRandom().nextInt(5)), 0);
         }
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
 
     private boolean findStructure(FloatingArtefactEntity entity) {
@@ -183,27 +192,27 @@ public class CrystalHeartItem extends Item implements FloatingArtefactEntity.Art
 
     private boolean findPyramid(FloatingArtefactEntity entity, Direction direction) {
 
-        BlockPos tip = entity.getBlockPos().offset(direction);
-        BlockState tipState = entity.getWorld().getBlockState(tip);
-        if (!tipState.isIn(UTags.Blocks.CRYSTAL_HEART_ORNAMENT) || (!tipState.contains(EndRodBlock.FACING)|| tipState.get(EndRodBlock.FACING) != direction.getOpposite())) {
+        BlockPos tip = entity.blockPosition().relative(direction);
+        BlockState tipState = entity.level().getBlockState(tip);
+        if (!tipState.is(UTags.Blocks.CRYSTAL_HEART_ORNAMENT) || (!tipState.hasProperty(EndRodBlock.FACING)|| tipState.getValue(EndRodBlock.FACING) != direction.getOpposite())) {
             return false;
         }
 
-        tip = tip.offset(direction);
-        if (!isDiamond(entity.getWorld().getBlockState(tip))) {
+        tip = tip.relative(direction);
+        if (!isDiamond(entity.level().getBlockState(tip))) {
             return false;
         }
-        tip = tip.offset(direction);
+        tip = tip.relative(direction);
 
         final BlockPos center = tip;
 
-        return BlockPos.streamOutwards(center, 1, 0, 1)
+        return com.minelittlepony.unicopia.util.PosHelper.withinManhattanStream(center, 1, 0, 1)
                 .filter(p -> p.getX() == center.getX() || p.getZ() == center.getZ())
-                .map(entity.getWorld()::getBlockState)
+                .map(entity.level()::getBlockState)
                 .allMatch(this::isDiamond);
     }
 
     private boolean isDiamond(BlockState state) {
-        return state.isIn(UTags.Blocks.CRYSTAL_HEART_BASE);
+        return state.is(UTags.Blocks.CRYSTAL_HEART_BASE);
     }
 }

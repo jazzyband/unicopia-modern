@@ -1,7 +1,15 @@
 package com.minelittlepony.unicopia.client.gui;
 
 import java.util.Optional;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.ability.Ability;
 import com.minelittlepony.unicopia.ability.AbilityDispatcher;
@@ -9,15 +17,7 @@ import com.minelittlepony.unicopia.ability.AbilitySlot;
 import com.minelittlepony.unicopia.ability.ActivationType;
 import com.minelittlepony.unicopia.client.KeyBindingsHandler;
 import com.minelittlepony.unicopia.client.UnicopiaClient;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.MutableText;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import org.joml.Matrix3x2fStack;
 
 class Slot {
     protected final UHud uHud;
@@ -84,7 +84,7 @@ class Slot {
         return y;
     }
 
-    void renderBackground(DrawContext context, AbilityDispatcher abilities, boolean bSwap, float tickDelta) {
+    void renderBackground(GuiGraphicsExtractor context, AbilityDispatcher abilities, boolean bSwap, float tickDelta) {
 
         if (aSlot != bSlot) {
             bSwap |= !abilities.isFilled(aSlot);
@@ -102,12 +102,12 @@ class Slot {
             }
         }
 
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.translate(getX(), getY(), 0);
+        Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate(getX(), getY());
 
         // background
-        context.drawTexture(RenderLayer::getGuiTextured, UHud.HUD_TEXTURE, 0, 0, backgroundU, backgroundV, size, size, 128, 128);
+        context.blit(RenderPipelines.GUI_TEXTURED, UHud.HUD_TEXTURE, 0, 0, backgroundU, backgroundV, size, size, 128, 128);
 
         int iconPosition = ((size - iconSize + slotPadding + 1) / 2);
         int sz = iconSize - slotPadding;
@@ -116,7 +116,7 @@ class Slot {
         float cooldown = stat.getFillProgress();
 
         if (cooldown > 0 && cooldown <= 1) {
-            float lerpCooldown = MathHelper.lerp(tickDelta, cooldown, lastCooldown);
+            float lerpCooldown = Mth.lerp(tickDelta, cooldown, lastCooldown);
 
             lastCooldown = lerpCooldown;
 
@@ -129,24 +129,24 @@ class Slot {
         }
 
         renderContents(context, abilities, bSwap, tickDelta);
-        matrices.pop();
+        matrices.popMatrix();
     }
 
-    protected void renderContents(DrawContext context, AbilityDispatcher abilities, boolean bSwap, float tickDelta) {
+    protected void renderContents(GuiGraphicsExtractor context, AbilityDispatcher abilities, boolean bSwap, float tickDelta) {
         renderForegroundLayer(context, 0, 0);
     }
 
-    protected void renderForegroundLayer(DrawContext context, int uOffset, int vOffset) {
+    protected void renderForegroundLayer(GuiGraphicsExtractor context, int uOffset, int vOffset) {
         // contents
-        boolean flip = MinecraftClient.getInstance().player.getMainArm() == Arm.LEFT;
+        boolean flip = Minecraft.getInstance().player.getMainArm() == HumanoidArm.LEFT;
         if (flip) {
-            context.drawTexture(RenderLayer::getGuiTextured, UHud.HUD_TEXTURE, 0, 0, size, size, foregroundU + uOffset + size, foregroundV + vOffset, -size, size, 128, 128);
+            context.blit(RenderPipelines.GUI_TEXTURED, UHud.HUD_TEXTURE, 0, 0, size, size, foregroundU + uOffset + size, foregroundV + vOffset, -size, size, 128, 128);
         } else {
-            context.drawTexture(RenderLayer::getGuiTextured, UHud.HUD_TEXTURE, 0, 0, foregroundU + uOffset, foregroundV + vOffset, size, size, 128, 128);
+            context.blit(RenderPipelines.GUI_TEXTURED, UHud.HUD_TEXTURE, 0, 0, foregroundU + uOffset, foregroundV + vOffset, size, size, 128, 128);
         }
     }
 
-    void renderLabel(DrawContext context, AbilityDispatcher abilities, float tickDelta) {
+    void renderLabel(GuiGraphicsExtractor context, AbilityDispatcher abilities, float tickDelta) {
 
         Optional<Ability<?>> ability = abilities.getStat(aSlot).getAbility(Unicopia.getConfig().hudPage.get());
 
@@ -154,24 +154,24 @@ class Slot {
             return;
         }
 
-        MutableText label = KeyBindingsHandler.INSTANCE.getBinding(aSlot).getLabel().copy();
+        MutableComponent label = KeyBindingsHandler.INSTANCE.getBinding(aSlot).getLabel().copy();
 
         int x = getX();
         if (uHud.xDirection > 0) {
             x += labelX;
         } else {
             x += labelX - size/3;
-            x -= uHud.client.textRenderer.getWidth(label)/2;
+            x -= uHud.client.font.width(label)/2;
         }
 
         ActivationType activation = KeyBindingsHandler.INSTANCE.getForcedActivationType();
         if (activation.isResult()) {
             label = label.append("+T" + activation.getTapCount());
             if (!ability.get().acceptsQuickAction(UnicopiaClient.getClientPony(), activation)) {
-                label = label.formatted(Formatting.RED);
+                label = label.withStyle(ChatFormatting.RED);
             }
         }
 
-        DrawableUtil.drawScaledText(context, label, x, getY() + labelY, 0.5F, Colors.WHITE);
+        DrawableUtil.drawScaledText(context, label, x, getY() + labelY, 0.5F, CommonColors.WHITE);
     }
 }

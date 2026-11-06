@@ -3,7 +3,14 @@ package com.minelittlepony.unicopia.ability;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.Race;
@@ -15,15 +22,6 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.AmuletItem;
 import com.minelittlepony.unicopia.item.FriendshipBraceletItem;
 import com.minelittlepony.unicopia.item.UItems;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Identifier;
 
 public class ChangeFormAbility implements Ability<Hit> {
 
@@ -63,7 +61,7 @@ public class ChangeFormAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -82,7 +80,8 @@ public class ChangeFormAbility implements Ability<Hit> {
         player.subtractEnergyCost(5 * targets.size());
         TrinketsDelegate.EquippedStack amulet = AmuletItem.getForEntity(player.asEntity(), UItems.PEARL_NECKLACE);
         if (!amulet.stack().isEmpty()) {
-            amulet.stack().damage(1, (ServerWorld)player.asWorld(), (ServerPlayerEntity)player.asEntity(), amulet.breakStatusSender());
+            amulet.stack().hurtAndBreak(1, (ServerLevel)player.asWorld(), (ServerPlayer)player.asEntity(),
+                    broken -> amulet.breakStatusSender().accept(broken));
         }
 
         boolean isTransforming = player.getSuppressedRace().isUnset();
@@ -104,11 +103,11 @@ public class ChangeFormAbility implements Ability<Hit> {
         player.getMagicalReserves().getExertion().addPercent(6);
         getTargets(player).forEach(target -> {
             if (player.getAbilities().getStat(slot).getWarmup() % 5 == 0) {
-                player.asWorld().playSound(target.asEntity(), target.getOrigin(), SoundEvents.BLOCK_BUBBLE_COLUMN_WHIRLPOOL_INSIDE, SoundCategory.PLAYERS);
+                player.asWorld().playSound(target.asEntity(), target.getOrigin(), SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_INSIDE, SoundSource.PLAYERS);
             }
 
-            if (player.asWorld().random.nextInt(5) == 0) {
-                player.asWorld().playSound(target.asEntity(), target.getOrigin(), USounds.Vanilla.BLOCK_BUBBLE_COLUMN_BUBBLE_POP, SoundCategory.PLAYERS);
+            if (player.asWorld().getRandom().nextInt(5) == 0) {
+                player.asWorld().playSound(target.asEntity(), target.getOrigin(), USounds.Vanilla.BUBBLE_COLUMN_BUBBLE_POP, SoundSource.PLAYERS);
             }
 
             target.spawnParticles(ParticleTypes.BUBBLE_COLUMN_UP, 15);

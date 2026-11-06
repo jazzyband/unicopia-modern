@@ -1,35 +1,29 @@
 package com.minelittlepony.unicopia.block.zap;
 
 import com.mojang.serialization.MapCodec;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class ZapSlabBlock extends SlabBlock implements ElectrifiedBlock {
-    private static final MapCodec<ZapSlabBlock> CODEC = createCodec(ZapSlabBlock::new);
 
-    public ZapSlabBlock(Settings settings) {
+    public ZapSlabBlock(Properties settings) {
         super(settings);
     }
 
-    @Override
-    public MapCodec<? extends SlabBlock> getCodec() {
-        return CODEC;
-    }
 
     @Deprecated
     @Override
-    public void onBlockBreakStart(BlockState state, World world, BlockPos pos, PlayerEntity player) {
+    public void attack(BlockState state, Level world, BlockPos pos, Player player) {
         triggerLightning(state, world, pos);
     }
 
     @Deprecated
     @Override
-    public float calcBlockBreakingDelta(BlockState state, PlayerEntity player, BlockView world, BlockPos pos) {
-        return getBlockBreakingDelta(super.calcBlockBreakingDelta(state, player, world, pos), player);
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter world, BlockPos pos) {
+        return getBlockBreakingDelta(super.getDestroyProgress(state, player, world, pos), player);
     }
 }

@@ -1,0 +1,7 @@
+{
+  "parent": "unicopia:block/template_bale_tne",
+  "textures": {
+    "side": "farmersdelight:block/straw_bale_side",
+    "top": "farmersdelight:block/straw_bale_end"
+  }
+}

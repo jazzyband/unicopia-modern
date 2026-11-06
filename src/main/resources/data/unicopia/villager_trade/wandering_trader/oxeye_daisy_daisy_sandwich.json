@@ -1,0 +1,12 @@
+{
+  "wants": {
+    "id": "minecraft:oxeye_daisy",
+    "count": 2
+  },
+  "gives": {
+    "id": "unicopia:daffodil_daisy_sandwich"
+  },
+  "max_uses": 10,
+  "xp": 6,
+  "reputation_discount": 0.08
+}

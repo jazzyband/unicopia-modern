@@ -1,17 +1,16 @@
 package com.minelittlepony.unicopia.block.state;
 
 import java.util.Iterator;
-
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.Nullable;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.Registries;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
 
 public interface StateUtil {
     Splitter COMMA_SPLITTER = Splitter.on(',');
@@ -24,7 +23,7 @@ public interface StateUtil {
             return to;
         }
         for (var property : from.getProperties()) {
-            to = to.withIfExists((Property)property, from.get(property));
+            to = to.trySetValue((Property)property, from.getValue(property));
         }
         return to;
     }
@@ -32,22 +31,22 @@ public interface StateUtil {
     static BlockState stateFromString(String string) {
         Iterator<String> pair = Splitter.on(CharMatcher.anyOf("[]")).limit(3).split(string).iterator();
         if (!pair.hasNext()) {
-            return Blocks.AIR.getDefaultState();
+            return Blocks.AIR.defaultBlockState();
         }
-        Block block = Identifier.validate(pair.next()).result().map(Registries.BLOCK::get).orElse(null);
+        Block block = Identifier.read(pair.next()).result().map(BuiltInRegistries.BLOCK::getValue).orElse(null);
         if (block == null) {
-            return Blocks.AIR.getDefaultState();
+            return Blocks.AIR.defaultBlockState();
         }
         if (!pair.hasNext()) {
-            return block.getDefaultState();
+            return block.defaultBlockState();
         }
         return stateFromKeyMap(block, pair.next());
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     static BlockState stateFromKeyMap(Block block, String keyMap) {
-        var stateFactory = block.getStateManager();
-        var state = block.getDefaultState();
+        var stateFactory = block.getStateDefinition();
+        var state = block.defaultBlockState();
         for (String pair : COMMA_SPLITTER.split(keyMap)) {
             Iterator<String> iterator = KEY_VALUE_SPLITTER.split(pair).iterator();
             if (!iterator.hasNext()) continue;
@@ -55,12 +54,12 @@ public interface StateUtil {
             var property = stateFactory.getProperty(propertyName);
             if (property != null && iterator.hasNext()) {
                 String value = iterator.next();
-                var comparable = property.parse(value).orElse(null);
+                var comparable = property.getValue(value).orElse(null);
                 if (comparable != null) {
-                    state = state.with((Property)property, (Comparable)comparable);
+                    state = state.setValue((Property)property, (Comparable)comparable);
                     continue;
                 }
-                throw new RuntimeException("Unknown value: '" + value + "' for blockstate property: '" + propertyName + "' " + property.getValues());
+                throw new RuntimeException("Unknown value: '" + value + "' for blockstate property: '" + propertyName + "' " + property.getPossibleValues());
             }
             if (!propertyName.isEmpty()) {
                 throw new RuntimeException("Unknown blockstate property: '" + propertyName + "'");

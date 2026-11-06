@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:earth/born_on_a_rock_farm",
+  "criteria": {
+    "killed_entity_with_rock": {
+      "conditions": {
+        "killing_blow": {
+          "tags": [
+            {
+              "expected": true,
+              "id": "#unicopia:from_rocks"
+            }
+          ]
+        }
+      },
+      "trigger": "minecraft:player_killed_entity"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.sticks_and_stones.description"
+    },
+    "icon": {
+      "id": "unicopia:pebbles"
+    },
+    "title": {
+      "translate": "advancements.unicopia.sticks_and_stones.title"
+    }
+  },
+  "requirements": [
+    [
+      "killed_entity_with_rock"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

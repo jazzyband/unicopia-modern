@@ -1,0 +1,31 @@
+{
+  "parent": "unicopia:earth/trick_apple",
+  "criteria": {
+    "feed_trick_apple": {
+      "conditions": {
+        "event": "feed_trick_apple",
+        "flying": true,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.feed_trick_apple.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "unicopia:zap_apple"
+    },
+    "title": {
+      "translate": "advancements.unicopia.feed_trick_apple.title"
+    }
+  },
+  "requirements": [
+    [
+      "feed_trick_apple"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

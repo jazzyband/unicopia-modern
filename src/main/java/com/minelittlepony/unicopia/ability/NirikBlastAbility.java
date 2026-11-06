@@ -1,7 +1,17 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level.ExplosionInteraction;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquinePredicates;
@@ -10,18 +20,6 @@ import com.minelittlepony.unicopia.client.render.PlayerPoser.Animation;
 import com.minelittlepony.unicopia.client.render.PlayerPoser.Animation.Recipient;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.ExplosionUtil;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World.ExplosionSourceType;
 
 /**
  * Kirin ability to transform into a nirik
@@ -44,7 +42,7 @@ public class NirikBlastAbility implements Ability<Hit> {
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Hit> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Hit> getSerializer() {
         return Hit.CODEC;
     }
 
@@ -56,18 +54,18 @@ public class NirikBlastAbility implements Ability<Hit> {
     @Override
     public boolean apply(Pony player, Hit data) {
 
-        player.asWorld().createExplosion(player.asEntity(), player.damageOf(DamageTypes.FIREBALL), ExplosionUtil.NON_DESTRUCTIVE, player.getOriginVector(), 5, true, ExplosionSourceType.MOB);
+        player.asWorld().explode(player.asEntity(), player.damageOf(DamageTypes.FIREBALL), ExplosionUtil.NON_DESTRUCTIVE, player.getOriginVector(), 5, true, ExplosionInteraction.MOB);
         player.setInvulnerabilityTicks(5);
 
         player.setAnimation(Animation.ARMS_UP, Recipient.ANYONE, 12);
-        player.playSound(SoundEvents.ENTITY_POLAR_BEAR_WARNING, 2F, 0.1F);
+        player.playSound(SoundEvents.POLAR_BEAR_WARNING, 2F, 0.1F);
         player.subtractEnergyCost(25);
 
         coolDown(player, AbilitySlot.NONE);
 
-        for (Entity e : player.findAllEntitiesInRange(5, EntityPredicates.VALID_LIVING_ENTITY.and(EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR)).toList()) {
-            Vec3d offset = player.getOriginVector().subtract(e.getPos());
-            ((LivingEntity)e).takeKnockback(1, offset.x, offset.z);
+        for (Entity e : player.findAllEntitiesInRange(5, EntitySelector.LIVING_ENTITY_STILL_ALIVE.and(EntitySelector.NO_CREATIVE_OR_SPECTATOR)).toList()) {
+            Vec3 offset = player.getOriginVector().subtract(e.position());
+            ((LivingEntity)e).knockback(1, offset.x, offset.z, player.asWorld().damageSources().mobAttack(player.asEntity()), 0);
         }
 
         return true;
@@ -79,13 +77,13 @@ public class NirikBlastAbility implements Ability<Hit> {
 
     @Override
     public void coolDown(Pony player, AbilitySlot slot) {
-        Random rng = player.asWorld().random;
+        RandomSource rng = player.asWorld().getRandom();
 
         for (int i = 0; i < 26; i++) {
-            Vec3d pos = player.getOriginVector().add(rng.nextGaussian(), 0, rng.nextGaussian());
-            player.addParticle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, pos, new Vec3d(rng.nextGaussian(), 0.3, rng.nextGaussian()));
-            player.addParticle(ParticleTypes.FLAME, pos, new Vec3d(rng.nextGaussian(), 0.8, rng.nextGaussian()));
-            player.addParticle(ParticleTypes.LAVA, pos, new Vec3d(rng.nextGaussian(), 0.8, rng.nextGaussian()));
+            Vec3 pos = player.getOriginVector().add(rng.nextGaussian(), 0, rng.nextGaussian());
+            player.addParticle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, pos, new Vec3(rng.nextGaussian(), 0.3, rng.nextGaussian()));
+            player.addParticle(ParticleTypes.FLAME, pos, new Vec3(rng.nextGaussian(), 0.8, rng.nextGaussian()));
+            player.addParticle(ParticleTypes.LAVA, pos, new Vec3(rng.nextGaussian(), 0.8, rng.nextGaussian()));
         }
 
     }

@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:platinum",
+  "author": {
+    "translate": "painting.unicopia.platinum.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.platinum.title"
+  },
+  "width": 2
+}

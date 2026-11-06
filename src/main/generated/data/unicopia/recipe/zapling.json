@@ -1,0 +1,6 @@
+{
+  "type": "unicopia:transform_crop",
+  "consume": "unicopia:chitin",
+  "output": "unicopia:zapling",
+  "target": "minecraft:dark_oak_sapling"
+}

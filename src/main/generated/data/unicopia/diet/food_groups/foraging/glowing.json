@@ -1,0 +1,43 @@
+{
+  "ailment": {
+    "effects": {
+      "type": "unicopia:many",
+      "afflictions": [
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 0,
+            "min": 0
+          },
+          "effect": "minecraft:glowing",
+          "seconds": {
+            "max": 30,
+            "min": 30
+          }
+        },
+        {
+          "type": "unicopia:apply_status_effect",
+          "amplifier": {
+            "max": 2,
+            "min": 2
+          },
+          "chance": 30,
+          "effect": "unicopia:food_poisoning",
+          "seconds": {
+            "max": 100,
+            "min": 100
+          }
+        }
+      ]
+    }
+  },
+  "food_attributes": {
+    "food": {
+      "nutrition": 1,
+      "saturation": 3.2
+    }
+  },
+  "tags": [
+    "unicopia:forage/glowing"
+  ]
+}

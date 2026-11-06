@@ -1,0 +1,20 @@
+{
+    "type":  "minecraft:brewing",
+    "input":  {
+                  "item":  "minecraft:potion",
+                  "potion_contents":  {
+                                          "potions":  "unicopia:long_morph_kirin"
+                                      }
+              },
+    "output":  {
+                   "components":  {
+                                      "minecraft:potion_contents":  {
+                                                                        "potion":  "unicopia:kirin"
+                                                                    }
+                                  },
+                   "id":  "minecraft:potion"
+               },
+    "reagent":  {
+                    "item":  "unicopia:curing_joke"
+                }
+}

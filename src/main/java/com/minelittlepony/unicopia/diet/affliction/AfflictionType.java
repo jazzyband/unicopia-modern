@@ -5,18 +5,17 @@ import com.minelittlepony.unicopia.util.RegistryUtils;
 import com.minelittlepony.unicopia.util.serialization.CodecUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.core.Registry;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 
-public record AfflictionType<T extends Affliction>(Identifier id, MapCodec<T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec) {
-    public static final Identifier DEFAULT_ID = Unicopia.id("apply_status_effect");
-    public static final Registry<AfflictionType<?>> REGISTRY = RegistryUtils.createSynced(Unicopia.key("affliction_type"), DEFAULT_ID);
-    public static final Codec<Affliction> CODEC = CodecUtils.apply(REGISTRY.getCodec()
+public record AfflictionType<T extends Affliction>(Identifier id, MapCodec<T> codec, StreamCodec<? super RegistryFriendlyByteBuf, T> packetCodec) {
+    public static final String DEFAULT_ID = "unicopia:apply_status_effect";
+    public static final Registry<AfflictionType<?>> REGISTRY = RegistryUtils.createSynced(Unicopia.id("affliction_type"), DEFAULT_ID);
+    public static final Codec<Affliction> CODEC = CodecUtils.apply(REGISTRY.byNameCodec()
             .dispatch("type", Affliction::getType, AfflictionType::codec), elementCodec -> Codec
             .withAlternative(elementCodec, Codec.list(elementCodec), afflictions -> {
                 afflictions = afflictions.stream().filter(f -> !f.isEmpty()).toList();
@@ -26,7 +25,7 @@ public record AfflictionType<T extends Affliction>(Identifier id, MapCodec<T> co
                     default -> new CompoundAffliction(afflictions);
                 };
             }));
-    public static final PacketCodec<RegistryByteBuf, Affliction> PACKET_CODEC = PacketCodecs.registryValue(REGISTRY.getKey())
+    public static final StreamCodec<RegistryFriendlyByteBuf, Affliction> PACKET_CODEC = ByteBufCodecs.registry(REGISTRY.key())
             .dispatch(Affliction::getType, AfflictionType::packetCodec);
 
     public static final AfflictionType<EmptyAffliction> EMPTY = register("empty", EmptyAffliction.CODEC, EmptyAffliction.PACKET_CODEC);
@@ -36,12 +35,12 @@ public record AfflictionType<T extends Affliction>(Identifier id, MapCodec<T> co
     public static final AfflictionType<HealingAffliction> HEALING = register("healing", HealingAffliction.CODEC, HealingAffliction.PACKET_CODEC);
     public static final AfflictionType<ClearLoveSicknessAffliction> CURE_LOVE_SICKNESS = register("cure_love_sickness", ClearLoveSicknessAffliction.CODEC, ClearLoveSicknessAffliction.PACKET_CODEC);
 
-    static <T extends Affliction> AfflictionType<T> register(String name, MapCodec<T> codec, PacketCodec<? super RegistryByteBuf, T> packetCodec) {
+    static <T extends Affliction> AfflictionType<T> register(String name, MapCodec<T> codec, StreamCodec<? super RegistryFriendlyByteBuf, T> packetCodec) {
         return Registry.register(REGISTRY, Unicopia.id(name), new AfflictionType<>(Unicopia.id(name), codec, packetCodec));
     }
 
     public String getTranslationKey() {
-        return Util.createTranslationKey("affliction", id());
+        return Util.makeDescriptionId("affliction", id());
     }
 
     public static void bootstrap() { }

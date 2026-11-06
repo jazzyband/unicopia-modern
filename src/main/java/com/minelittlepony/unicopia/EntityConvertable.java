@@ -1,9 +1,9 @@
 package com.minelittlepony.unicopia;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Interface for things that can be owned by an entity.
@@ -19,22 +19,22 @@ public interface EntityConvertable<E extends Entity> extends WorldConvertable {
      * Gets the center position where this caster is located.
      */
     default BlockPos getOrigin() {
-        return asEntity().getBlockPos();
+        return asEntity().blockPosition();
     }
     /**
      * Gets the center position where this caster is located.
      */
-    default Vec3d getOriginVector() {
-        return asEntity().getPos().add(0, asEntity().getHeight() * 0.5F, 0);
+    default Vec3 getOriginVector() {
+        return asEntity().position().add(0, asEntity().getBbHeight() * 0.5F, 0);
     }
 
     @Override
-    default World asWorld() {
-        return asEntity().getWorld();
+    default Level asWorld() {
+        return asEntity().level();
     }
 
     @SuppressWarnings("deprecation")
     default boolean isPosLoaded(BlockPos pos) {
-        return asWorld().isChunkLoaded(pos);
+        return asWorld().hasChunkAt(pos);
     }
 }

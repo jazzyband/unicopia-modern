@@ -1,22 +1,20 @@
 package com.minelittlepony.unicopia.client.gui;
 
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
+import org.joml.Matrix3x2fStack;
+import org.joml.Matrix3x2f;
+import org.joml.Matrix3x2fc;
 
 import com.minelittlepony.unicopia.Race;
-import com.minelittlepony.unicopia.client.render.RenderLayers;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider.Immediate;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.render.TextureSetup;
+import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 
 public interface DrawableUtil {
     double PI = Math.PI;
@@ -24,100 +22,84 @@ public interface DrawableUtil {
     double NUM_RINGS = 300;
     double INCREMENT = TAU / NUM_RINGS;
 
-    static void drawScaledText(DrawContext context, Text text, int x, int y, float size, int color) {
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.translate(x, y, 0);
-        matrices.scale(size, size, 1);
-        context.drawText(MinecraftClient.getInstance().textRenderer, text, 0, 0, color, false);
-        matrices.pop();
+    static void drawScaledText(GuiGraphicsExtractor context, Component text, int x, int y, float size, int color) {
+        Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate(x, y);
+        matrices.scale(size, size);
+        context.text(Minecraft.getInstance().font, text, 0, 0, color, false);
+        matrices.popMatrix();
     }
 
-    static void drawScaledText(DrawContext context, String text, int x, int y, float size, int color) {
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
-        matrices.translate(x, y, 0);
-        matrices.scale(size, size, 1);
-        context.drawText(MinecraftClient.getInstance().textRenderer, text, 0, 0, color, false);
-        matrices.pop();
-    }
-
-    static void renderItemIcon(DrawContext context, ItemStack stack, double x, double y, float scale) {
-        MatrixStack modelStack = context.getMatrices();
-        modelStack.push();
-        modelStack.translate(x, y, 0);
+    static void renderItemIcon(GuiGraphicsExtractor context ,ItemStack stack, double x, double y, float scale) {
+        Matrix3x2fStack modelStack = context.pose();
+        modelStack.pushMatrix();
+        modelStack.translate((float)x, (float)y);
         if (scale != 1) {
-            modelStack.scale(scale, scale, 1);
+            modelStack.scale(scale, scale);
         }
-        context.drawItem(stack, 0, 0);
+        context.item(stack, 0, 0);
 
-        modelStack.pop();
+        modelStack.popMatrix();
     }
 
-    static void renderRaceIcon(DrawContext context, Race race, int x, int y, int size) {
-        context.drawTexture(RenderLayer::getGuiTextured, race.getIcon(), x - size / 2, y - size / 2, 0, 0, 0, size, size, size, size);
+    static void renderRaceIcon(GuiGraphicsExtractor context, Race race, int x, int y, int size) {
+        context.blit(RenderPipelines.GUI_TEXTURED, race.getIcon(), x - size / 2, y - size / 2, 0, 0, 0, size, size, size, size);
     }
 
-    static void drawLine(MatrixStack matrices, int x1, int y1, int x2, int y2, int color) {
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
-        Immediate vertices = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumer bufferBuilder = vertices.getBuffer(RenderLayer.getDebugLineStrip(3));
-        bufferBuilder.vertex(matrix, x1, y1, 0).color(color);
-        bufferBuilder.vertex(matrix, x2, y2, 0).color(color);
-        vertices.draw();
+    static void drawLine(GuiGraphicsExtractor context, int x1, int y1, int x2, int y2, int color) {
+        int steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+        for (int i = 0; i <= steps; i++) {
+            int x = steps == 0 ? x1 : x1 + (x2 - x1) * i / steps;
+            int y = steps == 0 ? y1 : y1 + (y2 - y1) * i / steps;
+            context.fill(x, y, x + 1, y + 1, color);
+        }
     }
 
-    /**
-     * Renders a colored arc with notches.
-     *
-     * @param mirrorHorizontally Whether or not the arc must be mirrored across the horizontal plane. Will produce a bar that grows from the middle filling both sides.
-     */
-    static void drawNotchedArc(DrawContext context, double innerRadius, double outerRadius, double startAngle, double arcAngle, double notchAngle, double notchSpacing, int color) {
-        double notchBegin = startAngle;
+    static void drawNotchedArc(GuiGraphicsExtractor context, double innerRadius, double outerRadius, double startAngle, double arcAngle, double notchAngle, double notchSpacing, int color) {
         double endAngle = startAngle + arcAngle;
-        while (notchBegin < endAngle) {
-            double notchEnd = Math.min(notchBegin + notchAngle, endAngle);
-            if (notchEnd <= notchBegin) {
-                return;
-            }
-            drawArc(context, innerRadius, outerRadius, notchBegin, notchEnd - notchBegin, color);
-            notchBegin += notchAngle + notchSpacing;
+        for (double angle = startAngle; angle < endAngle; angle += notchAngle + notchSpacing) {
+            drawArc(context, innerRadius, outerRadius, angle, Math.min(notchAngle, endAngle - angle), color);
         }
     }
 
-    /**
-     * Renders a colored arc.
-     */
-    static void drawArc(DrawContext context, double innerRadius, double outerRadius, double startAngle, double arcAngle, int color) {
-        if (Math.abs(arcAngle) < INCREMENT) {
-            return;
+    static void drawArc(GuiGraphicsExtractor context, double innerRadius, double outerRadius, double startAngle, double arcAngle, int color) {
+        if (outerRadius <= innerRadius || arcAngle <= 0 || color >>> 24 == 0
+                || !Double.isFinite(outerRadius) || !Double.isFinite(startAngle) || !Double.isFinite(arcAngle)) return;
+        Matrix3x2f pose = new Matrix3x2f(context.pose());
+        int radius = (int)Math.ceil(outerRadius);
+        ScreenRectangle scissor = context.scissorStack.peek();
+        ScreenRectangle bounds = new ScreenRectangle(-radius, -radius, radius * 2, radius * 2).transformMaxBounds(pose);
+        if (scissor != null) bounds = bounds.intersection(scissor);
+        if (bounds != null) {
+            context.guiRenderState.addGuiElement(new ArcRenderState(pose, Math.max(0, innerRadius), outerRadius,
+                    startAngle, Math.min(TAU, arcAngle), color, scissor, bounds));
         }
-
-        arcAngle = Math.min(arcAngle, TAU - INCREMENT);
-
-        final double maxAngle = startAngle + arcAngle;
-
-        Matrix4f model = context.getMatrices().peek().getPositionMatrix();
-        context.draw(vertices -> {
-            VertexConsumer bufferBuilder = vertices.getBuffer(RenderLayers.getMagicColored());
-            for (double angle = -startAngle; angle >= -maxAngle; angle -= INCREMENT) {
-                // center
-                cylendricalVertex(bufferBuilder, model, innerRadius, angle, color);
-                // point one
-                cylendricalVertex(bufferBuilder, model, outerRadius, angle, color);
-                // point two
-                cylendricalVertex(bufferBuilder, model, outerRadius, angle + INCREMENT, color);
-                // back to center
-                cylendricalVertex(bufferBuilder, model, innerRadius, angle + INCREMENT, color);
-            }
-        });
     }
 
-    private static void cylendricalVertex(VertexConsumer bufferBuilder, Matrix4f matrix, double radius, double angle, int color) {
-        Vector3f pos = matrix.transformPosition(
-                (float)(radius * MathHelper.sin((float)angle)),
-                (float)(radius * MathHelper.cos((float)angle)),
-                0, new Vector3f());
-        bufferBuilder.vertex(pos.x, pos.y, pos.z, color, 0, 0, OverlayTexture.DEFAULT_UV, LightmapTextureManager.MAX_LIGHT_COORDINATE, 0, 0, 0);
+    record ArcRenderState(Matrix3x2fc pose, double innerRadius, double outerRadius, double startAngle,
+            double arcAngle, int color, ScreenRectangle scissorArea, ScreenRectangle bounds) implements GuiElementRenderState {
+        @Override
+        public RenderPipeline pipeline() { return RenderPipelines.GUI; }
+
+        @Override
+        public TextureSetup textureSetup() { return TextureSetup.noTexture(); }
+
+        @Override
+        public void buildVertices(VertexConsumer vertices) {
+            int segments = Math.max(1, (int)Math.ceil(arcAngle / INCREMENT));
+            for (int i = 0; i < segments; i++) {
+                double a = startAngle + arcAngle * i / segments;
+                double b = startAngle + arcAngle * (i + 1) / segments;
+                vertex(vertices, innerRadius, a);
+                vertex(vertices, outerRadius, a);
+                vertex(vertices, outerRadius, b);
+                vertex(vertices, innerRadius, b);
+            }
+        }
+
+        private void vertex(VertexConsumer vertices, double radius, double angle) {
+            vertices.addVertexWith2DPose(pose, (float)(-Math.sin(angle) * radius), (float)(Math.cos(angle) * radius)).setColor(color);
+        }
     }
 }

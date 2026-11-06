@@ -1,0 +1,35 @@
+{
+  "parent": "unicopia:hippogriff/shoo_be_doo",
+  "criteria": {
+    "seapony_transition": {
+      "conditions": {
+        "event": "seapony_transition",
+        "flying": false,
+        "races": {
+          "exclude": [
+            "unicopia:seapony"
+          ]
+        },
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.shoo_be_done.description"
+    },
+    "icon": {
+      "id": "unicopia:pearl_necklace"
+    },
+    "title": {
+      "translate": "advancements.unicopia.shoo_be_done.title"
+    }
+  },
+  "requirements": [
+    [
+      "seapony_transition"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -1,0 +1,13 @@
+{
+  "wants": {
+    "id": "unicopia:gemstone",
+    "count": 20
+  },
+  "gives": {
+    "id": "unicopia:hay_fries",
+    "count": 5
+  },
+  "max_uses": 50,
+  "xp": 3,
+  "reputation_discount": 0.06
+}

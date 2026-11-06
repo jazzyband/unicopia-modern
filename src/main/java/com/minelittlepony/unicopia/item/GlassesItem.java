@@ -2,17 +2,16 @@ package com.minelittlepony.unicopia.item;
 
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.compat.trinkets.TrinketsDelegate;
-
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.equipment.ArmorMaterials;
-import net.minecraft.text.Text;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.equipment.ArmorMaterials;
 
 public class GlassesItem extends WearableItem {
-    public GlassesItem(Item.Settings settings) {
+    public GlassesItem(Item.Properties settings) {
         super(settings, ArmorMaterials.LEATHER.equipSound());
     }
 
@@ -23,8 +22,8 @@ public class GlassesItem extends WearableItem {
 
     public static boolean isCoolAndHasShades(LivingEntity entity) {
         ItemStack glasses = getForEntity(entity).stack();
-        Text customName = glasses.get(DataComponentTypes.CUSTOM_NAME);
-        return glasses.isIn(UTags.Items.TINTED_SHADES) && customName != null && "Cool Shades".equals(customName.getString());
+        Component customName = glasses.get(DataComponents.CUSTOM_NAME);
+        return glasses.is(UTags.Items.TINTED_SHADES) && customName != null && "Cool Shades".equals(customName.getString());
     }
 
     public static TrinketsDelegate.EquippedStack getForEntity(LivingEntity entity) {

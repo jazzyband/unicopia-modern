@@ -5,105 +5,96 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.EquineContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.StairsBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCollisionHandler;
-import net.minecraft.entity.ai.pathing.NavigationType;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.EmptyBlockView;
-import net.minecraft.world.World;
-
-public class CloudStairsBlock extends StairsBlock implements CloudLike {
-    private static final MapCodec<CloudStairsBlock> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BlockState.CODEC.fieldOf("base_state").forGetter(block -> block.baseBlockState),
-            StairsBlock.createSettingsCodec()
-    ).apply(instance, CloudStairsBlock::new));
+public class CloudStairsBlock extends StairBlock implements CloudLike {
 
     private final CloudBlock baseBlock;
 
-    public CloudStairsBlock(BlockState baseState, Settings settings) {
+    public CloudStairsBlock(BlockState baseState, Properties settings) {
         super(baseState, CloudLike.applyCloudProperties(settings));
         this.baseBlock = (CloudBlock)baseState.getBlock();
     }
 
+
     @Override
-    public MapCodec<? extends StairsBlock> getCodec() {
-        return CODEC;
+    protected float getShadeBrightness(BlockState state, BlockGetter world, BlockPos pos) {
+        return baseBlock.getShadeBrightness(state, world, pos);
     }
 
     @Override
-    protected float getAmbientOcclusionLightLevel(BlockState state, BlockView world, BlockPos pos) {
-        return baseBlock.getAmbientOcclusionLightLevel(state, world, pos);
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return baseBlock.propagatesSkylightDown(state);
     }
 
     @Override
-    protected boolean isTransparent(BlockState state) {
-        return baseBlock.isTransparent(state);
+    public void bounceOn(Level world, BlockState state, BlockPos pos, Entity entity, double fallDistance) {
+        baseBlock.bounceOn(world, state, pos, entity, fallDistance);
     }
 
     @Override
-    public void onEntityLand(BlockView world, Entity entity) {
-        baseBlock.onEntityLand(world, entity);
+    public void fallOn(Level world, BlockState state, BlockPos pos, Entity entity, double fallDistance) {
+        baseBlock.fallOn(world, state, pos, entity, fallDistance);
     }
 
     @Override
-    public void onLandedUpon(World world, BlockState state, BlockPos pos, Entity entity, double fallDistance) {
-        baseBlock.onLandedUpon(world, state, pos, entity, fallDistance);
+    protected void entityInside(BlockState state, Level world, BlockPos pos, Entity entity, InsideBlockEffectApplier handler, boolean isMoving) {
+        baseBlock.entityInside(state, world, pos, entity, handler, isMoving);
     }
 
     @Override
-    protected void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity, EntityCollisionHandler handler) {
-        baseBlock.onEntityCollision(state, world, pos, entity, handler);
-    }
-
-    @Override
-    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+    protected VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
         if (!baseBlock.canInteract(state, world, pos, EquineContext.of(context))) {
-            return VoxelShapes.empty();
+            return Shapes.empty();
         }
-        return super.getOutlineShape(state, world, pos, context);
+        return super.getShape(state, world, pos, context);
     }
 
     @Override
-    protected final VoxelShape getCullingShape(BlockState state) {
-        return super.getOutlineShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
+    protected final VoxelShape getOcclusionShape(BlockState state) {
+        return super.getShape(state, EmptyBlockGetter.INSTANCE, BlockPos.ZERO, CollisionContext.empty());
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return this.collidable ? state.getOutlineShape(world, pos, context) : VoxelShapes.empty();
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return this.hasCollision ? state.getShape(world, pos, context) : Shapes.empty();
     }
 
     @Override
     @Nullable
-    public BlockState getPlacementState(ItemPlacementContext context) {
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
         EquineContext equineContext = EquineContext.of(context);
-        if (!baseBlock.canInteract(getDefaultState(), context.getWorld(), context.getBlockPos(), equineContext)) {
+        if (!baseBlock.canInteract(defaultBlockState(), context.getLevel(), context.getClickedPos(), equineContext)) {
             return null;
         }
-        return super.getPlacementState(context);
+        return super.getStateForPlacement(context);
     }
 
     @Override
-    protected boolean canReplace(BlockState state, ItemPlacementContext context) {
-        return baseBlock.canReplace(state, context);
+    protected boolean canBeReplaced(BlockState state, BlockPlaceContext context) {
+        return baseBlock.canBeReplaced(state, context);
     }
 
     @Override
-    protected boolean isSideInvisible(BlockState state, BlockState stateFrom, Direction direction) {
-        return baseBlock.isSideInvisible(state, stateFrom, direction);
+    protected boolean skipRendering(BlockState state, BlockState stateFrom, Direction direction) {
+        return baseBlock.skipRendering(state, stateFrom, direction);
     }
 
     @Override
-    protected boolean canPathfindThrough(BlockState state, NavigationType type) {
-        return baseBlock.canPathfindThrough(state, type);
+    protected boolean isPathfindable(BlockState state, PathComputationType type) {
+        return baseBlock.isPathfindable(state, type);
     }
 }

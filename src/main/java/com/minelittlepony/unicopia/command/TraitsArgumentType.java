@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.network.chat.Component;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.mojang.brigadier.StringReader;
@@ -14,11 +15,9 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 
-import net.minecraft.text.Text;
-
 class TraitsArgumentType implements ArgumentType<SpellTraits> {
     private static final List<String> EXAMPLES = List.of("strength:1,focus:2", "");
-    public static final SimpleCommandExceptionType UNRECOGNISED_TRAIT_EXCEPTION = new SimpleCommandExceptionType(Text.translatable("argument.spell_trait.unrecognised"));
+    public static final SimpleCommandExceptionType UNRECOGNISED_TRAIT_EXCEPTION = new SimpleCommandExceptionType(Component.translatable("argument.spell_trait.unrecognised"));
 
     private TraitsArgumentType() {
 

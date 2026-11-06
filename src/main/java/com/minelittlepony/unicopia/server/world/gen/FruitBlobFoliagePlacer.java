@@ -2,7 +2,14 @@ package com.minelittlepony.unicopia.server.world.gen;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.TreeFeature;
+import net.minecraft.world.level.levelgen.feature.foliageplacers.BlobFoliagePlacer;
+import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacerType;
 import org.joml.Vector2i;
 
 import com.minelittlepony.unicopia.block.FruitBearingBlock;
@@ -11,34 +18,25 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.intprovider.IntProvider;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.TestableWorld;
-import net.minecraft.world.gen.feature.TreeFeatureConfig;
-import net.minecraft.world.gen.foliage.BlobFoliagePlacer;
-import net.minecraft.world.gen.foliage.FoliagePlacerType;
-
 public class FruitBlobFoliagePlacer extends BlobFoliagePlacer {
-    public static final MapCodec<FruitBlobFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(instance -> createCodec(instance).apply(instance, FruitBlobFoliagePlacer::new));
+    public static final MapCodec<FruitBlobFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(instance -> blobParts(instance).apply(instance, FruitBlobFoliagePlacer::new));
 
     public FruitBlobFoliagePlacer(IntProvider radius, IntProvider offset, int height) {
         super(radius, offset, height);
     }
 
     @Override
-    protected FoliagePlacerType<?> getType() {
+    protected FoliagePlacerType<?> type() {
         return UWorldGen.FRUIT_BLOB_FOLIAGE_PLACER_TYPE;
     }
 
     @Override
-    public void generate(TestableWorld world, BlockPlacer placer, Random random, TreeFeatureConfig config, int trunkHeight, TreeNode treeNode, int foliageHeight, int radius) {
+    protected void createFoliage(WorldGenLevel world, FoliageSetter placer, RandomSource random, TreeFeature config, int trunkHeight, FoliageAttachment treeNode, int foliageHeight, int radius, int offset) {
         final Map<Vector2i, Pair<FruitBearingBlock, Integer>> leafPositions = new HashMap<>();
-        super.generate(world, new BlockPlacer() {
+        super.createFoliage(world, new FoliageSetter() {
             @Override
-            public void placeBlock(BlockPos pos, BlockState state) {
-                placer.placeBlock(pos, state);
+            public void set(BlockPos pos, BlockState state) {
+                placer.set(pos, state);
                 if (state.getBlock() instanceof FruitBearingBlock block
                         && block.isPositionValidForFruit(state, pos)) {
                     leafPositions.compute(new Vector2i(pos.getX(), pos.getZ()), (col, original) -> original == null || original.getSecond() > pos.getY() ? Pair.of(block, pos.getY()) : original);
@@ -46,15 +44,15 @@ public class FruitBlobFoliagePlacer extends BlobFoliagePlacer {
             }
 
             @Override
-            public boolean hasPlacedBlock(BlockPos pos) {
-                return placer.hasPlacedBlock(pos);
+            public boolean isSet(BlockPos pos) {
+                return placer.isSet(pos);
             }
-        }, random, config, trunkHeight, treeNode, foliageHeight, radius);
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        }, random, config, trunkHeight, treeNode, foliageHeight, radius, offset);
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         leafPositions.entrySet().forEach(pos -> {
             mutable.set(pos.getKey().x(), pos.getValue().getSecond() - 1, pos.getKey().y());
-            if (!placer.hasPlacedBlock(mutable) && random.nextInt(12) == 0) {
-                placer.placeBlock(mutable, pos.getValue().getFirst().getPlacedFruitState(random));
+            if (!placer.isSet(mutable) && random.nextInt(12) == 0) {
+                placer.set(mutable, pos.getValue().getFirst().getPlacedFruitState(random));
             }
         });
     }

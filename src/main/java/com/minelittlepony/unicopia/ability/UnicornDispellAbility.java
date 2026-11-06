@@ -1,7 +1,10 @@
 package com.minelittlepony.unicopia.ability;
 
 import java.util.Optional;
-
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.Race;
@@ -13,11 +16,6 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.VecHelper;
-
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
 /**
  * Dispells an active spell
@@ -41,11 +39,11 @@ public class UnicornDispellAbility implements Ability<Pos> {
 
     @Override
     public Identifier getIcon(Pony player) {
-        return Abilities.REGISTRY.getId(this).withPath(p -> "textures/gui/ability/" + p + (player.getSpecies() == Race.CHANGELING ? "_changeling" : "") + ".png");
+        return Abilities.REGISTRY.getKey(this).withPath(p -> "textures/gui/ability/" + p + (player.getSpecies() == Race.CHANGELING ? "_changeling" : "") + ".png");
     }
 
     @Override
-    public PacketCodec<? super RegistryByteBuf, Pos> getSerializer() {
+    public StreamCodec<? super RegistryFriendlyByteBuf, Pos> getSerializer() {
         return Pos.CODEC;
     }
 
@@ -56,9 +54,9 @@ public class UnicornDispellAbility implements Ability<Pos> {
             if (type.getTapCount() > 1) {
                 player.setAnimation(Animation.WOLOLO, Animation.Recipient.ANYONE, 10);
                 if (player.getSpellSlot().clear()) {
-                    player.asEntity().sendMessage(Text.translatable("gui.unicopia.action.spells_cleared"), true);
+                    player.asEntity().sendOverlayMessage(Component.translatable("gui.unicopia.action.spells_cleared"));
                 } else {
-                    player.asEntity().sendMessage(Text.translatable("gui.unicopia.action.no_spells_cleared"), true);
+                    player.asEntity().sendOverlayMessage(Component.translatable("gui.unicopia.action.no_spells_cleared"));
                 }
                 return true;
             }

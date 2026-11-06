@@ -1,0 +1,32 @@
+{
+  "parent": "unicopia:earth/earth_route",
+  "criteria": {
+    "has_oats": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:oats"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.oats_so_easy.description"
+    },
+    "icon": {
+      "id": "unicopia:oats"
+    },
+    "title": {
+      "translate": "advancements.unicopia.oats_so_easy.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_oats"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

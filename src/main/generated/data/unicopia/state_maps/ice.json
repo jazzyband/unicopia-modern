@@ -1,0 +1,55 @@
+{
+  "entries": [
+    {
+      "apply": {
+        "type": "unicopia:cycle_property",
+        "property": "layers"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:snow{layers<7}"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:frosted_ice"
+      },
+      "match": {
+        "type": "unicopia:fluid_tag",
+        "tag": "#minecraft:water"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "unicopia:frosted_obsidian"
+      },
+      "match": {
+        "type": "unicopia:fluid_tag",
+        "tag": "#minecraft:lava"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_state",
+        "state": "minecraft:air"
+      },
+      "match": {
+        "type": "unicopia:block_tag",
+        "tag": "#minecraft:fire"
+      }
+    },
+    {
+      "apply": {
+        "type": "unicopia:set_property",
+        "property": "power",
+        "value": "power"
+      },
+      "match": {
+        "type": "unicopia:block_state",
+        "state": "minecraft:redstone_wire"
+      }
+    }
+  ]
+}

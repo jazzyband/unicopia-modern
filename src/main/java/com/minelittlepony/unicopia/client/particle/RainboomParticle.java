@@ -3,11 +3,10 @@ package com.minelittlepony.unicopia.client.particle;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.particle.OrientedBillboardParticleEffect;
-
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 
 public class RainboomParticle extends OrientedBillboardParticle {
     private static final Identifier TEXTURE = Unicopia.id("textures/particles/rainboom_ring.png");
@@ -15,14 +14,14 @@ public class RainboomParticle extends OrientedBillboardParticle {
     protected float prevBaseSize = 0;
     protected float baseSize = 0;
 
-    public RainboomParticle(OrientedBillboardParticleEffect effect, ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+    public RainboomParticle(OrientedBillboardParticleEffect effect, ClientLevel world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
         super(effect, world, x, y, z, velocityX, velocityY, velocityZ);
-        setMaxAge(40);
+        setLifetime(40);
     }
 
     @Override
     public float getScale(float tickDelta) {
-       return MathHelper.lerp(tickDelta, prevBaseSize, baseSize) * super.getScale(tickDelta);
+       return Mth.lerp(tickDelta, prevBaseSize, baseSize) * super.getScale(tickDelta);
     }
 
     @Override
@@ -38,8 +37,8 @@ public class RainboomParticle extends OrientedBillboardParticle {
         baseSize++;
 
         if (age == 1) {
-            world.playSoundClient(x, y, z, USounds.PARTICLE_RAINBOOM_THUNDER, SoundCategory.AMBIENT, 5, 0.3F, true);
-            world.playSoundClient(x, y, z, USounds.PARTICLE_RAINBOOM_REVERB, SoundCategory.AMBIENT, 10, 1.3F, true);
+            level.playLocalSound(x, y, z, USounds.PARTICLE_RAINBOOM_THUNDER, SoundSource.AMBIENT, 5, 0.3F, true);
+            level.playLocalSound(x, y, z, USounds.PARTICLE_RAINBOOM_REVERB, SoundSource.AMBIENT, 10, 1.3F, true);
         }
     }
 }

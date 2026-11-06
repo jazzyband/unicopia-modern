@@ -3,7 +3,11 @@ package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.util.MutableVector;
@@ -11,25 +15,20 @@ import com.minelittlepony.unicopia.util.MutableVector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 
 public class AltarRecipeMatch {
-    private final Vec3d position;
+    private final Vec3 position;
     private final List<ItemEntity> stacks = new ArrayList<>();
     private final Int2ObjectMap<ItemInput> inputs = new Int2ObjectOpenHashMap<>();
     private final int minCrafts;
     private final ItemStack result;
 
     public AltarRecipeMatch(Stream<ItemEntity> stacks, ItemStack result) {
-        MutableVector position = new MutableVector(Vec3d.ZERO);
+        MutableVector position = new MutableVector(Vec3.ZERO);
         stacks.forEach(stack -> {
             this.stacks.add(stack);
-            position.add(stack.getPos());
-            inputs.computeIfAbsent(Item.getRawId(stack.getStack().getItem()), i -> new ItemInput()).add(stack);
+            position.add(stack.position());
+            inputs.computeIfAbsent(Item.getId(stack.getItem().getItem()), i -> new ItemInput()).add(stack);
         });
         position.multiply(1D/this.stacks.size());
         this.position = position.toImmutable();
@@ -59,11 +58,11 @@ public class AltarRecipeMatch {
         inputs.compute(itemId, (i, entities) -> entities == null ? null : entities.consume(amount));
     }
 
-    public void craft(World world) {
-        ItemEntity output = new ItemEntity(world, position.getX(), position.getY(), position.getZ(), result);
-        output.setInvulnerable(true);
+    public void craft(Level world) {
+        ItemEntity output = new ItemEntity(world, position.x(), position.y(), position.z(), result);
+        output.setPermanentlyInvulnerable(true);
         consumeInputs(minCrafts);
-        world.spawnEntity(output);
+        world.addFreshEntity(output);
     }
 
     class ItemInput {
@@ -71,7 +70,7 @@ public class AltarRecipeMatch {
         final List<ItemEntity> entities = new ArrayList<>();
 
         public void add(ItemEntity stack) {
-            count += stack.getStack().getCount();
+            count += stack.getItem().getCount();
             entities.add(stack);
         }
 
@@ -84,15 +83,15 @@ public class AltarRecipeMatch {
             int remainder = amount;
             while (remainder > 0 && !entities.isEmpty()) {
                 ItemEntity entity = entities.get(0);
-                ItemStack stack = entity.getStack();
+                ItemStack stack = entity.getItem();
                 int decremented = Math.min(remainder, stack.getCount());
                 remainder -= decremented;
-                stack.decrement(decremented);
+                stack.shrink(decremented);
                 if (stack.isEmpty()) {
                     entity.discard();
                     entities.remove(0);
                 } else {
-                    entity.setStack(stack);
+                    entity.setItem(stack);
                 }
             }
             if (entities.isEmpty()) {

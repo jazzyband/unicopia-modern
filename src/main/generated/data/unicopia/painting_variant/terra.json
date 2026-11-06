@@ -1,0 +1,11 @@
+{
+  "asset_id": "unicopia:terra",
+  "author": {
+    "translate": "painting.unicopia.terra.author"
+  },
+  "height": 4,
+  "title": {
+    "translate": "painting.unicopia.terra.title"
+  },
+  "width": 2
+}

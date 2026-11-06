@@ -1,8 +1,8 @@
 package com.minelittlepony.unicopia.util.shape;
 
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
 
 public class Cylinder implements Shape {
 
@@ -67,17 +67,17 @@ public class Cylinder implements Shape {
     }
 
     @Override
-    public Vec3d computePoint(Random rand) {
-        double y = MathHelper.nextDouble(rand, 0, height);
-        double pheta = MathHelper.nextDouble(rand, 0, Math.PI * 2);
-        double rho = hollow && Math.abs(y) != height/2 ? rad : MathHelper.nextDouble(rand, 0, rad);
+    public Vec3 computePoint(RandomSource rand) {
+        double y = Mth.nextDouble(rand, 0, height);
+        double pheta = Mth.nextDouble(rand, 0, Math.PI * 2);
+        double rho = hollow && Math.abs(y) != height/2 ? rad : Mth.nextDouble(rand, 0, rad);
 
-        return new Vec3d(rho * Math.cos(pheta) * stretchX, y, rho * Math.sin(pheta) * stretchZ);
+        return new Vec3(rho * Math.cos(pheta) * stretchX, y, rho * Math.sin(pheta) * stretchZ);
     }
 
     @Override
-    public boolean isPointInside(Vec3d point) {
-        point = new Vec3d(point.x / stretchX, point.y, point.z / stretchZ);
+    public boolean isPointInside(Vec3 point) {
+        point = new Vec3(point.x / stretchX, point.y, point.z / stretchZ);
         double y = Math.abs(point.y);
         if (y < height/2) {
             double r = Math.sqrt((point.x * point.x) + (point.z * point.z));
@@ -87,12 +87,12 @@ public class Cylinder implements Shape {
     }
 
     @Override
-    public Vec3d getLowerBound() {
-        return new Vec3d(-rad * stretchX, 0, -rad * stretchZ);
+    public Vec3 getLowerBound() {
+        return new Vec3(-rad * stretchX, 0, -rad * stretchZ);
     }
 
     @Override
-    public Vec3d getUpperBound() {
-        return new Vec3d(-rad * stretchX, height, -rad * stretchZ);
+    public Vec3 getUpperBound() {
+        return new Vec3(-rad * stretchX, height, -rad * stretchZ);
     }
 }

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "unicopia:block/golden_oak_slab"
+    },
+    "type=double": {
+      "model": "unicopia:block/golden_oak_planks"
+    },
+    "type=top": {
+      "model": "unicopia:block/golden_oak_slab_top"
+    }
+  }
+}

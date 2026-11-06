@@ -1,0 +1,17 @@
+{
+  "drops": [
+    {
+      "item": "unicopia:rotten_apple",
+      "weight": 1
+    }
+  ],
+  "leaves": [
+    "minecraft:mangrove_leaves"
+  ],
+  "leavesRatio": 0.5,
+  "logs": [
+    "minecraft:mangrove_log",
+    "minecraft:mangrove_wood"
+  ],
+  "rarity": 5
+}

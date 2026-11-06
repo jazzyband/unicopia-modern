@@ -1,0 +1,40 @@
+{
+  "parent": "unicopia:unicorn/take_a_note",
+  "criteria": {
+    "ding_sun": {
+      "conditions": {
+        "counter": "dings_on_celestias_head",
+        "item": {
+          "items": "#unicopia:is_delivered_aggressively"
+        },
+        "races": {
+          "include": [
+            "unicopia:bat"
+          ]
+        },
+        "recipient_name": "princess celestia",
+        "recipient_present": false
+      },
+      "trigger": "unicopia:send_dragon_breath"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.sweet_sweet_revenge.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "minecraft:chipped_anvil"
+    },
+    "title": {
+      "translate": "advancements.unicopia.sweet_sweet_revenge.title"
+    }
+  },
+  "requirements": [
+    [
+      "ding_sun"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -8,31 +8,32 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.minelittlepony.unicopia.entity.duck.LavaAffine;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Leashable;
+import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+import net.minecraft.world.entity.vehicle.boat.Boat;
+import net.minecraft.world.entity.vehicle.VehicleEntity;
+import net.minecraft.world.level.material.Fluid;
 
-import net.minecraft.entity.Leashable;
-import net.minecraft.entity.data.*;
-import net.minecraft.entity.data.DataTracker.Builder;
-import net.minecraft.entity.vehicle.AbstractBoatEntity;
-import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.entity.vehicle.VehicleEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.registry.tag.TagKey;
-
-@Mixin(AbstractBoatEntity.class)
+@Mixin(AbstractBoat.class)
 abstract class MixinBoatEntity extends VehicleEntity implements Leashable, LavaAffine {
-    private static final TrackedData<Boolean> IS_LAVA_BOAT = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> IS_LAVA_BOAT = SynchedEntityData.defineId(Boat.class, EntityDataSerializers.BOOLEAN);
 
     MixinBoatEntity() { super(null, null); }
 
     @ModifyExpressionValue(
             method = {
-                    "getWaterHeightBelow",
-                    "checkBoatInWater",
-                    "getUnderWaterLocation",
-                    "fall",
+                    "getWaterLevelAbove",
+                    "checkInWater",
+                    "isUnderwater",
+                    "checkFallDamage",
                     "canAddPassenger"
             },
             at = @At(
@@ -46,24 +47,24 @@ abstract class MixinBoatEntity extends VehicleEntity implements Leashable, LavaA
         return isLavaAffine() ? FluidTags.LAVA : tag;
     }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("HEAD"))
-    private void onWriteCustomDataToNbt(NbtCompound nbt, CallbackInfo info) {
+    @Inject(method = "addAdditionalSaveData", at = @At("HEAD"))
+    private void onWriteCustomDataToNbt(net.minecraft.world.level.storage.ValueOutput nbt, CallbackInfo info) {
         nbt.putBoolean("IsLavaAffine", isLavaAffine());
     }
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("HEAD"))
-    private void onReadCustomDataFromNbt(NbtCompound nbt, CallbackInfo info) {
-        setLavaAffine(nbt.getBoolean("IsLavaAffine", false));
+    @Inject(method = "readAdditionalSaveData", at = @At("HEAD"))
+    private void onReadCustomDataFromNbt(net.minecraft.world.level.storage.ValueInput nbt, CallbackInfo info) {
+        setLavaAffine(nbt.getBooleanOr("IsLavaAffine", false));
     }
 
-    @Inject(method = "initDataTracker", at = @At("HEAD"))
+    @Inject(method = "defineSynchedData", at = @At("HEAD"))
     private void onInitDataTracker(Builder builder, CallbackInfo info) {
-        builder.add(IS_LAVA_BOAT, false);
+        builder.define(IS_LAVA_BOAT, false);
     }
 
     @Override
     public void setLavaAffine(boolean lavaAffine) {
-        dataTracker.set(IS_LAVA_BOAT, lavaAffine);
+        entityData.set(IS_LAVA_BOAT, lavaAffine);
         if (lavaAffine) {
             ParticleUtils.spawnParticles(ParticleTypes.CLOUD, this, 10);
         }
@@ -71,6 +72,6 @@ abstract class MixinBoatEntity extends VehicleEntity implements Leashable, LavaA
 
     @Override
     public boolean isLavaAffine() {
-        return dataTracker.get(IS_LAVA_BOAT);
+        return entityData.get(IS_LAVA_BOAT);
     }
 }

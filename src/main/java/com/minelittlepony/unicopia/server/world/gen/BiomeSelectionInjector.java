@@ -7,41 +7,39 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Climate;
+import net.minecraft.world.level.biome.Climate.Parameter;
+import net.minecraft.world.level.biome.Climate.ParameterPoint;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.include.com.google.common.base.Objects;
 
 import com.minelittlepony.unicopia.server.world.gen.BiomeSelectionContext.SplittableBiomeCoordinate;
 import com.mojang.datafixers.util.Pair;
 
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.util.MultiNoiseUtil;
-import net.minecraft.world.biome.source.util.MultiNoiseUtil.NoiseHypercube;
-import net.minecraft.world.biome.source.util.MultiNoiseUtil.ParameterRange;
+public final class BiomeSelectionInjector implements Consumer<Pair<Climate.ParameterPoint, ResourceKey<Biome>>> {
 
-public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUtil.NoiseHypercube, RegistryKey<Biome>>> {
+    private final Consumer<Pair<Climate.ParameterPoint, ResourceKey<Biome>>> parameterConsumer;
 
-    private final Consumer<Pair<MultiNoiseUtil.NoiseHypercube, RegistryKey<Biome>>> parameterConsumer;
-
-    public BiomeSelectionInjector(Consumer<Pair<MultiNoiseUtil.NoiseHypercube, RegistryKey<Biome>>> parameterConsumer) {
+    public BiomeSelectionInjector(Consumer<Pair<Climate.ParameterPoint, ResourceKey<Biome>>> parameterConsumer) {
         this.parameterConsumer = parameterConsumer;
     }
 
     @Override
-    public void accept(Pair<NoiseHypercube, RegistryKey<Biome>> parameter) {
+    public void accept(Pair<ParameterPoint, ResourceKey<Biome>> parameter) {
         Context context = new Context(parameter);
         OverworldBiomeSelectionCallback.EVENT.invoker().onSelectingBiome(context);
         if (!context.overrides.isEmpty()) {
-            List<Pair<NoiseHypercube, RegistryKey<Biome>>> subSections = List.of(parameter);
+            List<Pair<ParameterPoint, ResourceKey<Biome>>> subSections = List.of(parameter);
             // sort splits from largest to smallest
             var divisions = context.overrides.entrySet()
                 .stream()
-                .sorted(Comparator.<Map.Entry<SplittableBiomeCoordinate, RegistryKey<Biome>>, Float>comparing(entry -> Context.getVolume(entry.getKey())).reversed())
+                .sorted(Comparator.<Map.Entry<SplittableBiomeCoordinate, ResourceKey<Biome>>, Float>comparing(entry -> Context.getVolume(entry.getKey())).reversed())
                 .toList();
             // recursively sub-divide into parts so every split gets a (kinda) fair share
-            for (Map.Entry<SplittableBiomeCoordinate, RegistryKey<Biome>> division : divisions) {
+            for (Map.Entry<SplittableBiomeCoordinate, ResourceKey<Biome>> division : divisions) {
                 subSections = subSections.stream().flatMap(par -> Stream.of(
                         Pair.of(Context.write(division.getKey(), par.getFirst()), division.getValue()),
                         par
@@ -55,15 +53,15 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
     }
 
     class Context implements BiomeSelectionContext {
-        private final Pair<NoiseHypercube, RegistryKey<Biome>> parameter;
-        private final Map<SplittableBiomeCoordinate, RegistryKey<Biome>> overrides = new LinkedHashMap<>();
+        private final Pair<ParameterPoint, ResourceKey<Biome>> parameter;
+        private final Map<SplittableBiomeCoordinate, ResourceKey<Biome>> overrides = new LinkedHashMap<>();
 
-        public Context(Pair<NoiseHypercube, RegistryKey<Biome>> parameter) {
+        public Context(Pair<ParameterPoint, ResourceKey<Biome>> parameter) {
             this.parameter = parameter;
         }
 
         @Override
-        public RegistryKey<Biome> biomeKey() {
+        public ResourceKey<Biome> biomeKey() {
             return parameter.getSecond();
         }
 
@@ -74,7 +72,7 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
 
         @Override
         @Nullable
-        public RegistryKey<Biome> addOverride(SplittableBiomeCoordinate coordinate, RegistryKey<Biome> biome) {
+        public ResourceKey<Biome> addOverride(SplittableBiomeCoordinate coordinate, ResourceKey<Biome> biome) {
             return overrides.put(coordinate, biome);
         }
 
@@ -87,8 +85,8 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
                     * ((SplitableParameterRangeImpl)coordinate.weirdness()).length();
         }
 
-        static NoiseHypercube write(SplittableBiomeCoordinate coordinate, NoiseHypercube referenceFrame) {
-            return new NoiseHypercube(
+        static ParameterPoint write(SplittableBiomeCoordinate coordinate, ParameterPoint referenceFrame) {
+            return new ParameterPoint(
                     ((SplitableParameterRangeImpl)coordinate.temperature()).write(referenceFrame.temperature()),
                     ((SplitableParameterRangeImpl)coordinate.humidity()).write(referenceFrame.humidity()),
                     ((SplitableParameterRangeImpl)coordinate.continentalness()).write(referenceFrame.continentalness()),
@@ -99,7 +97,7 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
             );
         }
 
-        static SplittableBiomeCoordinate createStart(NoiseHypercube referenceFrame) {
+        static SplittableBiomeCoordinate createStart(ParameterPoint referenceFrame) {
             final SplittableBiomeCoordinate[] self = new SplittableBiomeCoordinate[1];
             return self[0] = new SplittableBiomeCoordinate(
                     new SplitableParameterRangeImpl(self, SplittableBiomeCoordinate::temperature, 0, 1),
@@ -144,12 +142,12 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
 
             @Override
             public SplittableBiomeCoordinate splitAbove(float midpoint) {
-                return copyWithDifference(o -> o.min = MathHelper.lerp(midpoint, o.min, o.max));
+                return copyWithDifference(o -> o.min = Mth.lerp(midpoint, o.min, o.max));
             }
 
             @Override
             public SplittableBiomeCoordinate splitBelow(float midpoint) {
-                return copyWithDifference(o -> o.max = MathHelper.lerp(midpoint, o.min, o.max));
+                return copyWithDifference(o -> o.max = Mth.lerp(midpoint, o.min, o.max));
             }
 
             private SplittableBiomeCoordinate copyWithDifference(Consumer<SplitableParameterRangeImpl> mutator) {
@@ -158,10 +156,10 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
                 return copy;
             }
 
-            public ParameterRange write(ParameterRange range) {
-                return ParameterRange.of(
-                        MultiNoiseUtil.toFloat(range.min()) * (1 + min),
-                        MultiNoiseUtil.toFloat(range.max()) * max
+            public Parameter write(Parameter range) {
+                return Parameter.span(
+                        Climate.unquantizeCoord(range.min()) * (1 + min),
+                        Climate.unquantizeCoord(range.max()) * max
                 );
             }
 
@@ -172,8 +170,8 @@ public final class BiomeSelectionInjector implements Consumer<Pair<MultiNoiseUti
             @Override
             public boolean equals(Object o) {
                 return o instanceof SplitableParameterRangeImpl i
-                        && MathHelper.approximatelyEquals(i.min, min)
-                        && MathHelper.approximatelyEquals(i.max, max);
+                        && Mth.equal(i.min, min)
+                        && Mth.equal(i.max, max);
             }
 
             @Override

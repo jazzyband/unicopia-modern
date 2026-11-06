@@ -2,7 +2,10 @@ package com.minelittlepony.unicopia.ability;
 
 
 import java.util.Optional;
-
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquinePredicates;
@@ -15,11 +18,6 @@ import com.minelittlepony.unicopia.entity.behaviour.Disguise;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.util.Trace;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.sound.SoundCategory;
 
 /**
  * Changeling ability to disguise themselves as other players.
@@ -34,7 +32,7 @@ public class ChangelingDisguiseAbility extends ChangelingFeedAbility {
 
     @Override
     public boolean apply(Pony iplayer, Hit data) {
-        PlayerEntity player = iplayer.asEntity();
+        Player player = iplayer.asEntity();
 
         if (prepare(iplayer).isEmpty()) {
             return false;
@@ -43,13 +41,13 @@ public class ChangelingDisguiseAbility extends ChangelingFeedAbility {
         Trace trace = Trace.create(player, 10, 1, EquinePredicates.VALID_FOR_DISGUISE);
 
         Entity looked = trace.getEntity().map(AbstractDisguiseSpell::getAppearance).orElseGet(() -> trace.getBlockPos().map(pos -> {
-            if (!iplayer.asWorld().isAir(pos)) {
-                return new FallingBlockEntity(player.getEntityWorld(), 0, 0, 0, iplayer.asWorld().getBlockState(pos));
+            if (!iplayer.asWorld().isEmptyBlock(pos)) {
+                return new FallingBlockEntity(player.level(), 0, 0, 0, iplayer.asWorld().getBlockState(pos));
             }
             return null;
         }).orElse(null));
 
-        player.getEntityWorld().playSound(null, player.getBlockPos(), USounds.ENTITY_PLAYER_CHANGELING_TRANSFORM, SoundCategory.PLAYERS, 1.4F, 0.4F);
+        player.level().playSound(null, player.blockPosition(), USounds.ENTITY_PLAYER_CHANGELING_TRANSFORM, SoundSource.PLAYERS, 1.4F, 0.4F);
 
         Disguise currentDisguise = iplayer.getSpellSlot().get(SpellType.CHANGELING_DISGUISE)
             .orElseGet(() -> SpellType.CHANGELING_DISGUISE.withTraits().apply(iplayer, CastingMethod.INNATE));
@@ -63,7 +61,7 @@ public class ChangelingDisguiseAbility extends ChangelingFeedAbility {
             iplayer.getMagicalReserves().getMana().multiply(0.1F);
         }
 
-        player.calculateDimensions();
+        player.refreshDimensions();
         return true;
     }
 

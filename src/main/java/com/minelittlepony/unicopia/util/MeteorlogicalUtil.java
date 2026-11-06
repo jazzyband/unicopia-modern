@@ -1,23 +1,21 @@
 package com.minelittlepony.unicopia.util;
 
 import java.util.Locale;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.HitResult.Type;
 import com.minelittlepony.unicopia.client.UnicopiaClient;
 import com.minelittlepony.unicopia.server.world.UnicopiaWorldProperties;
 import com.mojang.serialization.Codec;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.hit.HitResult.Type;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.LightType;
-import net.minecraft.world.LunarWorldView;
-import net.minecraft.world.World;
 
 public interface MeteorlogicalUtil {
     float SUNRISE = 0;
@@ -27,9 +25,13 @@ public interface MeteorlogicalUtil {
     float MOONSET = 2;
 
     /**
-     * @see net.minecraft.world.dimension.DimensionType#MOON_SIZES
+     * @see net.minecraft.world.level.dimension.DimensionType#MOON_BRIGHTNESS_PER_PHASE
      */
     int FULL_MOON = 0;
+
+    static int getMoonPhase(Level world) {
+        return (int)Math.floorMod(world.getOverworldClockTime() / 24000L, 8);
+    }
 
     static boolean isBetween(float skyAngle, float start, float end) {
         return skyAngle >= start && skyAngle <= end;
@@ -39,31 +41,31 @@ public interface MeteorlogicalUtil {
         return isBetween(skyAngle, value - deviation, value + deviation);
     }
 
-    static boolean isLookingIntoSun(World world, Entity entity) {
+    static boolean isLookingIntoSun(Level world, Entity entity) {
 
         // check first whether the world has a sun
-        if (!world.getDimension().hasSkyLight()) {
+        if (!world.dimensionType().hasSkyLight()) {
             return false;
         }
 
         // check if sun is obscured by clouds
-        if (world.hasRain(entity.getBlockPos()) || world.isThundering()) {
+        if (world.isRainingAt(entity.blockPosition()) || world.isThundering()) {
             return false;
         }
 
-        final float skyAngle = getSkyAngle(entity.getWorld());
-        float playerYaw = MathHelper.wrapDegrees(entity.getHeadYaw());
-        float playerAngle = (-entity.getPitch(1) / 90F) / 2F;
+        final float skyAngle = getSkyAngle(entity.level());
+        float playerYaw = Mth.wrapDegrees(entity.getYHeadRot());
+        float playerAngle = (-entity.getViewXRot(1) / 90F) / 2F;
 
         // player is facing the other way so flip the yaw to match sun angle
         if (playerYaw > 0) {
             playerAngle = 1 - playerAngle;
         }
 
-        if (world.isClient()) {
+        if (world.isClientSide()) {
             playerYaw += UnicopiaClient.getInstance().tangentalSkyAngle.getValue();
         } else {
-            playerYaw += UnicopiaWorldProperties.forWorld((ServerWorld)world).getTangentalSkyAngle();
+            playerYaw += UnicopiaWorldProperties.forWorld((ServerLevel)world).getTangentalSkyAngle();
         }
 
         playerYaw = Math.abs(playerYaw);
@@ -73,17 +75,17 @@ public interface MeteorlogicalUtil {
         return skyAngle < 1
             && (playerYaw > 89 && playerYaw < 92 || (playerAngle > 0.45F && playerAngle < 0.55F))
             && playerAngle > (skyAngle - 0.04F) && playerAngle < (skyAngle + 0.04F)
-            && entity.raycast(100, 1, true).getType() == Type.MISS;
+            && entity.pick(100, 1, true).getType() == Type.MISS;
     }
 
-    static float getSunIntensity(World world) {
+    static float getSunIntensity(Level world) {
         float skyAngle = getSkyAngle(world);
         if (skyAngle > SUNSET) {
             return 0;
         }
 
         // intensity (0-1) has a peak at 0.5 (midday)
-        float intensity = MathHelper.cos((skyAngle - 0.5F) * MathHelper.PI);
+        float intensity = Mth.cos((skyAngle - 0.5F) * Mth.PI);
 
         if (world.isRaining()) {
             intensity *= 0.5;
@@ -110,14 +112,14 @@ public interface MeteorlogicalUtil {
      * @param world
      * @return The sun angle
      */
-    static float getSkyAngle(LunarWorldView world) {
-        return ((world.getSkyAngle(1) + 0.25F) % 1F) * 2;
+    static float getSkyAngle(Level world) {
+        return (world.getOverworldClockTime() % 24000L) / 12000F;
     }
 
     /**
      * Gets the current day phase.
      */
-    static DayPhase getDayPhase(LunarWorldView world) {
+    static DayPhase getDayPhase(Level world) {
         float skyAngle = getSkyAngle(world);
 
         if (isCloseTo(skyAngle, SUNRISE, 0.1F)) {
@@ -144,19 +146,19 @@ public interface MeteorlogicalUtil {
         return DayPhase.AFTER_MIDNIGHT;
     }
 
-    static boolean isPositionExposedToSun(World world, BlockPos pos) {
-        if (world.isClient) {
-            world.calculateAmbientDarkness();
+    static boolean isPositionExposedToSun(Level world, BlockPos pos) {
+        if (world.isClientSide()) {
+            world.updateSkyBrightness();
         }
 
-        return world.getDimension().hasSkyLight()
-                && world.getLightLevel(LightType.SKY, pos) >= 12
+        return world.dimensionType().hasSkyLight()
+                && world.getBrightness(LightLayer.SKY, pos) >= 12
                 && !world.isRaining()
                 && !world.isThundering()
-                && world.isDay();
+                && world.isBrightOutside();
     }
 
-    public enum DayPhase implements StringIdentifiable {
+    public enum DayPhase implements StringRepresentable {
         SUNRISE(true),
         MORNING(true),
         NOON(true),
@@ -168,8 +170,8 @@ public interface MeteorlogicalUtil {
 
         public static final DayPhase[] VALUES = values();
 
-        public static final Codec<DayPhase> CODEC = StringIdentifiable.createCodec(DayPhase::values);
-        public static final PacketCodec<ByteBuf, DayPhase> PACKET_CODEC = PacketCodecs.indexed(i -> VALUES[i], DayPhase::ordinal);
+        public static final Codec<DayPhase> CODEC = StringRepresentable.fromEnum(DayPhase::values);
+        public static final StreamCodec<ByteBuf, DayPhase> PACKET_CODEC = ByteBufCodecs.idMapper(i -> VALUES[i], DayPhase::ordinal);
 
         private final boolean day;
         private final boolean transitionary;
@@ -203,7 +205,7 @@ public interface MeteorlogicalUtil {
         }
 
         @Override
-        public String asString() {
+        public String getSerializedName() {
             return name;
         }
     }

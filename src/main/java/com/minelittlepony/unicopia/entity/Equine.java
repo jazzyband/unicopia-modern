@@ -2,7 +2,7 @@ package com.minelittlepony.unicopia.entity;
 
 import java.util.Optional;
 import java.util.function.Predicate;
-
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EntityConvertable;
@@ -12,8 +12,6 @@ import com.minelittlepony.unicopia.projectile.ProjectileImpactListener;
 import com.minelittlepony.unicopia.util.Tickable;
 import com.minelittlepony.unicopia.util.Untyped;
 import com.minelittlepony.unicopia.util.serialization.NbtSerialisable;
-
-import net.minecraft.entity.Entity;
 
 public interface Equine<T extends Entity> extends NbtSerialisable, Tickable, ProjectileImpactListener, EntityConvertable<T>, EquineContext {
     Physics getPhysics();

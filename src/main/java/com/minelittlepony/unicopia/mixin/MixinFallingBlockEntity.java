@@ -6,10 +6,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.minelittlepony.unicopia.entity.duck.Hoverable;
-
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 
 @Mixin(FallingBlockEntity.class)
 abstract class MixinFallingBlockEntity extends Entity implements Hoverable {
@@ -36,7 +35,7 @@ abstract class MixinFallingBlockEntity extends Entity implements Hoverable {
 
     @Inject(method = "tick()V", at = @At("HEAD"))
     private void onTick(CallbackInfo info) {
-        if (!getWorld().isClient && maxTicksHovering > 0 && ticksHovering++ > maxTicksHovering) {
+        if (!level().isClientSide() && maxTicksHovering > 0 && ticksHovering++ > maxTicksHovering) {
             Entity self = this;
             self.setNoGravity(false);
         }
@@ -47,8 +46,8 @@ abstract class MixinFallingBlockEntity extends Entity implements Hoverable {
         return maxTicksHovering > 0 && ticksHovering < maxTicksHovering;
     }
 
-    @Inject(method = "writeCustomDataToNbt(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("HEAD"))
-    private void onWriteNbt(NbtCompound tag, CallbackInfo info) {
+    @Inject(method = "addAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueOutput;)V", at = @At("HEAD"))
+    private void onWriteNbt(net.minecraft.world.level.storage.ValueOutput tag, CallbackInfo info) {
         tag.putInt("unicopia_maxTicksHovering", maxTicksHovering);
         tag.putInt("unicopia_ticksHovering", ticksHovering);
         if (isHovering()) {
@@ -57,10 +56,10 @@ abstract class MixinFallingBlockEntity extends Entity implements Hoverable {
         }
     }
 
-    @Inject(method = "readCustomDataFromNbt(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("HEAD"))
-    private void onReadNbt(NbtCompound tag, CallbackInfo info) {
-        maxTicksHovering = tag.getInt("unicopia_maxTicksHovering", 0);
-        ticksHovering = tag.getInt("unicopia_ticksHovering", 0);
+    @Inject(method = "readAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueInput;)V", at = @At("HEAD"))
+    private void onReadNbt(net.minecraft.world.level.storage.ValueInput tag, CallbackInfo info) {
+        maxTicksHovering = tag.getIntOr("unicopia_maxTicksHovering", 0);
+        ticksHovering = tag.getIntOr("unicopia_ticksHovering", 0);
         if (isHovering()) {
             setNoGravity(true);
         }

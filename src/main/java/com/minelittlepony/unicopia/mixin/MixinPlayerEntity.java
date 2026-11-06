@@ -7,82 +7,76 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.minelittlepony.unicopia.entity.duck.PlayerEntityDuck;
+
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.entity.Equine;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.annotation.CaptureArg;
 import com.mojang.datafixers.util.Either;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Unit;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.state.BlockState;
 
-@Mixin(PlayerEntity.class)
-abstract class MixinPlayerEntity extends LivingEntity implements PlayerEntityDuck {
+@Mixin(Player.class)
+abstract class MixinPlayerEntity extends LivingEntity implements Equine.Container<Pony> {
     private MixinPlayerEntity() { super(null, null); }
     @Override
-    @Invoker("updateCapeAngles")
-    public abstract void callUpdateCapeAngles();
-
-    @Override
     public Equine<?> create() {
-        return new Pony((PlayerEntity)(Object)this);
+        return new Pony((Player)(Object)this);
     }
 
-    @ModifyReturnValue(method = "createPlayerAttributes()Lnet/minecraft/entity/attribute/DefaultAttributeContainer$Builder;", at = @At("RETURN"))
-    private static DefaultAttributeContainer.Builder onCreateAttributes(DefaultAttributeContainer.Builder builder) {
+    @ModifyReturnValue(method = "createAttributes()Lnet/minecraft/world/entity/ai/attributes/AttributeSupplier$Builder;", at = @At("RETURN"))
+    private static AttributeSupplier.Builder onCreateAttributes(AttributeSupplier.Builder builder) {
         Pony.registerAttributes(builder);
         return builder;
     }
 
-    @ModifyVariable(method = "applyDamage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)V", at = @At("HEAD"), ordinal = 0, argsOnly = true)
-    protected float modifyDamageAmount(float amount, @CaptureArg ServerWorld world, @CaptureArg DamageSource source) {
+    @ModifyVariable(method = "actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V", at = @At("HEAD"), ordinal = 0, argsOnly = true)
+    protected float modifyDamageAmount(float amount, @CaptureArg ServerLevel world, @CaptureArg DamageSource source) {
         return get().modifyDamage(source, amount).orElse(amount);
     }
 
-    @Inject(method = "trySleep(Lnet/minecraft/util/math/BlockPos;)Lcom/mojang/datafixers/util/Either;", at = @At("HEAD"), cancellable = true)
-    private void onTrySleep(BlockPos pos, CallbackInfoReturnable<Either<PlayerEntity.SleepFailureReason, Unit>> info) {
-        if (!getWorld().isClient) {
+    @Inject(method = "startSleepInBed", at = @At("HEAD"), cancellable = true)
+    private void onTrySleep(net.minecraft.world.level.block.AbstractBedBlock bed, net.minecraft.world.level.block.state.BlockState state,
+            net.minecraft.world.attribute.BedRule rule, BlockPos pos, CallbackInfoReturnable<Either<Player.BedSleepingProblem, Unit>> info) {
+        if (!level().isClientSide()) {
             get().trySleep(pos).ifPresent(reason -> {
-                ((PlayerEntity)(Object)this).sendMessage(reason, true);
-                info.setReturnValue(Either.left(ServerPlayerEntity.SleepFailureReason.OTHER_PROBLEM));
+                ((Player)(Object)this).sendOverlayMessage(reason);
+
+                info.setReturnValue(Either.left(Player.BedSleepingProblem.OTHER_PROBLEM));
             });
         }
     }
 
-    @ModifyReturnValue(method = "getBaseDimensions(Lnet/minecraft/entity/EntityPose;)Lnet/minecraft/entity/EntityDimensions;", at = @At("RETURN"))
-    private EntityDimensions modifyEyeHeight(EntityDimensions dimensions, EntityPose pose) {
-        return get().getMotion().getDimensions().calculateDimensions(dimensions);
-    }
-
-    @ModifyReturnValue(method = "getBlockBreakingSpeed(Lnet/minecraft/block/BlockState;)F", at = @At("RETURN"))
-    private float onGetBlockBreakingSpeed(float speed, BlockState state) {
-        return speed * get().getBlockBreakingSpeed();
+    @Inject(method = "getDestroySpeed(Lnet/minecraft/world/level/block/state/BlockState;)F",
+            at = @At("RETURN"),
+            cancellable = true)
+    private void onGetBlockBreakingSpeed(BlockState state, CallbackInfoReturnable<Float> info) {
+        info.setReturnValue(info.getReturnValue() * get().getBlockBreakingSpeed());
     }
 
     @Override
-    protected int getNextAirUnderwater(int air) {
+    protected int decreaseAirSupply(int air) {
         if (EquinePredicates.PLAYER_SEAPONY.test(this)) {
-            return super.getNextAirOnLand(air);
+            return super.increaseAirSupply(air);
         }
-        return super.getNextAirUnderwater(air);
+        return super.decreaseAirSupply(air);
     }
 
     @Override
-    protected int getNextAirOnLand(int air) {
+    protected int increaseAirSupply(int air) {
         if (EquinePredicates.PLAYER_SEAPONY.test(this)) {
-            return super.getNextAirUnderwater(air);
+            return super.decreaseAirSupply(air);
         }
-        return super.getNextAirOnLand(air);
+        return super.increaseAirSupply(air);
     }
 }

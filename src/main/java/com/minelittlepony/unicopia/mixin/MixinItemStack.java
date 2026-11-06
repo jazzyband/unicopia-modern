@@ -3,7 +3,19 @@ package com.minelittlepony.unicopia.mixin;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
+import net.minecraft.core.component.DataComponentHolder;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,20 +32,6 @@ import com.minelittlepony.unicopia.item.component.TransientComponentMap;
 import com.minelittlepony.unicopia.item.component.TransientComponentMapImpl;
 import com.minelittlepony.unicopia.util.TypedActionResult;
 
-import net.minecraft.component.ComponentHolder;
-import net.minecraft.component.ComponentType;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
-
 @Mixin(ItemStack.class)
 abstract class MixinItemStack implements ItemStackDuck {
     private final Supplier<TransientComponentMap> transientComponents = TransientComponentMapImpl.create(() -> (ItemStack)(Object)this);
@@ -44,64 +42,61 @@ abstract class MixinItemStack implements ItemStackDuck {
     }
 
     @Inject(method = "use", at = @At("HEAD"), cancellable = true)
-    private void onUse(World world, PlayerEntity user, Hand hand, CallbackInfoReturnable<TypedActionResult<ItemStack>> info) {
+    private void onUse(Level world, Player user, InteractionHand hand, CallbackInfoReturnable<TypedActionResult<ItemStack>> info) {
         getTransientComponents().setCarrier(user);
         TypedActionResult<ItemStack> result = FoodPoisoningStatusEffect.apply((ItemStack)(Object)this, user);
-        if (result.result() != ActionResult.PASS) {
+        if (result.result() != InteractionResult.PASS) {
             info.setReturnValue(result) ;
         }
     }
 
-    @Inject(method = "onStoppedUsing", at = @At("RETURN"))
-    public void onOnStoppedUsing(World world, LivingEntity user, int remainingUseTicks, CallbackInfo info) {
+    @Inject(method = "releaseUsing", at = @At("RETURN"))
+    public void onOnStoppedUsing(Level world, LivingEntity user, int remainingUseTicks, CallbackInfo info) {
         getTransientComponents().setCarrier(null);
     }
 
-    @Inject(method = "finishUsing", at = @At("RETURN"))
-    private void afterFinishUsing(World world, LivingEntity user, CallbackInfoReturnable<ItemStack> info) {
+    @Inject(method = "finishUsingItem", at = @At("RETURN"))
+    private void afterFinishUsing(Level world, LivingEntity user, CallbackInfoReturnable<ItemStack> info) {
         getTransientComponents().setCarrier(null);
     }
 
-    @Inject(method = "getTooltip", at = @At("HEAD"))
-    public void beforeGetTooltip(Item.TooltipContext context, @Nullable PlayerEntity player, TooltipType type, CallbackInfoReturnable<List<Text>> info) {
+    @Inject(method = "getTooltipLines", at = @At("HEAD"))
+    public void beforeGetTooltip(Item.TooltipContext context, @Nullable Player player, TooltipFlag type, CallbackInfoReturnable<List<Component>> info) {
         getTransientComponents().setCarrier(player);
     }
 
-    @Inject(method = "getTooltip", at = @At("RETURN"))
-    public void afterGetTooltip(Item.TooltipContext context, @Nullable PlayerEntity player, TooltipType type, CallbackInfoReturnable<List<Text>> info) {
+    @Inject(method = "getTooltipLines", at = @At("RETURN"))
+    public void afterGetTooltip(Item.TooltipContext context, @Nullable Player player, TooltipFlag type, CallbackInfoReturnable<List<Component>> info) {
         getTransientComponents().setCarrier(null);
     }
 
-    @Inject(method = "appendTooltip",
-            at = @At(value = "INVOKE",
-            target = "net/minecraft/item/ItemStack.appendAttributeModifiersTooltip(Ljava/util/function/Consumer;Lnet/minecraft/component/type/TooltipDisplayComponent;Lnet/minecraft/entity/player/PlayerEntity;)V"
-    ))
-    public void onGetTooltip(Item.TooltipContext context, TooltipDisplayComponent displayComponent, @Nullable PlayerEntity player, TooltipType type, Consumer<Text> textConsumer, CallbackInfo info) {
+    @Inject(method = "addDetailsToTooltip", at = @At("HEAD"))
+    public void onGetTooltip(Item.TooltipContext context, TooltipDisplay displayComponent, @Nullable Player player, TooltipFlag type, Consumer<Component> textConsumer, CallbackInfo info) {
         ItemStack self = (ItemStack)(Object)this;
         ModifierTooltipRenderer.INSTANCE.getTooltip(self, context, displayComponent, player, type, textConsumer);
     }
 
-    @ModifyReturnValue(method = "takesDamageFrom", at = @At("RETURN"))
+    @ModifyReturnValue(method = "canBeHurtBy", at = @At("RETURN"))
     private boolean onTakesDamageFrom(boolean takesDamage, DamageSource source) {
         ItemStack self = (ItemStack)(Object)this;
         return self.getItem() instanceof DamageChecker checker ? checker.takesDamageFrom(source) : takesDamage;
     }
 }
 
-@Mixin(ComponentHolder.class)
+@Mixin(DataComponentHolder.class)
 interface MixinComponentHolder {
     @ModifyReturnValue(method = "get", at = @At("RETURN"))
-    default <T> T unicopia_onGet(T value, ComponentType<? extends T> type) {
+    default <T> T unicopia_onGet(T value, DataComponentType<? extends T> type) {
         return TransientComponentMap.of(this).get(type, value);
     }
 
     @ModifyReturnValue(method = "getOrDefault", at = @At("RETURN"))
-    default <T> T unicopia_onGetOrDefault(T value, ComponentType<? extends T> type, T fallback) {
+    default <T> T unicopia_onGetOrDefault(T value, DataComponentType<? extends T> type, T fallback) {
         return TransientComponentMap.of(this).getOrDefault(type, value, fallback);
     }
 
-    @ModifyReturnValue(method = "contains", at = @At("RETURN"))
-    default boolean unicopia_onContains(boolean value, ComponentType<?> type) {
+    @ModifyReturnValue(method = "has", at = @At("RETURN"))
+    default boolean unicopia_onContains(boolean value, DataComponentType<?> type) {
         return TransientComponentMap.of(this).contains(type, value);
     }
 }

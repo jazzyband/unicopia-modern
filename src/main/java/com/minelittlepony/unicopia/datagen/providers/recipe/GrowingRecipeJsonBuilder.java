@@ -2,28 +2,27 @@ package com.minelittlepony.unicopia.datagen.providers.recipe;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementRequirements;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.triggers.RecipeUnlockedTrigger;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.include.com.google.common.base.Preconditions;
 
 import com.minelittlepony.unicopia.recipe.TransformCropsRecipe;
 
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementCriterion;
-import net.minecraft.advancement.AdvancementRequirements;
-import net.minecraft.advancement.AdvancementRewards;
-import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.book.RecipeCategory;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.util.Identifier;
-
 public class GrowingRecipeJsonBuilder {
-    private final Map<String, AdvancementCriterion<?>> criterions = new LinkedHashMap<>();
+    private final Map<String, Criterion<?>> criterions = new LinkedHashMap<>();
     @Nullable
     private String group;
     private final RecipeCategory category;
@@ -50,7 +49,7 @@ public class GrowingRecipeJsonBuilder {
         return this;
     }
 
-    public GrowingRecipeJsonBuilder criterion(String name, AdvancementCriterion<?> condition) {
+    public GrowingRecipeJsonBuilder criterion(String name, Criterion<?> condition) {
         criterions.put(name, condition);
         return this;
     }
@@ -60,26 +59,25 @@ public class GrowingRecipeJsonBuilder {
         return this;
     }
 
-    public void offerTo(RecipeExporter exporter, RegistryKey<Recipe<?>> key) {
-        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.getValue());
-        Advancement.Builder advancementBuilder = exporter.getAdvancementBuilder()
-                .criterion("has_the_recipe", RecipeUnlockedCriterion.create(key))
+    public void offerTo(RecipeOutput exporter, ResourceKey<Recipe<?>> key) {
+        Preconditions.checkState(!criterions.isEmpty(), "No way of obtaining recipe " + key.identifier());
+        Advancement.Builder advancementBuilder = exporter.advancement()
                 .rewards(AdvancementRewards.Builder.recipe(key))
-                .criteriaMerger(AdvancementRequirements.CriterionMerger.OR);
-        criterions.forEach(advancementBuilder::criterion);
-        exporter.accept(key, new TransformCropsRecipe(target, fuel, output), advancementBuilder.build(key.getValue().withPrefixedPath("recipes/" + category.getName() + "/")));
+                .requirements(AdvancementRequirements.Strategy.OR);
+        criterions.forEach(advancementBuilder::addCriterion);
+        exporter.accept(key, new TransformCropsRecipe(target, fuel, output), advancementBuilder.build(key.identifier().withPrefix("recipes/" + category.getFolderName() + "/")));
     }
 
-    public void offerTo(RecipeExporter exporter) {
-        offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, Registries.BLOCK.getId(output.getBlock())));
+    public void offerTo(RecipeOutput exporter) {
+        offerTo(exporter, ResourceKey.create(Registries.RECIPE, BuiltInRegistries.BLOCK.getKey(output.getBlock())));
     }
 
-    public void offerTo(RecipeExporter exporter, String recipePath) {
-        Identifier recipeId = Identifier.of(recipePath);
-        Identifier id = Registries.BLOCK.getId(output.getBlock());
+    public void offerTo(RecipeOutput exporter, String recipePath) {
+        Identifier recipeId = Identifier.parse(recipePath);
+        Identifier id = BuiltInRegistries.BLOCK.getKey(output.getBlock());
         if (recipeId.equals(id)) {
             throw new IllegalStateException("Recipe " + recipePath + " should remove its 'save' argument as it is equal to default one");
         }
-        offerTo(exporter, RegistryKey.of(RegistryKeys.RECIPE, recipeId));
+        offerTo(exporter, ResourceKey.create(Registries.RECIPE, recipeId));
     }
 }

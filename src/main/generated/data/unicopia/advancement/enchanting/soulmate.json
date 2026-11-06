@@ -1,0 +1,34 @@
+{
+  "parent": "unicopia:enchanting/hearts_stronger_than_horses",
+  "criteria": {
+    "use_soulmate": {
+      "conditions": {
+        "event": "use_soulmate",
+        "flying": false,
+        "repeatCount": 1
+      },
+      "trigger": "unicopia:custom"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.unicopia.soulmate.description"
+    },
+    "hidden": true,
+    "icon": {
+      "id": "minecraft:golden_pickaxe"
+    },
+    "title": {
+      "translate": "advancements.unicopia.soulmate.title"
+    }
+  },
+  "requirements": [
+    [
+      "use_soulmate"
+    ]
+  ],
+  "rewards": {
+    "experience": 1200
+  },
+  "sends_telemetry_event": true
+}

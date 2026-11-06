@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:tree",
+  "below_trunk_provider": {
+    "id": "minecraft:dirt"
+  },
+  "decorators": [],
+  "foliage_placer": {
+    "type": "minecraft:jungle_foliage_placer",
+    "height": 4,
+    "offset": 1,
+    "radius": 3
+  },
+  "foliage_provider": {
+    "id": "unicopia:zap_leaves",
+    "properties": {
+      "distance": "7",
+      "persistent": "false",
+      "stage": "greening",
+      "waterlogged": "false"
+    }
+  },
+  "ignore_vines": false,
+  "minimum_size": {
+    "type": "minecraft:two_layers_feature_size",
+    "limit": 6,
+    "upper_size": 8
+  },
+  "trunk_placer": {
+    "type": "minecraft:forking_trunk_placer",
+    "base_height": 6,
+    "height_rand_a": 3,
+    "height_rand_b": 1
+  },
+  "trunk_provider": {
+    "id": "unicopia:zap_log",
+    "properties": {
+      "axis": "y",
+      "natural": "true"
+    }
+  }
+}

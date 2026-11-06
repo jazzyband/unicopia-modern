@@ -1,61 +1,56 @@
 package com.minelittlepony.unicopia.client.render;
 
 import java.util.Set;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.client.render.ModelPartHooks.EnqueudHeadRender;
 import com.minelittlepony.unicopia.entity.Creature;
 import com.minelittlepony.unicopia.item.enchantment.EnchantmentUtil;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.model.Dilation;
-import net.minecraft.client.model.ModelData;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.model.ModelPartBuilder;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.model.TexturedModelData;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexRendering;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 public class SmittenEyesRenderer {
     private static final Identifier TEXTURE = Unicopia.id("textures/entity/smitten_eyes.png");
 
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private final ModelPart model;
 
     SmittenEyesRenderer() {
-        ModelData data = new ModelData();
-        data.getRoot().addChild("hearts", ModelPartBuilder.create()
-                .uv(0, 0)
-                .cuboid(-4, -4, -4, 8.0f, 8.0f, 8.0f, Dilation.NONE), ModelTransform.NONE);
-        model = TexturedModelData.of(data, 32, 32).createModel();
+        MeshDefinition data = new MeshDefinition();
+        data.getRoot().addOrReplaceChild("hearts", CubeListBuilder.create()
+                .texOffs(0, 0)
+                .addBox(-4, -4, -4, 8.0f, 8.0f, 8.0f, CubeDeformation.NONE), PartPose.ZERO);
+        model = LayerDefinition.create(data, 32, 32).bakeRoot();
     }
 
-    public void render(Set<EnqueudHeadRender> headParts, Entity entity, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-        VertexConsumer buffer = vertices.getBuffer(RenderLayer.getEntityCutout(TEXTURE));
+    public void render(Set<EnqueudHeadRender> headParts, Entity entity, PoseStack matrices, SubmitNodeCollector vertices, int light) {
         for (var part : headParts) {
-            matrices.push();
+            matrices.pushPose();
             part.transform(matrices, 0.95F);
-            float scale = 1F + (1.3F + MathHelper.sin(entity.age / 3F) * 0.06F);
+            float scale = 1F + (1.3F + Mth.sin(entity.tickCount / 3F) * 0.06F);
             matrices.scale(scale, scale, scale);
             matrices.translate(0, 0.05F, 0);
-            model.render(matrices, buffer, light, OverlayTexture.DEFAULT_UV, Colors.WHITE);
+            RenderGeometry.submit(matrices, vertices, RenderTypes.entityCutout(TEXTURE),
+                    (stack, buffer) -> model.render(stack, buffer, light, OverlayTexture.NO_OVERLAY, CommonColors.WHITE));
 
-            if (client.getEntityRenderDispatcher().shouldRenderHitboxes()) {
-                VertexConsumer lines = vertices.getBuffer(RenderLayer.getLines());
-                VertexRendering.drawBox(matrices, lines, new Box(-0.25, 0, -0.25, 0.25, 0.25, 0.25), 1, 1, 0, 1);
-                VertexRendering.drawBox(matrices, lines, new Box(-0.25, -0.25, -0.25, 0.25, 0, 0.25), 1, 0, 1, 1);
-            }
 
-            matrices.pop();
+            matrices.popPose();
         }
     }
 

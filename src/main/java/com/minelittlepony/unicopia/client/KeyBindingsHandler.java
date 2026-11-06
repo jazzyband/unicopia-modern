@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.Unicopia;
@@ -16,18 +16,15 @@ import com.minelittlepony.unicopia.ability.AbilitySlot;
 import com.minelittlepony.unicopia.ability.ActivationType;
 import com.minelittlepony.unicopia.client.gui.UHud;
 import com.minelittlepony.unicopia.entity.player.Pony;
-
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.option.StickyKeyBinding;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.ToggleKeyMapping;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 
 public class KeyBindingsHandler {
-    private static final String KEY_CATEGORY = "unicopia.category.name";
+    private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Unicopia.id("category"));
 
     public static final KeyBindingsHandler INSTANCE = new KeyBindingsHandler();
 
@@ -36,19 +33,19 @@ public class KeyBindingsHandler {
     private final Map<Binding, AbilitySlot> keys = new HashMap<>();
     private final Map<AbilitySlot, Binding> reverse = new HashMap<>();
 
-    private final Binding pageDown = new Binding(create(GLFW.GLFW_KEY_PAGE_DOWN, "hud_page_dn"));
-    private final Binding pageUp = new Binding(create(GLFW.GLFW_KEY_PAGE_UP, "hud_page_up"));
+    private final Binding pageDown = new Binding(create(InputConstants.KEY_PAGEDOWN, "hud_page_dn"));
+    private final Binding pageUp = new Binding(create(InputConstants.KEY_PAGEUP, "hud_page_up"));
 
-    private final KeyBinding singleTapModifier = createSticky(InputUtil.UNKNOWN_KEY.getCode(), "ability_modifier_tap");
-    private final KeyBinding doubleTapModifier = createSticky(InputUtil.UNKNOWN_KEY.getCode(), "ability_modifier_double_tap");
-    private final KeyBinding tripleTapModifier = createSticky(InputUtil.UNKNOWN_KEY.getCode(), "ability_modifier_triple_tap");
+    private final KeyMapping singleTapModifier = createSticky(InputConstants.UNKNOWN.getValue(), "ability_modifier_tap");
+    private final KeyMapping doubleTapModifier = createSticky(InputConstants.UNKNOWN.getValue(), "ability_modifier_double_tap");
+    private final KeyMapping tripleTapModifier = createSticky(InputConstants.UNKNOWN.getValue(), "ability_modifier_triple_tap");
 
-    private final Set<KeyBinding> pressed = new HashSet<>();
+    private final Set<KeyMapping> pressed = new HashSet<>();
 
     public KeyBindingsHandler() {
-        addKeybind(GLFW.GLFW_KEY_R, AbilitySlot.PRIMARY);
-        addKeybind(GLFW.GLFW_KEY_G, AbilitySlot.SECONDARY);
-        addKeybind(GLFW.GLFW_KEY_V, AbilitySlot.TERTIARY);
+        addKeybind(InputConstants.KEY_R, AbilitySlot.PRIMARY);
+        addKeybind(InputConstants.KEY_G, AbilitySlot.SECONDARY);
+        addKeybind(InputConstants.KEY_V, AbilitySlot.TERTIARY);
     }
 
     public Binding getBinding(AbilitySlot slot) {
@@ -60,15 +57,15 @@ public class KeyBindingsHandler {
     }
 
     public ActivationType getForcedActivationType() {
-        if (singleTapModifier.isPressed()) {
+        if (singleTapModifier.isDown()) {
             return ActivationType.TAP;
         }
 
-        if (doubleTapModifier.isPressed()) {
+        if (doubleTapModifier.isDown()) {
             return ActivationType.DOUBLE_TAP;
         }
 
-        if (tripleTapModifier.isPressed()) {
+        if (tripleTapModifier.isDown()) {
             return ActivationType.TRIPLE_TAP;
         }
 
@@ -81,16 +78,16 @@ public class KeyBindingsHandler {
         keys.put(binding, slot);
     }
 
-    KeyBinding create(int code, String name) {
-        return KeyBindingHelper.registerKeyBinding(new KeyBinding("key.unicopia." + name, code, KEY_CATEGORY));
+    KeyMapping create(int code, String name) {
+        return new KeyMapping("key.unicopia." + name, code, KEY_CATEGORY);
     }
 
-    KeyBinding createSticky(int code, String name) {
-        return KeyBindingHelper.registerKeyBinding(new StickyKeyBinding("key.unicopia." + name, code, KEY_CATEGORY, this::isToggleMode));
+    KeyMapping createSticky(int code, String name) {
+        return new ToggleKeyMapping("key.unicopia." + name, code, KEY_CATEGORY, this::isToggleMode, false);
     }
 
-    public void tick(MinecraftClient client) {
-        if (client.currentScreen != null
+    public void tick(Minecraft client) {
+        if (client.gui.screen() != null
             || client.player == null) {
             return;
         }
@@ -98,7 +95,7 @@ public class KeyBindingsHandler {
         AbilityDispatcher abilities = iplayer.getAbilities();
         int maxPage = abilities.getMaxPage();
 
-        int page = MathHelper.clamp(Unicopia.getConfig().hudPage.get(), 0, maxPage);
+        int page = Mth.clamp(Unicopia.getConfig().hudPage.get(), 0, maxPage);
 
         if (page > 0 && pageDown.getState() == PressedState.PRESSED) {
             changePage(client, maxPage, -1);
@@ -107,7 +104,7 @@ public class KeyBindingsHandler {
         } else if (!client.player.isSpectator()) {
             for (Binding i : keys.keySet()) {
                 AbilitySlot slot = keys.get(i);
-                if (slot == AbilitySlot.PRIMARY && client.options.sneakKey.isPressed() && abilities.isFilled(AbilitySlot.PASSIVE)) {
+                if (slot == AbilitySlot.PRIMARY && client.options.keyShift.isDown() && abilities.isFilled(AbilitySlot.PASSIVE)) {
                     slot = AbilitySlot.PASSIVE;
                 }
                 if (slot == AbilitySlot.PRIMARY && !abilities.isFilled(slot)) {
@@ -132,28 +129,28 @@ public class KeyBindingsHandler {
         }
     }
 
-    private void changePage(MinecraftClient client, long max, int sigma) {
+    private void changePage(Minecraft client, long max, int sigma) {
         int page = Unicopia.getConfig().hudPage.get();
         page += sigma;
         Unicopia.getConfig().hudPage.set(page);
         Unicopia.getConfig().save();
-        client.getSoundManager().play(PositionedSoundInstance.master(USounds.Vanilla.UI_BUTTON_CLICK, 1.75F + (0.25F * sigma)));
-        UHud.INSTANCE.setMessage(Text.translatable("gui.unicopia.page_num", page + 1, max + 1));
+        client.getSoundManager().play(SimpleSoundInstance.forUI(USounds.Vanilla.UI_BUTTON_CLICK, 1.75F + (0.25F * sigma)));
+        UHud.INSTANCE.setMessage(Component.translatable("gui.unicopia.page_num", page + 1, max + 1));
     }
 
     public class Binding {
-        private final KeyBinding binding;
+        private final KeyMapping binding;
 
         private long nextPhaseTime;
 
         private final AtomicReference<ActivationType> type = new AtomicReference<>(ActivationType.NONE);
 
-        Binding(KeyBinding binding) {
+        Binding(KeyMapping binding) {
             this.binding = binding;
         }
 
-        public Text getLabel() {
-            return binding.getBoundKeyLocalizedText();
+        public Component getLabel() {
+            return binding.getTranslatedKeyMessage();
         }
 
         public PressedState getState() {
@@ -174,10 +171,10 @@ public class KeyBindingsHandler {
         }
 
         public ActivationType getType() {
-            if (binding.isPressed()) {
+            if (binding.isDown()) {
                 ActivationType t = getForcedActivationType();
                 if (t.isResult()) {
-                    KeyBinding.untoggleStickyKeys();
+                    KeyMapping.resetToggleKeys();
                     return t;
                 }
             }
@@ -190,7 +187,7 @@ public class KeyBindingsHandler {
         }
 
         private PressedState getNewState() {
-            if (binding.isPressed()) {
+            if (binding.isDown()) {
                 return pressed.add(binding) ? PressedState.PRESSED : PressedState.UNCHANGED;
             } else if (pressed.remove(binding)) {
                 return PressedState.RELEASED;

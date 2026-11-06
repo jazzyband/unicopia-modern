@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "unicopia:wheat_worms"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_worm_block": {
+      "conditions": {
+        "items": [
+          {
+            "items": "unicopia:worm_block"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_worm_block"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unicopia:wheat_worms"
+    ]
+  }
+}

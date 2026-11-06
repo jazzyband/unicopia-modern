@@ -3,8 +3,7 @@ package com.minelittlepony.unicopia.entity.behaviour;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
-
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 public interface Guest {
     Guest NULL = new Guest() {

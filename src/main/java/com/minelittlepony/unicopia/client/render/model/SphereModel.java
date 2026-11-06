@@ -1,12 +1,10 @@
 package com.minelittlepony.unicopia.client.render.model;
 
 import java.util.function.Consumer;
-
+import net.minecraft.util.Mth;
 import org.joml.Vector4f;
 
 import com.minelittlepony.unicopia.client.gui.DrawableUtil;
-
-import net.minecraft.util.math.MathHelper;
 
 public class SphereModel extends BakedModel {
     public static final SphereModel SPHERE = new SphereModel(40, 40, DrawableUtil.TAU);
@@ -33,11 +31,11 @@ public class SphereModel extends BakedModel {
     }
 
     public static Vector4f convertToCartesianCoord(Vector4f output, double r, double theta, double phi) {
-        float st = MathHelper.sin((float)theta);
+        float st = Mth.sin((float)theta);
         output.set(
-            (float)(r * st * MathHelper.cos((float)phi)),
-            (float)(r * st * MathHelper.sin((float)phi)),
-            (float)(r * MathHelper.cos((float)theta)),
+            (float)(r * st * Mth.cos((float)phi)),
+            (float)(r * st * Mth.sin((float)phi)),
+            (float)(r * Mth.cos((float)theta)),
             1
         );
         return output;

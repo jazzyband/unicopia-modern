@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 33,
+  "ingredient": "unicopia:juice",
+  "result": {
+    "id": "unicopia:burned_juice"
+  }
+}

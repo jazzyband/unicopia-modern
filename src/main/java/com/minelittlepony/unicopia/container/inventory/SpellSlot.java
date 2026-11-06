@@ -6,20 +6,20 @@ import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellTyp
 import com.minelittlepony.unicopia.container.SpellbookScreenHandler;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.EnchantableItem;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class SpellSlot extends Slot implements SpellbookSlot {
     private final SpellbookScreenHandler handler;
 
     private final Pony pony;
-    private final Hand hand;
+    private final InteractionHand hand;
 
-    public SpellSlot(SpellbookScreenHandler handler, Pony pony, Hand hand, Inventory inventory, int index, int x, int y) {
+    public SpellSlot(SpellbookScreenHandler handler, Pony pony, InteractionHand hand, Container inventory, int index, int x, int y) {
         super(inventory, index, x, y);
         this.handler = handler;
         this.pony = pony;
@@ -31,28 +31,28 @@ public class SpellSlot extends Slot implements SpellbookSlot {
     }
 
     @Override
-    public int getMaxItemCount() {
+    public int getMaxStackSize() {
         return 1;
     }
 
     @Override
-    public boolean isEnabled() {
+    public boolean isActive() {
        return handler.canShowSlots(SlotType.INVENTORY) && !handler.canShowSlots(SlotType.CRAFTING);
     }
 
     @Override
-    public boolean canInsert(ItemStack stack) {
+    public boolean mayPlace(ItemStack stack) {
         return false;
     }
 
     @Override
-    public ItemStack getStack() {
+    public ItemStack getItem() {
         var spell = getSpell();
-        return spell.isEmpty() ? Items.AIR.getDefaultStack() : spell.getDefaultStack();
+        return spell.isEmpty() ? Items.AIR.getDefaultInstance() : spell.getDefaultStack();
     }
 
     @Override
-    public void setStackNoCallbacks(ItemStack stack) {
+    public void set(ItemStack stack) {
 
     }
 
@@ -64,12 +64,12 @@ public class SpellSlot extends Slot implements SpellbookSlot {
     }
 
     @Override
-    public ItemStack takeStack(int amount) {
+    public ItemStack remove(int amount) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public void markDirty() {
+    public void setChanged() {
     }
 
     @Override

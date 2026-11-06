@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "bed_sheet",
+  "key": {
+    "#": "minecraft:green_wool"
+  },
+  "pattern": [
+    "###",
+    "# #",
+    " ##"
+  ],
+  "result": {
+    "id": "unicopia:green_bed_sheets"
+  }
+}

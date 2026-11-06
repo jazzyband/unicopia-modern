@@ -14,22 +14,22 @@ import com.minelittlepony.unicopia.util.TypedActionResult;
 import com.mojang.serialization.Codec;
 
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.minecraft.block.Block;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.SidedInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryWrapper.WrapperLookup;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.Direction;
+import com.minelittlepony.unicopia.util.Tuple;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 
 public record ItemsJarContents (
         TileData tile,
         List<ItemStack> stacks
-    ) implements JarContents, SidedInventory {
+    ) implements JarContents, WorldlyContainer {
     private static final int MAX_SIZE = 16;
     private static final int[] SLOTS = IntStream.range(0, MAX_SIZE).toArray();
     private static final Codec<List<ItemStack>> STACKS_CODEC = ItemStack.CODEC.listOf(0, MAX_SIZE);
@@ -38,83 +38,83 @@ public record ItemsJarContents (
         this(tile, new ArrayList<>(MAX_SIZE));
     }
 
-    public ItemsJarContents(TileData tile, NbtCompound compound, WrapperLookup lookup) {
-        this(tile, new ArrayList<>(compound.get("items", STACKS_CODEC, lookup.getOps(NbtOps.INSTANCE)).orElse(List.of())));
+    public ItemsJarContents(TileData tile, CompoundTag compound, Provider lookup) {
+        this(tile, new ArrayList<>(compound.read("items", STACKS_CODEC, lookup.createSerializationContext(NbtOps.INSTANCE)).orElse(List.of())));
     }
 
     @Override
-    public TypedActionResult<JarContents> interact(PlayerEntity player, Hand hand) {
-        ItemStack handStack = player.getStackInHand(hand);
+    public TypedActionResult<JarContents> interact(Player player, InteractionHand hand) {
+        ItemStack handStack = player.getItemInHand(hand);
 
         if (handStack.isEmpty()) {
             if (stacks.isEmpty()) {
                 return TypedActionResult.fail(this);
             }
-            Block.dropStack(tile.getWorld(), tile.getPos(), stacks.remove(0));
-            markDirty();
+            Block.popResource(tile.getLevel(), tile.getBlockPos(), stacks.remove(0));
+            setChanged();
             return TypedActionResult.success(this);
         }
 
         if (stacks.isEmpty()) {
             if (handStack.getItem() instanceof MixinEntityBucketItem bucket) {
-                consumeAndSwap(player, hand, Items.BUCKET.getDefaultStack());
-                player.playSound(bucket.getEmptyingSound(), 1, 1);
-                markDirty();
-                return TypedActionResult.success(new EntityJarContents(tile, bucket.getEntityType()));
+                consumeAndSwap(player, hand, Items.BUCKET.getDefaultInstance());
+                player.playSound(bucket.getEmptySound(), 1, 1);
+                setChanged();
+                return TypedActionResult.success(new EntityJarContents(tile, bucket.getType()));
             }
 
-            Pair<Long, FluidVariant> fluid = FluidHelper.extract(handStack, player, hand).orElse(null);
+            Tuple<Long, FluidVariant> fluid = FluidHelper.extract(handStack, player, hand).orElse(null);
             if (fluid != null) {
-                fluid.getRight().getFluid().getBucketFillSound().ifPresent(sound -> player.playSound(sound, 1, 1));
-                markDirty();
-                return TypedActionResult.success(new FluidOnlyJarContents(tile, fluid.getLeft(), fluid.getRight()));
+                fluid.getB().getFluid().getPickupSound().ifPresent(sound -> player.playSound(sound, 1, 1));
+                setChanged();
+                return TypedActionResult.success(new FluidOnlyJarContents(tile, fluid.getA(), fluid.getB()));
             }
 
-            if (handStack.isOf(Items.MILK_BUCKET)) {
-                consumeAndSwap(player, hand, handStack.getRecipeRemainder());
-                player.playSound(USounds.Vanilla.ITEM_BUCKET_EMPTY, 1, 1);
-                markDirty();
+            if (handStack.is(Items.MILK_BUCKET)) {
+                consumeAndSwap(player, hand, Items.BUCKET.getDefaultInstance());
+                player.playSound(USounds.Vanilla.BUCKET_EMPTY, 1, 1);
+                setChanged();
                 return TypedActionResult.success(new FakeFluidJarContents(tile, "milk", 0xFFFFFFFF, Items.BUCKET, Items.MILK_BUCKET));
             }
 
-            if (handStack.isOf(Items.POWDER_SNOW_BUCKET)) {
-                consumeAndSwap(player, hand, Items.BUCKET.getDefaultStack());
-                player.playSound(USounds.Vanilla.ITEM_BUCKET_EMPTY_POWDER_SNOW, 1, 1);
-                markDirty();
+            if (handStack.is(Items.POWDER_SNOW_BUCKET)) {
+                consumeAndSwap(player, hand, Items.BUCKET.getDefaultInstance());
+                player.playSound(USounds.Vanilla.BUCKET_EMPTY_POWDER_SNOW, 1, 1);
+                setChanged();
                 return TypedActionResult.success(new FakeFluidJarContents(tile, "powder_snow", 0xFFFFFFFF, Items.BUCKET, Items.POWDER_SNOW_BUCKET));
             }
 
-            if (handStack.isOf(UItems.LOVE_BUCKET)) {
-                consumeAndSwap(player, hand, handStack.getRecipeRemainder());
-                player.playSound(USounds.Vanilla.ITEM_BUCKET_EMPTY, 1, 1);
-                markDirty();
+            if (handStack.is(UItems.LOVE_BUCKET)) {
+                consumeAndSwap(player, hand, Items.BUCKET.getDefaultInstance());
+                player.playSound(USounds.Vanilla.BUCKET_EMPTY, 1, 1);
+                setChanged();
                 return TypedActionResult.success(new FakeFluidJarContents(tile, "love", 0xFF3030, Items.BUCKET, UItems.LOVE_BUCKET));
             }
 
-            if (handStack.isOf(UItems.JUICE)) {
-                consumeAndSwap(player, hand, handStack.getRecipeRemainder());
-                player.playSound(USounds.Vanilla.ITEM_BUCKET_EMPTY, 1, 1);
-                markDirty();
+            if (handStack.is(UItems.JUICE)) {
+                consumeAndSwap(player, hand, Items.GLASS_BOTTLE.getDefaultInstance());
+                player.playSound(USounds.Vanilla.BUCKET_EMPTY, 1, 1);
+                setChanged();
                 return TypedActionResult.success(new FakeFluidJarContents(tile, "apple_juice", 0x30FF30, Items.GLASS_BOTTLE, UItems.JUICE));
             }
         }
 
-        if (stacks.size() >= size()) {
+        if (stacks.size() >= getContainerSize()) {
             return TypedActionResult.fail(this);
         }
         stacks.add(player.isCreative() ? handStack.copyWithCount(1) : handStack.split(1));
-        markDirty();
+        setChanged();
 
         return TypedActionResult.success(this);
     }
 
     @Override
     public void onDestroyed() {
-        stacks.forEach(stack -> Block.dropStack(tile.getWorld(), tile.getPos(), stack));
+        stacks.forEach(stack -> Block.popResource(tile.getLevel(), tile.getBlockPos(), stack));
     }
 
     @Override
-    public int size() {
+    public int getContainerSize() {
         return MAX_SIZE;
     }
 
@@ -124,12 +124,12 @@ public record ItemsJarContents (
     }
 
     @Override
-    public ItemStack getStack(int slot) {
+    public ItemStack getItem(int slot) {
         return slot < 0 || slot >= stacks.size() ? ItemStack.EMPTY : stacks.get(slot);
     }
 
     @Override
-    public ItemStack removeStack(int slot, int amount) {
+    public ItemStack removeItem(int slot, int amount) {
         if (slot < 0 || slot >= stacks.size()) {
             return ItemStack.EMPTY;
         }
@@ -142,12 +142,12 @@ public record ItemsJarContents (
             }
             return removed;
         } finally {
-            markDirty();
+            setChanged();
         }
     }
 
     @Override
-    public ItemStack removeStack(int slot) {
+    public ItemStack removeItemNoUpdate(int slot) {
         if (slot < 0 || slot >= stacks.size()) {
             return ItemStack.EMPTY;
         }
@@ -155,54 +155,54 @@ public record ItemsJarContents (
         try {
             return stacks.remove(slot);
         } finally {
-            markDirty();
+            setChanged();
         }
     }
 
     @Override
-    public void setStack(int slot, ItemStack stack) {
+    public void setItem(int slot, ItemStack stack) {
         if (slot >= stacks.size()) {
             stacks.add(stack);
         } else {
             stacks.set(slot, stack);
         }
-        markDirty();
+        setChanged();
     }
 
     @Override
-    public boolean canPlayerUse(PlayerEntity player) {
+    public boolean stillValid(Player player) {
         return false;
     }
 
     @Override
-    public void clear() {
+    public void clearContent() {
         stacks.clear();
-        markDirty();
+        setChanged();
     }
 
     @Override
-    public int[] getAvailableSlots(Direction side) {
+    public int[] getSlotsForFace(Direction side) {
         return SLOTS;
     }
 
     @Override
-    public boolean canInsert(int slot, ItemStack stack, Direction dir) {
-        return slot >= 0 && slot < size() && slot >= stacks.size();
+    public boolean canPlaceItemThroughFace(int slot, ItemStack stack, Direction dir) {
+        return slot >= 0 && slot < getContainerSize() && slot >= stacks.size();
     }
 
     @Override
-    public boolean canExtract(int slot, ItemStack stack, Direction dir) {
-        return slot >= 0 && slot < size() && slot < stacks.size();
+    public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction dir) {
+        return slot >= 0 && slot < getContainerSize() && slot < stacks.size();
     }
 
     @Override
-    public NbtCompound toNBT(NbtCompound compound, WrapperLookup lookup) {
-        compound.put("items", STACKS_CODEC, lookup.getOps(NbtOps.INSTANCE), stacks);
+    public CompoundTag toNBT(CompoundTag compound, Provider lookup) {
+        compound.store("items", STACKS_CODEC, lookup.createSerializationContext(NbtOps.INSTANCE), stacks);
         return compound;
     }
 
     @Override
-    public void markDirty() {
-        tile.markDirty();
+    public void setChanged() {
+        tile.setChanged();
     }
 }
